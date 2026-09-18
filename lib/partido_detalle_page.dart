@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import 'editar_partido_page.dart';
+import 'resultado_partido_page.dart';
 
 class PartidoDetallePage extends StatefulWidget {
   final int partidoId;
@@ -220,6 +221,9 @@ class _PartidoDetallePageState
       case 'PROGRAMADO':
         return Colors.blue;
 
+      case 'CANCELADO':
+        return Colors.red;
+
       default:
         return Colors.grey;
     }
@@ -267,6 +271,23 @@ class _PartidoDetallePageState
     }
   }
 
+  Future<void> abrirResultado() async {
+    final actualizado =
+        await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ResultadoPartidoPage(
+          partidoId: widget.partidoId,
+          token: widget.token,
+        ),
+      ),
+    );
+
+    if (actualizado == true && mounted) {
+      await cargarPartido();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (cargando) {
@@ -297,21 +318,13 @@ class _PartidoDetallePageState
                   size: 70,
                   color: Colors.red,
                 ),
-
-                const SizedBox(
-                  height: 18,
-                ),
-
+                const SizedBox(height: 18),
                 Text(
                   error!,
                   textAlign:
                       TextAlign.center,
                 ),
-
-                const SizedBox(
-                  height: 20,
-                ),
-
+                const SizedBox(height: 20),
                 FilledButton.icon(
                   onPressed:
                       cargarPartido,
@@ -411,15 +424,13 @@ class _PartidoDetallePageState
 
             child: Column(
               crossAxisAlignment:
-                  CrossAxisAlignment
-                      .stretch,
+                  CrossAxisAlignment.stretch,
               children: [
                 Card(
                   elevation: 2,
                   child: Padding(
                     padding:
                         const EdgeInsets.all(24),
-
                     child: Column(
                       children: [
                         Text(
@@ -432,9 +443,7 @@ class _PartidoDetallePageState
                           ),
                         ),
 
-                        const SizedBox(
-                          height: 6,
-                        ),
+                        const SizedBox(height: 6),
 
                         Text(
                           fase,
@@ -445,9 +454,7 @@ class _PartidoDetallePageState
                           ),
                         ),
 
-                        const SizedBox(
-                          height: 24,
-                        ),
+                        const SizedBox(height: 24),
 
                         Row(
                           children: [
@@ -508,9 +515,7 @@ class _PartidoDetallePageState
                           ],
                         ),
 
-                        const SizedBox(
-                          height: 22,
-                        ),
+                        const SizedBox(height: 22),
 
                         Container(
                           padding:
@@ -548,9 +553,7 @@ class _PartidoDetallePageState
                   ),
                 ),
 
-                const SizedBox(
-                  height: 18,
-                ),
+                const SizedBox(height: 18),
 
                 filaDato(
                   Icons.calendar_month,
@@ -583,21 +586,36 @@ class _PartidoDetallePageState
                   estado,
                 ),
 
-                if (observaciones
-                    .isNotEmpty)
+                if (observaciones.isNotEmpty)
                   filaDato(
                     Icons.notes,
                     'Observaciones',
                     observaciones,
                   ),
 
-                const SizedBox(
-                  height: 24,
-                ),
+                const SizedBox(height: 24),
+
+                SizedBox(
+  height: 52,
+  child: FilledButton.icon(
+    onPressed: abrirResultado,
+    icon: Icon(
+      estado.toUpperCase() == 'FINALIZADO'
+          ? Icons.edit_note
+          : Icons.scoreboard,
+    ),
+    label: Text(
+      estado.toUpperCase() == 'FINALIZADO'
+          ? 'EDITAR RESULTADO'
+          : 'REGISTRAR RESULTADO',
+    ),
+  ),
+),
+                const SizedBox(height: 12),
 
                 SizedBox(
                   height: 52,
-                  child: FilledButton.icon(
+                  child: OutlinedButton.icon(
                     onPressed:
                         abrirEdicion,
                     icon: const Icon(
@@ -609,9 +627,7 @@ class _PartidoDetallePageState
                   ),
                 ),
 
-                const SizedBox(
-                  height: 20,
-                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),
