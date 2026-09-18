@@ -21,12 +21,13 @@ class PartidoDetallePage extends StatefulWidget {
       _PartidoDetallePageState();
 }
 
-class _PartidoDetallePageState
-    extends State<PartidoDetallePage> {
+class _PartidoDetallePageState extends State<PartidoDetallePage> {
   static const String baseUrl =
       'https://torneointertecnologias-production-7ae9.up.railway.app';
 
   bool cargando = true;
+  bool reabriendo = false;
+
   String? error;
 
   Map<String, dynamic>? partido;
@@ -39,10 +40,12 @@ class _PartidoDetallePageState
   }
 
   Future<void> cargarPartido() async {
-    setState(() {
-      cargando = true;
-      error = null;
-    });
+    if (mounted) {
+      setState(() {
+        cargando = true;
+        error = null;
+      });
+    }
 
     try {
       final respuesta = await http.get(
@@ -56,48 +59,57 @@ class _PartidoDetallePageState
       );
 
       if (respuesta.statusCode == 200) {
-        final dynamic datos =
-            jsonDecode(respuesta.body);
+        final dynamic datos = jsonDecode(respuesta.body);
 
         if (datos is Map<String, dynamic> &&
             datos['partido'] is Map<String, dynamic>) {
+          if (!mounted) return;
+
           setState(() {
-            partido =
-                Map<String, dynamic>.from(
+            partido = Map<String, dynamic>.from(
               datos['partido'],
             );
 
-            if (datos['resumen']
-                is Map<String, dynamic>) {
-              resumen =
-                  Map<String, dynamic>.from(
+            if (datos['resumen'] is Map<String, dynamic>) {
+              resumen = Map<String, dynamic>.from(
                 datos['resumen'],
               );
+            } else {
+              resumen = null;
             }
           });
         } else {
+          if (!mounted) return;
+
           setState(() {
             error =
                 'La respuesta del servidor no tiene el formato esperado.';
           });
         }
       } else if (respuesta.statusCode == 401) {
+        if (!mounted) return;
+
         setState(() {
           error =
               'Sesión no autorizada o token vencido.';
         });
       } else if (respuesta.statusCode == 404) {
+        if (!mounted) return;
+
         setState(() {
-          error =
-              'Partido no encontrado.';
+          error = 'Partido no encontrado.';
         });
       } else {
+        if (!mounted) return;
+
         setState(() {
           error =
               'No fue posible cargar el partido. Código ${respuesta.statusCode}.';
         });
       }
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         error =
             'No se pudo conectar con el servidor.';
@@ -117,12 +129,9 @@ class _PartidoDetallePageState
   ) {
     if (equipo is Map<String, dynamic>) {
       final nombre =
-          equipo['nombre']
-              ?.toString()
-              .trim();
+          equipo['nombre']?.toString().trim();
 
-      if (nombre != null &&
-          nombre.isNotEmpty) {
+      if (nombre != null && nombre.isNotEmpty) {
         return nombre;
       }
     }
@@ -254,6 +263,23 @@ class _PartidoDetallePageState
     );
   }
 
+  void mostrarMensaje(
+    String mensaje, {
+    bool esError = false,
+  }) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor:
+            esError
+                ? Colors.red.shade700
+                : Colors.green.shade700,
+      ),
+    );
+  }
+
   Future<void> abrirEdicion() async {
     final actualizado =
         await Navigator.push<bool>(
@@ -288,6 +314,128 @@ class _PartidoDetallePageState
     }
   }
 
+  Future<void> confirmarReapertura() async {
+    if (partido == null || reabriendo) {
+      return;
+    }
+
+    final local =
+        obtenerNombreEquipo(
+      partido!['equipoLocal'],
+      'Equipo local',
+    );
+
+    final visitante =
+        obtenerNombreEquipo(
+      partido!['equipoVisitante'],
+      'Equipo visitante',
+    );
+
+    final confirmar =
+        await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text(
+            'Reabrir partido',
+          ),
+          content: Text(
+            '¿Deseas reabrir el partido '
+            '$local vs $visitante?\n\n'
+            'El marcador será eliminado y el partido '
+            'volverá al estado PROGRAMADO.\n\n'
+            'La fecha y hora se conservarán.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(
+                  context,
+                  false,
+                );
+              },
+              child: const Text(
+                'CANCELAR',
+              ),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(
+                  context,
+                  true,
+                );
+              },
+              child: const Text(
+                'REABRIR',
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmar == true) {
+      await reabrirPartido();
+    }
+  }
+
+  Future<void> reabrirPartido() async {
+    setState(() {
+      reabriendo = true;
+    });
+
+    try {
+      final respuesta = await http.put(
+        Uri.parse(
+          '$baseUrl/api/partidos/${widget.partidoId}/reabrir',
+        ),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      );
+
+      if (respuesta.statusCode == 200) {
+        mostrarMensaje(
+          'Partido reabierto correctamente.',
+        );
+
+        await cargarPartido();
+      } else {
+        String mensaje =
+            'No fue posible reabrir el partido. Código ${respuesta.statusCode}.';
+
+        try {
+          final dynamic datos =
+              jsonDecode(respuesta.body);
+
+          if (datos is Map<String, dynamic>) {
+            mensaje =
+                datos['mensaje']?.toString() ??
+                    datos['message']?.toString() ??
+                    mensaje;
+          }
+        } catch (_) {}
+
+        mostrarMensaje(
+          mensaje,
+          esError: true,
+        );
+      }
+    } catch (e) {
+      mostrarMensaje(
+        'No se pudo conectar con el servidor.',
+        esError: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          reabriendo = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (cargando) {
@@ -318,13 +466,21 @@ class _PartidoDetallePageState
                   size: 70,
                   color: Colors.red,
                 ),
-                const SizedBox(height: 18),
+
+                const SizedBox(
+                  height: 18,
+                ),
+
                 Text(
                   error!,
                   textAlign:
                       TextAlign.center,
                 ),
-                const SizedBox(height: 20),
+
+                const SizedBox(
+                  height: 20,
+                ),
+
                 FilledButton.icon(
                   onPressed:
                       cargarPartido,
@@ -370,6 +526,9 @@ class _PartidoDetallePageState
                 .trim() ??
             'SIN ESTADO';
 
+    final estadoNormalizado =
+        estado.toUpperCase();
+
     final jornada =
         partido!['jornada']
                 ?.toString() ??
@@ -399,6 +558,9 @@ class _PartidoDetallePageState
 
     final marcador =
         obtenerMarcador();
+
+    final esFinalizado =
+        estadoNormalizado == 'FINALIZADO';
 
     return Scaffold(
       backgroundColor:
@@ -443,7 +605,9 @@ class _PartidoDetallePageState
                           ),
                         ),
 
-                        const SizedBox(height: 6),
+                        const SizedBox(
+                          height: 6,
+                        ),
 
                         Text(
                           fase,
@@ -454,7 +618,9 @@ class _PartidoDetallePageState
                           ),
                         ),
 
-                        const SizedBox(height: 24),
+                        const SizedBox(
+                          height: 24,
+                        ),
 
                         Row(
                           children: [
@@ -486,7 +652,8 @@ class _PartidoDetallePageState
                                 ),
                                 borderRadius:
                                     BorderRadius.circular(
-                                        12),
+                                  12,
+                                ),
                               ),
                               child: Text(
                                 marcador,
@@ -515,7 +682,9 @@ class _PartidoDetallePageState
                           ],
                         ),
 
-                        const SizedBox(height: 22),
+                        const SizedBox(
+                          height: 22,
+                        ),
 
                         Container(
                           padding:
@@ -533,7 +702,8 @@ class _PartidoDetallePageState
                             ),
                             borderRadius:
                                 BorderRadius.circular(
-                                    20),
+                              20,
+                            ),
                           ),
                           child: Text(
                             estado,
@@ -553,7 +723,9 @@ class _PartidoDetallePageState
                   ),
                 ),
 
-                const SizedBox(height: 18),
+                const SizedBox(
+                  height: 18,
+                ),
 
                 filaDato(
                   Icons.calendar_month,
@@ -593,29 +765,72 @@ class _PartidoDetallePageState
                     observaciones,
                   ),
 
-                const SizedBox(height: 24),
-
-                SizedBox(
-  height: 52,
-  child: FilledButton.icon(
-    onPressed: abrirResultado,
-    icon: Icon(
-      estado.toUpperCase() == 'FINALIZADO'
-          ? Icons.edit_note
-          : Icons.scoreboard,
-    ),
-    label: Text(
-      estado.toUpperCase() == 'FINALIZADO'
-          ? 'EDITAR RESULTADO'
-          : 'REGISTRAR RESULTADO',
-    ),
-  ),
-),
-                const SizedBox(height: 12),
+                const SizedBox(
+                  height: 24,
+                ),
 
                 SizedBox(
                   height: 52,
-                  child: OutlinedButton.icon(
+                  child: FilledButton.icon(
+                    onPressed:
+                        abrirResultado,
+                    icon: Icon(
+                      esFinalizado
+                          ? Icons.edit_note
+                          : Icons.scoreboard,
+                    ),
+                    label: Text(
+                      esFinalizado
+                          ? 'EDITAR RESULTADO'
+                          : 'REGISTRAR RESULTADO',
+                    ),
+                  ),
+                ),
+
+                if (esFinalizado) ...[
+                  const SizedBox(
+                    height: 12,
+                  ),
+
+                  SizedBox(
+                    height: 52,
+                    child:
+                        OutlinedButton.icon(
+                      onPressed:
+                          reabriendo
+                              ? null
+                              : confirmarReapertura,
+                      icon:
+                          reabriendo
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child:
+                                      CircularProgressIndicator(
+                                    strokeWidth:
+                                        2,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.restart_alt,
+                                ),
+                      label: Text(
+                        reabriendo
+                            ? 'REABRIENDO...'
+                            : 'REABRIR PARTIDO',
+                      ),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(
+                  height: 12,
+                ),
+
+                SizedBox(
+                  height: 52,
+                  child:
+                      OutlinedButton.icon(
                     onPressed:
                         abrirEdicion,
                     icon: const Icon(
@@ -627,7 +842,9 @@ class _PartidoDetallePageState
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(
+                  height: 20,
+                ),
               ],
             ),
           ),
