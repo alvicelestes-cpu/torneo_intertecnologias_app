@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'editar_partido_page.dart';
 import 'resultado_partido_page.dart';
 import 'goles_partido_page.dart';
+import 'tarjetas_partido_page.dart';
 
 class PartidoDetallePage extends StatefulWidget {
   final int partidoId;
@@ -261,14 +262,11 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     return Card(
       elevation: 1,
       child: ListTile(
-        leading: Icon(
-          icono,
-        ),
+        leading: Icon(icono),
         title: Text(
           titulo,
           style: const TextStyle(
-            fontWeight:
-                FontWeight.w600,
+            fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: Text(
@@ -287,12 +285,9 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   }) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          mensaje,
-        ),
+        content: Text(mensaje),
         backgroundColor:
             esError
                 ? Colors.red.shade700
@@ -306,18 +301,14 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
         await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            EditarPartidoPage(
-          partidoId:
-              widget.partidoId,
-          token:
-              widget.token,
+        builder: (_) => EditarPartidoPage(
+          partidoId: widget.partidoId,
+          token: widget.token,
         ),
       ),
     );
 
-    if (actualizado == true &&
-        mounted) {
+    if (actualizado == true && mounted) {
       await cargarPartido();
     }
   }
@@ -327,18 +318,14 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
         await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            ResultadoPartidoPage(
-          partidoId:
-              widget.partidoId,
-          token:
-              widget.token,
+        builder: (_) => ResultadoPartidoPage(
+          partidoId: widget.partidoId,
+          token: widget.token,
         ),
       ),
     );
 
-    if (actualizado == true &&
-        mounted) {
+    if (actualizado == true && mounted) {
       await cargarPartido();
     }
   }
@@ -347,12 +334,25 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            GolesPartidoPage(
-          partidoId:
-              widget.partidoId,
-          token:
-              widget.token,
+        builder: (_) => GolesPartidoPage(
+          partidoId: widget.partidoId,
+          token: widget.token,
+        ),
+      ),
+    );
+
+    if (mounted) {
+      await cargarPartido();
+    }
+  }
+
+  Future<void> abrirTarjetas() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TarjetasPartidoPage(
+          partidoId: widget.partidoId,
+          token: widget.token,
         ),
       ),
     );
@@ -464,13 +464,10 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
             respuesta.body,
           );
 
-          if (datos
-              is Map<String, dynamic>) {
+          if (datos is Map<String, dynamic>) {
             mensaje =
-                datos['mensaje']
-                        ?.toString() ??
-                    datos['message']
-                        ?.toString() ??
+                datos['mensaje']?.toString() ??
+                    datos['message']?.toString() ??
                     mensaje;
           }
         } catch (_) {}
@@ -501,8 +498,7 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     if (cargando) {
       return const Scaffold(
         body: Center(
-          child:
-              CircularProgressIndicator(),
+          child: CircularProgressIndicator(),
         ),
       );
     }
@@ -517,8 +513,7 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
         body: Center(
           child: Padding(
             padding:
-                const EdgeInsets.all(
-                    24),
+                const EdgeInsets.all(24),
             child: Column(
               mainAxisSize:
                   MainAxisSize.min,
@@ -528,21 +523,17 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                   size: 70,
                   color: Colors.red,
                 ),
-
                 const SizedBox(
                   height: 18,
                 ),
-
                 Text(
                   error!,
                   textAlign:
                       TextAlign.center,
                 ),
-
                 const SizedBox(
                   height: 20,
                 ),
-
                 FilledButton.icon(
                   onPressed:
                       cargarPartido,
@@ -630,37 +621,32 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
           const Color(
         0xFFF4F7FB,
       ),
-
       appBar: AppBar(
         title: const Text(
           'Detalle del partido',
         ),
         centerTitle: true,
       ),
-
       body: SingleChildScrollView(
         padding:
             const EdgeInsets.all(
                 20),
-
         child: Center(
           child: ConstrainedBox(
             constraints:
                 const BoxConstraints(
               maxWidth: 700,
             ),
-
             child: Column(
               crossAxisAlignment:
-                  CrossAxisAlignment
-                      .stretch,
+                  CrossAxisAlignment.stretch,
               children: [
                 Card(
                   elevation: 2,
                   child: Padding(
                     padding:
-                        const EdgeInsets
-                            .all(24),
+                        const EdgeInsets.all(
+                            24),
                     child: Column(
                       children: [
                         Text(
@@ -669,57 +655,43 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                               const TextStyle(
                             fontSize: 18,
                             fontWeight:
-                                FontWeight
-                                    .bold,
+                                FontWeight.bold,
                           ),
                         ),
-
                         const SizedBox(
                           height: 6,
                         ),
-
                         Text(
                           fase,
                           style:
                               const TextStyle(
                             color:
-                                Colors
-                                    .black54,
+                                Colors.black54,
                           ),
                         ),
-
                         const SizedBox(
                           height: 24,
                         ),
-
                         Row(
                           children: [
                             Expanded(
-                              child:
-                                  Text(
+                              child: Text(
                                 local,
                                 textAlign:
-                                    TextAlign
-                                        .center,
+                                    TextAlign.center,
                                 style:
                                     const TextStyle(
-                                  fontSize:
-                                      21,
+                                  fontSize: 21,
                                   fontWeight:
-                                      FontWeight
-                                          .bold,
+                                      FontWeight.bold,
                                 ),
                               ),
                             ),
-
                             Container(
                               padding:
-                                  const EdgeInsets
-                                      .symmetric(
-                                horizontal:
-                                    20,
-                                vertical:
-                                    12,
+                                  const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
                               ),
                               decoration:
                                   BoxDecoration(
@@ -728,57 +700,43 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                                   0xFFEAF2FB,
                                 ),
                                 borderRadius:
-                                    BorderRadius
-                                        .circular(
+                                    BorderRadius.circular(
                                   12,
                                 ),
                               ),
-                              child:
-                                  Text(
+                              child: Text(
                                 marcador,
                                 style:
                                     const TextStyle(
-                                  fontSize:
-                                      26,
+                                  fontSize: 26,
                                   fontWeight:
-                                      FontWeight
-                                          .bold,
+                                      FontWeight.bold,
                                 ),
                               ),
                             ),
-
                             Expanded(
-                              child:
-                                  Text(
+                              child: Text(
                                 visitante,
                                 textAlign:
-                                    TextAlign
-                                        .center,
+                                    TextAlign.center,
                                 style:
                                     const TextStyle(
-                                  fontSize:
-                                      21,
+                                  fontSize: 21,
                                   fontWeight:
-                                      FontWeight
-                                          .bold,
+                                      FontWeight.bold,
                                 ),
                               ),
                             ),
                           ],
                         ),
-
                         const SizedBox(
                           height: 22,
                         ),
-
                         Container(
                           padding:
-                              const EdgeInsets
-                                  .symmetric(
-                            horizontal:
-                                14,
-                            vertical:
-                                8,
+                              const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
                           ),
                           decoration:
                               BoxDecoration(
@@ -786,12 +744,10 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                                 obtenerColorEstado(
                               estado,
                             ).withValues(
-                              alpha:
-                                  0.12,
+                              alpha: 0.12,
                             ),
                             borderRadius:
-                                BorderRadius
-                                    .circular(
+                                BorderRadius.circular(
                               20,
                             ),
                           ),
@@ -804,8 +760,7 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                                 estado,
                               ),
                               fontWeight:
-                                  FontWeight
-                                      .bold,
+                                  FontWeight.bold,
                             ),
                           ),
                         ),
@@ -813,66 +768,54 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                     ),
                   ),
                 ),
-
                 const SizedBox(
                   height: 18,
                 ),
-
                 filaDato(
                   Icons.calendar_month,
                   'Fecha y hora',
                   fechaHora,
                 ),
-
                 filaDato(
                   Icons.flag,
                   'Fase',
                   fase,
                 ),
-
                 filaDato(
                   Icons.numbers,
                   'Jornada',
                   jornada,
                 ),
-
                 if (llave.isNotEmpty)
                   filaDato(
                     Icons.account_tree,
                     'Llave',
                     llave,
                   ),
-
                 filaDato(
                   Icons.info_outline,
                   'Estado',
                   estado,
                 ),
-
-                if (observaciones
-                    .isNotEmpty)
+                if (observaciones.isNotEmpty)
                   filaDato(
                     Icons.notes,
                     'Observaciones',
                     observaciones,
                   ),
-
                 const SizedBox(
                   height: 24,
                 ),
 
                 SizedBox(
                   height: 52,
-                  child:
-                      FilledButton.icon(
+                  child: FilledButton.icon(
                     onPressed:
                         abrirResultado,
                     icon: Icon(
                       esFinalizado
-                          ? Icons
-                              .edit_note
-                          : Icons
-                              .scoreboard,
+                          ? Icons.edit_note
+                          : Icons.scoreboard,
                     ),
                     label: Text(
                       esFinalizado
@@ -886,12 +829,10 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                   const SizedBox(
                     height: 12,
                   ),
-
                   SizedBox(
                     height: 52,
                     child:
-                        OutlinedButton
-                            .icon(
+                        OutlinedButton.icon(
                       onPressed:
                           reabriendo
                               ? null
@@ -899,19 +840,15 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                       icon:
                           reabriendo
                               ? const SizedBox(
-                                  width:
-                                      20,
-                                  height:
-                                      20,
+                                  width: 20,
+                                  height: 20,
                                   child:
                                       CircularProgressIndicator(
-                                    strokeWidth:
-                                        2,
+                                    strokeWidth: 2,
                                   ),
                                 )
                               : const Icon(
-                                  Icons
-                                      .restart_alt,
+                                  Icons.restart_alt,
                                 ),
                       label: Text(
                         reabriendo
@@ -939,6 +876,27 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                     label:
                         const Text(
                       'GOLES DEL PARTIDO',
+                    ),
+                  ),
+                ),
+
+                const SizedBox(
+                  height: 12,
+                ),
+
+                SizedBox(
+                  height: 52,
+                  child:
+                      OutlinedButton.icon(
+                    onPressed:
+                        abrirTarjetas,
+                    icon:
+                        const Icon(
+                      Icons.style,
+                    ),
+                    label:
+                        const Text(
+                      'TARJETAS DEL PARTIDO',
                     ),
                   ),
                 ),
