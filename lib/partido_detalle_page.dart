@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import 'editar_partido_page.dart';
 import 'resultado_partido_page.dart';
+import 'goles_partido_page.dart';
 
 class PartidoDetallePage extends StatefulWidget {
   final int partidoId;
@@ -97,7 +98,8 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
         if (!mounted) return;
 
         setState(() {
-          error = 'Partido no encontrado.';
+          error =
+              'Partido no encontrado.';
         });
       } else {
         if (!mounted) return;
@@ -127,11 +129,12 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     dynamic equipo,
     String valorDefecto,
   ) {
-    if (equipo is Map<String, dynamic>) {
+    if (equipo is Map) {
       final nombre =
           equipo['nombre']?.toString().trim();
 
-      if (nombre != null && nombre.isNotEmpty) {
+      if (nombre != null &&
+          nombre.isNotEmpty) {
         return nombre;
       }
     }
@@ -144,7 +147,9 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     return valorDefecto;
   }
 
-  String formatearFechaHora(dynamic fechaHora) {
+  String formatearFechaHora(
+    dynamic fechaHora,
+  ) {
     if (fechaHora == null) {
       return 'Fecha por definir';
     }
@@ -164,24 +169,34 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     }
 
     final dia =
-        fecha.day.toString().padLeft(2, '0');
+        fecha.day
+            .toString()
+            .padLeft(2, '0');
 
     final mes =
-        fecha.month.toString().padLeft(2, '0');
+        fecha.month
+            .toString()
+            .padLeft(2, '0');
 
     final anio =
         fecha.year.toString();
 
     final hora =
-        fecha.hour.toString().padLeft(2, '0');
+        fecha.hour
+            .toString()
+            .padLeft(2, '0');
 
     final minuto =
-        fecha.minute.toString().padLeft(2, '0');
+        fecha.minute
+            .toString()
+            .padLeft(2, '0');
 
     return '$dia/$mes/$anio - $hora:$minuto';
   }
 
-  String formatearFase(dynamic fase) {
+  String formatearFase(
+    dynamic fase,
+  ) {
     if (fase == null) {
       return 'Sin fase';
     }
@@ -246,11 +261,14 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     return Card(
       elevation: 1,
       child: ListTile(
-        leading: Icon(icono),
+        leading: Icon(
+          icono,
+        ),
         title: Text(
           titulo,
           style: const TextStyle(
-            fontWeight: FontWeight.w600,
+            fontWeight:
+                FontWeight.w600,
           ),
         ),
         subtitle: Text(
@@ -269,9 +287,12 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   }) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context)
+        .showSnackBar(
       SnackBar(
-        content: Text(mensaje),
+        content: Text(
+          mensaje,
+        ),
         backgroundColor:
             esError
                 ? Colors.red.shade700
@@ -285,14 +306,18 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
         await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => EditarPartidoPage(
-          partidoId: widget.partidoId,
-          token: widget.token,
+        builder: (_) =>
+            EditarPartidoPage(
+          partidoId:
+              widget.partidoId,
+          token:
+              widget.token,
         ),
       ),
     );
 
-    if (actualizado == true && mounted) {
+    if (actualizado == true &&
+        mounted) {
       await cargarPartido();
     }
   }
@@ -302,20 +327,44 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
         await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => ResultadoPartidoPage(
-          partidoId: widget.partidoId,
-          token: widget.token,
+        builder: (_) =>
+            ResultadoPartidoPage(
+          partidoId:
+              widget.partidoId,
+          token:
+              widget.token,
         ),
       ),
     );
 
-    if (actualizado == true && mounted) {
+    if (actualizado == true &&
+        mounted) {
+      await cargarPartido();
+    }
+  }
+
+  Future<void> abrirGoles() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            GolesPartidoPage(
+          partidoId:
+              widget.partidoId,
+          token:
+              widget.token,
+        ),
+      ),
+    );
+
+    if (mounted) {
       await cargarPartido();
     }
   }
 
   Future<void> confirmarReapertura() async {
-    if (partido == null || reabriendo) {
+    if (partido == null ||
+        reabriendo) {
       return;
     }
 
@@ -385,17 +434,21 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     });
 
     try {
-      final respuesta = await http.put(
+      final respuesta =
+          await http.put(
         Uri.parse(
           '$baseUrl/api/partidos/${widget.partidoId}/reabrir',
         ),
         headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer ${widget.token}',
+          'Accept':
+              'application/json',
+          'Authorization':
+              'Bearer ${widget.token}',
         },
       );
 
-      if (respuesta.statusCode == 200) {
+      if (respuesta.statusCode ==
+          200) {
         mostrarMensaje(
           'Partido reabierto correctamente.',
         );
@@ -407,12 +460,17 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
 
         try {
           final dynamic datos =
-              jsonDecode(respuesta.body);
+              jsonDecode(
+            respuesta.body,
+          );
 
-          if (datos is Map<String, dynamic>) {
+          if (datos
+              is Map<String, dynamic>) {
             mensaje =
-                datos['mensaje']?.toString() ??
-                    datos['message']?.toString() ??
+                datos['mensaje']
+                        ?.toString() ??
+                    datos['message']
+                        ?.toString() ??
                     mensaje;
           }
         } catch (_) {}
@@ -437,11 +495,14 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     if (cargando) {
       return const Scaffold(
         body: Center(
-          child: CircularProgressIndicator(),
+          child:
+              CircularProgressIndicator(),
         ),
       );
     }
@@ -456,7 +517,8 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
         body: Center(
           child: Padding(
             padding:
-                const EdgeInsets.all(24),
+                const EdgeInsets.all(
+                    24),
             child: Column(
               mainAxisSize:
                   MainAxisSize.min,
@@ -560,11 +622,14 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
         obtenerMarcador();
 
     final esFinalizado =
-        estadoNormalizado == 'FINALIZADO';
+        estadoNormalizado ==
+            'FINALIZADO';
 
     return Scaffold(
       backgroundColor:
-          const Color(0xFFF4F7FB),
+          const Color(
+        0xFFF4F7FB,
+      ),
 
       appBar: AppBar(
         title: const Text(
@@ -575,7 +640,8 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
 
       body: SingleChildScrollView(
         padding:
-            const EdgeInsets.all(20),
+            const EdgeInsets.all(
+                20),
 
         child: Center(
           child: ConstrainedBox(
@@ -586,13 +652,15 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
 
             child: Column(
               crossAxisAlignment:
-                  CrossAxisAlignment.stretch,
+                  CrossAxisAlignment
+                      .stretch,
               children: [
                 Card(
                   elevation: 2,
                   child: Padding(
                     padding:
-                        const EdgeInsets.all(24),
+                        const EdgeInsets
+                            .all(24),
                     child: Column(
                       children: [
                         Text(
@@ -601,7 +669,8 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                               const TextStyle(
                             fontSize: 18,
                             fontWeight:
-                                FontWeight.bold,
+                                FontWeight
+                                    .bold,
                           ),
                         ),
 
@@ -614,7 +683,8 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                           style:
                               const TextStyle(
                             color:
-                                Colors.black54,
+                                Colors
+                                    .black54,
                           ),
                         ),
 
@@ -625,24 +695,31 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                         Row(
                           children: [
                             Expanded(
-                              child: Text(
+                              child:
+                                  Text(
                                 local,
                                 textAlign:
-                                    TextAlign.center,
+                                    TextAlign
+                                        .center,
                                 style:
                                     const TextStyle(
-                                  fontSize: 21,
+                                  fontSize:
+                                      21,
                                   fontWeight:
-                                      FontWeight.bold,
+                                      FontWeight
+                                          .bold,
                                 ),
                               ),
                             ),
 
                             Container(
                               padding:
-                                  const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 12,
+                                  const EdgeInsets
+                                      .symmetric(
+                                horizontal:
+                                    20,
+                                vertical:
+                                    12,
                               ),
                               decoration:
                                   BoxDecoration(
@@ -651,31 +728,39 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                                   0xFFEAF2FB,
                                 ),
                                 borderRadius:
-                                    BorderRadius.circular(
+                                    BorderRadius
+                                        .circular(
                                   12,
                                 ),
                               ),
-                              child: Text(
+                              child:
+                                  Text(
                                 marcador,
                                 style:
                                     const TextStyle(
-                                  fontSize: 26,
+                                  fontSize:
+                                      26,
                                   fontWeight:
-                                      FontWeight.bold,
+                                      FontWeight
+                                          .bold,
                                 ),
                               ),
                             ),
 
                             Expanded(
-                              child: Text(
+                              child:
+                                  Text(
                                 visitante,
                                 textAlign:
-                                    TextAlign.center,
+                                    TextAlign
+                                        .center,
                                 style:
                                     const TextStyle(
-                                  fontSize: 21,
+                                  fontSize:
+                                      21,
                                   fontWeight:
-                                      FontWeight.bold,
+                                      FontWeight
+                                          .bold,
                                 ),
                               ),
                             ),
@@ -688,9 +773,12 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
 
                         Container(
                           padding:
-                              const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
+                              const EdgeInsets
+                                  .symmetric(
+                            horizontal:
+                                14,
+                            vertical:
+                                8,
                           ),
                           decoration:
                               BoxDecoration(
@@ -698,10 +786,12 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                                 obtenerColorEstado(
                               estado,
                             ).withValues(
-                              alpha: 0.12,
+                              alpha:
+                                  0.12,
                             ),
                             borderRadius:
-                                BorderRadius.circular(
+                                BorderRadius
+                                    .circular(
                               20,
                             ),
                           ),
@@ -714,7 +804,8 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                                 estado,
                               ),
                               fontWeight:
-                                  FontWeight.bold,
+                                  FontWeight
+                                      .bold,
                             ),
                           ),
                         ),
@@ -758,7 +849,8 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                   estado,
                 ),
 
-                if (observaciones.isNotEmpty)
+                if (observaciones
+                    .isNotEmpty)
                   filaDato(
                     Icons.notes,
                     'Observaciones',
@@ -771,13 +863,16 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
 
                 SizedBox(
                   height: 52,
-                  child: FilledButton.icon(
+                  child:
+                      FilledButton.icon(
                     onPressed:
                         abrirResultado,
                     icon: Icon(
                       esFinalizado
-                          ? Icons.edit_note
-                          : Icons.scoreboard,
+                          ? Icons
+                              .edit_note
+                          : Icons
+                              .scoreboard,
                     ),
                     label: Text(
                       esFinalizado
@@ -795,7 +890,8 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                   SizedBox(
                     height: 52,
                     child:
-                        OutlinedButton.icon(
+                        OutlinedButton
+                            .icon(
                       onPressed:
                           reabriendo
                               ? null
@@ -803,8 +899,10 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                       icon:
                           reabriendo
                               ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
+                                  width:
+                                      20,
+                                  height:
+                                      20,
                                   child:
                                       CircularProgressIndicator(
                                     strokeWidth:
@@ -812,7 +910,8 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                                   ),
                                 )
                               : const Icon(
-                                  Icons.restart_alt,
+                                  Icons
+                                      .restart_alt,
                                 ),
                       label: Text(
                         reabriendo
@@ -832,11 +931,34 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                   child:
                       OutlinedButton.icon(
                     onPressed:
+                        abrirGoles,
+                    icon:
+                        const Icon(
+                      Icons.sports_soccer,
+                    ),
+                    label:
+                        const Text(
+                      'GOLES DEL PARTIDO',
+                    ),
+                  ),
+                ),
+
+                const SizedBox(
+                  height: 12,
+                ),
+
+                SizedBox(
+                  height: 52,
+                  child:
+                      OutlinedButton.icon(
+                    onPressed:
                         abrirEdicion,
-                    icon: const Icon(
+                    icon:
+                        const Icon(
                       Icons.edit,
                     ),
-                    label: const Text(
+                    label:
+                        const Text(
                       'EDITAR PARTIDO',
                     ),
                   ),
