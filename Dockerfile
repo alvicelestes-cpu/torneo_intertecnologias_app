@@ -18,7 +18,9 @@ RUN curl -L \
 
 ENV PATH="/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:${PATH}"
 
-RUN git config --global --add safe.directory /opt/flutter`r`n`r`nRUN flutter --version
+RUN git config --global --add safe.directory /opt/flutter
+
+RUN flutter --version
 
 WORKDIR /app
 
@@ -38,3 +40,4 @@ COPY --from=build /app/build/web /usr/share/nginx/html
 EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]
+
