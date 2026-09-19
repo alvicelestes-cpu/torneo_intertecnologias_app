@@ -18,7 +18,7 @@ RUN curl -L \
 
 ENV PATH="/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:${PATH}"
 
-RUN flutter --version
+RUN git config --global --add safe.directory /opt/flutter`r`n`r`nRUN flutter --version
 
 WORKDIR /app
 
