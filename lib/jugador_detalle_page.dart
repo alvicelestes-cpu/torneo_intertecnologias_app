@@ -12,13 +12,13 @@ import 'editar_jugador_page.dart';
 class JugadorDetallePage extends StatefulWidget {
   final Map<String, dynamic> jugador;
   final String equipoNombre;
-  final String token;
+  final String? token;
 
   const JugadorDetallePage({
     super.key,
     required this.jugador,
     required this.equipoNombre,
-    required this.token,
+    this.token,
   });
 
   @override
@@ -56,6 +56,7 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
   }
 
   Future<void> abrirEdicion() async {
+    if (!SessionManager().isAuthenticated) return;
     if (jugador.id <= 0) {
       UiHelpers.showError(context, 'El jugador no tiene un ID válido.');
       return;
@@ -66,7 +67,7 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
       MaterialPageRoute(
         builder: (_) => EditarJugadorPage(
           jugadorId: jugador.id,
-          token: widget.token,
+          token: widget.token ?? SessionManager().token,
         ),
       ),
     );
@@ -156,7 +157,9 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
                   'Fecha de nacimiento',
                   fechaNacimiento,
                 ),
-                if (jugador.documento != null && jugador.documento!.isNotEmpty)
+                if (SessionManager().isAuthenticated &&
+                    jugador.documento != null &&
+                    jugador.documento!.isNotEmpty)
                   filaDato(
                     Icons.badge,
                     'Documento',
@@ -172,32 +175,35 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
                   'Equipo',
                   widget.equipoNombre,
                 ),
-                if (jugador.observacionAdmin != null &&
+                if (SessionManager().isAuthenticated &&
+                    jugador.observacionAdmin != null &&
                     jugador.observacionAdmin!.isNotEmpty)
                   filaDato(
                     Icons.note,
                     'Observaciones',
                     jugador.observacionAdmin!,
                   ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                if (SessionManager().isAuthenticated) ...[
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: abrirEdicion,
+                      icon: const Icon(Icons.edit),
+                      label: const Text(
+                        'EDITAR JUGADOR',
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
-                    onPressed: abrirEdicion,
-                    icon: const Icon(Icons.edit),
-                    label: const Text(
-                      'EDITAR JUGADOR',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 20),
               ],
             ),

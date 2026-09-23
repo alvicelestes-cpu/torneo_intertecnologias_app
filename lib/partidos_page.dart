@@ -17,11 +17,11 @@ import 'widgets/status_chip.dart';
 import 'partido_detalle_page.dart';
 
 class PartidosPage extends StatefulWidget {
-  final String token;
+  final String? token;
 
   const PartidosPage({
     super.key,
-    required this.token,
+    this.token,
   });
 
   @override

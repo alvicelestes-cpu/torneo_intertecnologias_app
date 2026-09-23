@@ -14,11 +14,11 @@ import 'widgets/player_avatar.dart';
 import 'jugador_detalle_page.dart';
 
 class JugadoresPage extends StatefulWidget {
-  final String token;
+  final String? token;
 
   const JugadoresPage({
     super.key,
-    required this.token,
+    this.token,
   });
 
   @override

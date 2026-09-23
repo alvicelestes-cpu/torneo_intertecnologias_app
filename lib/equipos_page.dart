@@ -15,11 +15,11 @@ import 'widgets/team_logo_avatar.dart';
 import 'jugadores_equipo_page.dart';
 
 class EquiposPage extends StatefulWidget {
-  final String token;
+  final String? token;
 
   const EquiposPage({
     super.key,
-    required this.token,
+    this.token,
   });
 
   @override

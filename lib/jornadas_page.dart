@@ -14,11 +14,11 @@ import 'widgets/status_chip.dart';
 import 'jornada_detalle_page.dart';
 
 class JornadasPage extends StatefulWidget {
-  final String token;
+  final String? token;
 
   const JornadasPage({
     super.key,
-    required this.token,
+    this.token,
   });
 
   @override

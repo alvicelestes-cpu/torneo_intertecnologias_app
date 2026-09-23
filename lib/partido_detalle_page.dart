@@ -19,12 +19,12 @@ import 'tarjetas_partido_page.dart';
 
 class PartidoDetallePage extends StatefulWidget {
   final int partidoId;
-  final String token;
+  final String? token;
 
   const PartidoDetallePage({
     super.key,
     required this.partidoId,
-    required this.token,
+    this.token,
   });
 
   @override
@@ -90,12 +90,14 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   }
 
   Future<void> abrirEdicion() async {
+    final token = widget.token ?? SessionManager().token;
+    if (token.isEmpty) return;
     final actualizado = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => EditarPartidoPage(
           partidoId: widget.partidoId,
-          token: widget.token,
+          token: token,
         ),
       ),
     );
@@ -106,12 +108,14 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   }
 
   Future<void> abrirResultado() async {
+    final token = widget.token ?? SessionManager().token;
+    if (token.isEmpty) return;
     final actualizado = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => ResultadoPartidoPage(
           partidoId: widget.partidoId,
-          token: widget.token,
+          token: token,
         ),
       ),
     );
@@ -122,12 +126,14 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   }
 
   Future<void> abrirGoles() async {
+    final token = widget.token ?? SessionManager().token;
+    if (token.isEmpty) return;
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => GolesPartidoPage(
           partidoId: widget.partidoId,
-          token: widget.token,
+          token: token,
         ),
       ),
     );
@@ -138,12 +144,14 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   }
 
   Future<void> abrirTarjetas() async {
+    final token = widget.token ?? SessionManager().token;
+    if (token.isEmpty) return;
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => TarjetasPartidoPage(
           partidoId: widget.partidoId,
-          token: widget.token,
+          token: token,
         ),
       ),
     );
@@ -154,6 +162,8 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   }
 
   Future<void> confirmarReapertura() async {
+    final token = widget.token ?? SessionManager().token;
+    if (token.isEmpty) return;
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -180,7 +190,7 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     setState(() => reabriendo = true);
 
     try {
-      await _partidosService.reabrirPartido(widget.partidoId, token: widget.token);
+      await _partidosService.reabrirPartido(widget.partidoId, token: token);
       if (!mounted) return;
       UiHelpers.showSuccess(context, 'Partido reabierto correctamente.');
       await cargarPartido();
@@ -415,50 +425,52 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
-                      onPressed: abrirEdicion,
-                      icon: const Icon(Icons.edit),
-                      label: const Text('EDITAR PARTIDO'),
-                    ),
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(backgroundColor: Colors.teal.shade700),
-                      onPressed: abrirResultado,
-                      icon: const Icon(Icons.sports_score),
-                      label: const Text('RESULTADO'),
-                    ),
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(backgroundColor: Colors.indigo.shade700),
-                      onPressed: abrirGoles,
-                      icon: const Icon(Icons.sports_soccer),
-                      label: const Text('GOLES'),
-                    ),
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(backgroundColor: Colors.amber.shade900),
-                      onPressed: abrirTarjetas,
-                      icon: const Icon(Icons.style),
-                      label: const Text('TARJETAS'),
-                    ),
-                    if (partido.esFinalizado)
+                if (SessionManager().isAuthenticated) ...[
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
                       FilledButton.icon(
-                        style: FilledButton.styleFrom(backgroundColor: Colors.orange.shade800),
-                        onPressed: reabriendo ? null : confirmarReapertura,
-                        icon: reabriendo
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Icon(Icons.lock_open),
-                        label: const Text('REABRIR PARTIDO'),
+                        style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+                        onPressed: abrirEdicion,
+                        icon: const Icon(Icons.edit),
+                        label: const Text('EDITAR PARTIDO'),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 24),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(backgroundColor: Colors.teal.shade700),
+                        onPressed: abrirResultado,
+                        icon: const Icon(Icons.sports_score),
+                        label: const Text('RESULTADO'),
+                      ),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(backgroundColor: Colors.indigo.shade700),
+                        onPressed: abrirGoles,
+                        icon: const Icon(Icons.sports_soccer),
+                        label: const Text('GOLES'),
+                      ),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(backgroundColor: Colors.amber.shade900),
+                        onPressed: abrirTarjetas,
+                        icon: const Icon(Icons.style),
+                        label: const Text('TARJETAS'),
+                      ),
+                      if (partido.esFinalizado)
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(backgroundColor: Colors.orange.shade800),
+                          onPressed: reabriendo ? null : confirmarReapertura,
+                          icon: reabriendo
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.lock_open),
+                          label: const Text('REABRIR PARTIDO'),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                ],
                 filaDato(Icons.access_time, 'Fecha y hora', fechaHora),
                 filaDato(
                   Icons.stadium_outlined,

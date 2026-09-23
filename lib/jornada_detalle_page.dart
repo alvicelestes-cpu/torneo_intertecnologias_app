@@ -17,12 +17,12 @@ import 'partido_detalle_page.dart';
 
 class JornadaDetallePage extends StatefulWidget {
   final int numeroJornada;
-  final String token;
+  final String? token;
 
   const JornadaDetallePage({
     super.key,
     required this.numeroJornada,
-    required this.token,
+    this.token,
   });
 
   @override

@@ -12,6 +12,7 @@ import 'goleadores_page.dart';
 import 'jornadas_page.dart';
 import 'jugadores_page.dart';
 import 'partidos_page.dart';
+import 'portal_publico_page.dart';
 import 'posiciones_page.dart';
 import 'widgets/campeonato_selector_bar.dart';
 
@@ -38,7 +39,42 @@ class TorneoApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      home: const LoginPage(),
+      initialRoute: '/',
+      onGenerateRoute: (settings) {
+        final uri = Uri.parse(settings.name ?? '/');
+        final path = uri.path;
+
+        if (path == '/admin' || path == '/login') {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const LoginPage(),
+          );
+        }
+
+        if (path == '/inicio') {
+          final session = SessionManager();
+          if (session.isAuthenticated && session.currentUser != null) {
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (_) => InicioPage(
+                token: session.token,
+                usuario: session.currentUser!.usuario,
+                rol: session.currentUser!.rol,
+              ),
+            );
+          }
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const LoginPage(),
+          );
+        }
+
+        // Por defecto: / o /publico o cualquier ruta desconocida va al portal público
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const PortalPublicoPage(),
+        );
+      },
     );
   }
 }
@@ -228,6 +264,18 @@ class _LoginPageState extends State<LoginPage> {
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextButton.icon(
+                          onPressed: () {
+                            if (Navigator.canPop(context)) {
+                              Navigator.pop(context);
+                            } else {
+                              Navigator.pushReplacementNamed(context, '/');
+                            }
+                          },
+                          icon: const Icon(Icons.arrow_back, size: 18),
+                          label: const Text('← Volver al Portal Público'),
                         ),
                       ],
                     ),

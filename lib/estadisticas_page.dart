@@ -12,11 +12,11 @@ import 'widgets/campeonato_selector_bar.dart';
 import 'widgets/player_avatar.dart';
 
 class EstadisticasPage extends StatefulWidget {
-  final String token;
+  final String? token;
 
   const EstadisticasPage({
     super.key,
-    required this.token,
+    this.token,
   });
 
   @override

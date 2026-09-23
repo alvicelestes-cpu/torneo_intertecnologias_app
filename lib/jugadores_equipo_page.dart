@@ -15,13 +15,13 @@ import 'jugador_detalle_page.dart';
 class JugadoresEquipoPage extends StatefulWidget {
   final int equipoId;
   final String equipoNombre;
-  final String token;
+  final String? token;
 
   const JugadoresEquipoPage({
     super.key,
     required this.equipoId,
     required this.equipoNombre,
-    required this.token,
+    this.token,
   });
 
   @override

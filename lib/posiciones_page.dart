@@ -12,11 +12,11 @@ import 'widgets/campeonato_selector_bar.dart';
 import 'widgets/team_logo_avatar.dart';
 
 class PosicionesPage extends StatefulWidget {
-  final String token;
+  final String? token;
 
   const PosicionesPage({
     super.key,
-    required this.token,
+    this.token,
   });
 
   @override
