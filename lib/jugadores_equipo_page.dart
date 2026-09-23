@@ -14,6 +14,8 @@ import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
 import 'widgets/public_age_group_section.dart';
+import 'widgets/public_navbar.dart';
+import 'widgets/team_logo_avatar.dart';
 
 import 'jugador_detalle_page.dart';
 
@@ -168,22 +170,7 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      appBar: AppBar(
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(widget.equipoNombre),
-            ListenableBuilder(
-              listenable: SessionManager(),
-              builder: (context, _) => Text(
-                SessionManager().selectedCampeonatoNombre,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
-              ),
-            ),
-          ],
-        ),
-        centerTitle: true,
-      ),
+      appBar: const PublicTopNavBar(activeRoute: 'Equipos'),
       body: RefreshIndicator(
         onRefresh: cargarJugadores,
         child: Builder(
@@ -217,7 +204,7 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Cabecera del equipo
+                      // Cabecera del equipo con botón Volver a equipos, escudo, nombre y badge de inscritos
                       Card(
                         elevation: 2.5,
                         margin: const EdgeInsets.only(bottom: 16),
@@ -238,46 +225,122 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                             ),
                           ),
                           padding: const EdgeInsets.all(18),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withAlpha(35),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.groups,
-                                  color: Colors.white,
-                                  size: 28,
+                              // Botón "← Volver a equipos"
+                              InkWell(
+                                onTap: () => Navigator.pop(context),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withAlpha(25),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.white30, width: 1),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.arrow_back, color: Colors.white, size: 16),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Volver a equipos',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'PLANTEL OFICIAL',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 11,
-                                        letterSpacing: 1.1,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                              const SizedBox(height: 14),
+
+                              // Escudo, Nombre del club y Badge inscritos
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white70, width: 2),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.black26,
+                                          blurRadius: 6,
+                                          offset: Offset(0, 2),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${jugadores.length} jugadores en nómina',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w900,
-                                      ),
+                                    child: TeamLogoAvatar(
+                                      logoUrl: equipoInfo?.logo,
+                                      teamName: widget.equipoNombre,
+                                      sigla: equipoInfo?.sigla,
+                                      size: 52,
+                                      borderRadius: 26,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'PLANTEL OFICIAL',
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 11,
+                                            letterSpacing: 1.1,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          widget.equipoNombre,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withAlpha(35),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: Colors.white38, width: 1.2),
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '${jugadores.length}/23',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                        const Text(
+                                          'inscritos',
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),

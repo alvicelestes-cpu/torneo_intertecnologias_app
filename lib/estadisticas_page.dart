@@ -8,8 +8,8 @@ import 'services/torneo_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
-import 'widgets/campeonato_selector_bar.dart';
 import 'widgets/player_avatar.dart';
+import 'widgets/public_navbar.dart';
 
 class EstadisticasPage extends StatefulWidget {
   final String? token;
@@ -398,28 +398,7 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      appBar: AppBar(
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Estadísticas'),
-            ListenableBuilder(
-              listenable: SessionManager(),
-              builder: (context, _) => Text(
-                SessionManager().selectedCampeonatoNombre,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
-              ),
-            ),
-          ],
-        ),
-        centerTitle: true,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: CampeonatoSelectorBar(),
-          ),
-        ],
-      ),
+      appBar: const PublicTopNavBar(activeRoute: 'Estadísticas'),
       body: RefreshIndicator(
         onRefresh: cargarEstadisticas,
         child: Builder(

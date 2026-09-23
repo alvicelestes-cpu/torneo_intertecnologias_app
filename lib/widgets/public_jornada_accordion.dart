@@ -115,28 +115,59 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                  // FASE + BADGE
+                  // FASE + JORNADA UNIFICADA ("PRIMERA FASE - Jornada X")
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(35),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.white24, width: 1),
-                        ),
+                      Flexible(
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('⚽ ', style: TextStyle(fontSize: 10)),
-                            Text(
-                              widget.fase.toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.8,
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(35),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.white24, width: 1),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('⚽ ', style: TextStyle(fontSize: 10)),
+                                  Text(
+                                    widget.fase.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 8),
+                              child: Text(
+                                '-',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            Flexible(
+                              child: Text(
+                                'Jornada ${widget.numeroJornada}',
+                                style: const TextStyle(
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -153,19 +184,7 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-
-                  // JORNADA X GRANDE
-                  Text(
-                    'Jornada ${widget.numeroJornada}',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
 
                   // FECHA Y CANTIDAD DE PARTIDOS
                   Row(

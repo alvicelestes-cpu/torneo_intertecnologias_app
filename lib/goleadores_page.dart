@@ -8,8 +8,8 @@ import 'services/torneo_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
-import 'widgets/campeonato_selector_bar.dart';
 import 'widgets/player_avatar.dart';
+import 'widgets/public_navbar.dart';
 
 class GoleadoresPage extends StatefulWidget {
   final String? token;
@@ -105,28 +105,7 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      appBar: AppBar(
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Goleadores'),
-            ListenableBuilder(
-              listenable: SessionManager(),
-              builder: (context, _) => Text(
-                SessionManager().selectedCampeonatoNombre,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
-              ),
-            ),
-          ],
-        ),
-        centerTitle: true,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: CampeonatoSelectorBar(),
-          ),
-        ],
-      ),
+      appBar: const PublicTopNavBar(activeRoute: 'Goleadores'),
       body: RefreshIndicator(
         onRefresh: cargarGoleadores,
         child: Builder(

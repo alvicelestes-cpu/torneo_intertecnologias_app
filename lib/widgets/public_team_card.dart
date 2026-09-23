@@ -19,7 +19,7 @@ class PublicTeamCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final teamColor = equipo.color;
-    const maxPlantilla = 20;
+    const maxPlantilla = 23;
     final cant = equipo.cantidadJugadores;
     final porcentaje = min(1.0, cant / maxPlantilla);
 
@@ -166,7 +166,7 @@ class PublicTeamCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            '$cant / $maxPlantilla',
+                            '$cant/$maxPlantilla jugadores',
                             style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary,

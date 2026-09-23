@@ -11,7 +11,7 @@ import 'services/jugadores_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
-import 'widgets/campeonato_selector_bar.dart';
+import 'widgets/public_navbar.dart';
 import 'widgets/public_team_card.dart';
 
 import 'jugadores_equipo_page.dart';
@@ -135,28 +135,7 @@ class _EquiposPageState extends State<EquiposPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      appBar: AppBar(
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Equipos'),
-            ListenableBuilder(
-              listenable: SessionManager(),
-              builder: (context, _) => Text(
-                SessionManager().selectedCampeonatoNombre,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
-              ),
-            ),
-          ],
-        ),
-        centerTitle: true,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: CampeonatoSelectorBar(),
-          ),
-        ],
-      ),
+      appBar: const PublicTopNavBar(activeRoute: 'Equipos'),
       body: RefreshIndicator(
         onRefresh: cargarEquipos,
         child: Builder(
@@ -185,7 +164,7 @@ class _EquiposPageState extends State<EquiposPage> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    // Cabecera deportiva azul
+                    // Cabecera deportiva azul con icono de trofeo
                     Card(
                       elevation: 2.5,
                       margin: const EdgeInsets.only(bottom: 16),
@@ -216,7 +195,7 @@ class _EquiposPageState extends State<EquiposPage> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Icon(
-                                Icons.groups,
+                                Icons.emoji_events,
                                 color: Colors.white,
                                 size: 28,
                               ),

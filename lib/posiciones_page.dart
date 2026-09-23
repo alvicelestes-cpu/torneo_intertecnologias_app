@@ -8,7 +8,7 @@ import 'services/torneo_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
-import 'widgets/campeonato_selector_bar.dart';
+import 'widgets/public_navbar.dart';
 import 'widgets/team_logo_avatar.dart';
 
 class PosicionesPage extends StatefulWidget {
@@ -282,28 +282,7 @@ class _PosicionesPageState extends State<PosicionesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      appBar: AppBar(
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Tabla de posiciones'),
-            ListenableBuilder(
-              listenable: SessionManager(),
-              builder: (context, _) => Text(
-                SessionManager().selectedCampeonatoNombre,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
-              ),
-            ),
-          ],
-        ),
-        centerTitle: true,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: CampeonatoSelectorBar(),
-          ),
-        ],
-      ),
+      appBar: const PublicTopNavBar(activeRoute: 'Posiciones'),
       body: RefreshIndicator(
         onRefresh: cargarPosiciones,
         child: Builder(

@@ -12,8 +12,8 @@ import 'services/partidos_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
-import 'widgets/campeonato_selector_bar.dart';
 import 'widgets/public_jornada_accordion.dart';
+import 'widgets/public_navbar.dart';
 
 class JornadasPage extends StatefulWidget {
   final String? token;
@@ -120,28 +120,7 @@ class _JornadasPageState extends State<JornadasPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      appBar: AppBar(
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Jornadas'),
-            ListenableBuilder(
-              listenable: SessionManager(),
-              builder: (context, _) => Text(
-                SessionManager().selectedCampeonatoNombre,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
-              ),
-            ),
-          ],
-        ),
-        centerTitle: true,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: CampeonatoSelectorBar(),
-          ),
-        ],
-      ),
+      appBar: const PublicTopNavBar(activeRoute: 'Jornadas'),
       body: RefreshIndicator(
         onRefresh: cargarJornadas,
         child: Builder(

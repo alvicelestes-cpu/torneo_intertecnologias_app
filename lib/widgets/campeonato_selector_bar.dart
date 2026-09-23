@@ -238,10 +238,10 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
                   color: AppColors.primary,
                 ),
                 const SizedBox(width: 8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 220),
+                Flexible(
                   child: Text(
                     nombreTorneo,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 13,

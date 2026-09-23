@@ -12,6 +12,7 @@ import 'partidos_page.dart';
 import 'posiciones_page.dart';
 import 'services/torneo_service.dart';
 import 'widgets/campeonato_selector_bar.dart';
+import 'widgets/public_navbar.dart';
 
 class PortalPublicoPage extends StatefulWidget {
   const PortalPublicoPage({super.key});
@@ -298,92 +299,144 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
     );
   }
 
+  void _mostrarAcercaDelTorneo(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, color: Color(0xFF1565C0), size: 24),
+            SizedBox(width: 10),
+            Text(
+              'Acerca del Torneo',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ListenableBuilder(
+                listenable: SessionManager(),
+                builder: (context, _) => Text(
+                  SessionManager().selectedCampeonatoNombre,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    color: Color(0xFF0D233A),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Torneo oficial intertecnologías con control deportivo de planteles, partidos por jornadas, tabla de posiciones en tiempo real, estadísticas oficiales y carnets deportivos de futbolistas organizados por rangos de edad:\n\n'
+                '• 🟢 Mayores de 40 años (Verde #2E7D32)\n'
+                '• 🟠 Entre 35 y 39 años (Naranja #E65100)\n'
+                '• 🔵 De 18 a 34 años (Azul #1565C0)\n\n'
+                'Control multitorneo independiente, estadísticas en vivo y portal público de consulta deportiva.',
+                style: TextStyle(fontSize: 13, height: 1.45, color: Color(0xFF334155)),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Entendido', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final modulos = <Map<String, dynamic>>[
       {
-        'titulo': 'Posiciones',
-        'subtitulo': 'Tabla de posiciones en vivo',
-        'icono': Icons.leaderboard,
-        'color': const Color(0xFF1E88E5),
-        'builder': (BuildContext ctx) => const PosicionesPage(),
+        'titulo': 'Equipos',
+        'subtitulo': 'Clubes y plantillas oficiales',
+        'icono': Icons.groups,
+        'color': const Color(0xFF2E7D32),
+        'onTap': () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const EquiposPage()),
+        ),
       },
       {
         'titulo': 'Partidos',
-        'subtitulo': 'Calendario y resultados por jornada',
+        'subtitulo': 'Calendario y resultados oficiales',
         'icono': Icons.sports_soccer,
-        'color': const Color(0xFF43A047),
-        'builder': (BuildContext ctx) => const PartidosPage(),
+        'color': const Color(0xFFE65100),
+        'onTap': () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PartidosPage()),
+        ),
       },
       {
         'titulo': 'Jornadas',
         'subtitulo': 'Partidos agrupados por jornada',
         'icono': Icons.calendar_month,
-        'color': const Color(0xFF5E35B1),
-        'builder': (BuildContext ctx) => const JornadasPage(),
+        'color': const Color(0xFF7B1FA2),
+        'onTap': () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const JornadasPage()),
+        ),
+      },
+      {
+        'titulo': 'Posiciones',
+        'subtitulo': 'Tabla de posiciones en vivo',
+        'icono': Icons.leaderboard,
+        'color': const Color(0xFF1565C0),
+        'onTap': () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PosicionesPage()),
+        ),
       },
       {
         'titulo': 'Goleadores',
         'subtitulo': 'Clasificación de máximos artilleros',
         'icono': Icons.emoji_events,
-        'color': const Color(0xFFFB8C00),
-        'builder': (BuildContext ctx) => const GoleadoresPage(),
+        'color': const Color(0xFFF57C00),
+        'onTap': () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const GoleadoresPage()),
+        ),
       },
       {
         'titulo': 'Estadísticas',
         'subtitulo': 'Valla menos vencida y Fair Play',
         'icono': Icons.bar_chart,
         'color': const Color(0xFF8E24AA),
-        'builder': (BuildContext ctx) => const EstadisticasPage(),
+        'onTap': () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const EstadisticasPage()),
+        ),
       },
       {
-        'titulo': 'Equipos',
-        'subtitulo': 'Clubes y plantillas oficiales',
-        'icono': Icons.groups,
-        'color': const Color(0xFF00897B),
-        'builder': (BuildContext ctx) => const EquiposPage(),
-      },
-      {
-        'titulo': 'Jugadores',
-        'subtitulo': 'Carnets deportivos de futbolistas',
+        'titulo': 'Jugadores (Carnets)',
+        'subtitulo': 'Carnets oficiales ordenados por edad',
         'icono': Icons.badge_outlined,
-        'color': const Color(0xFF546E7A),
-        'builder': (BuildContext ctx) => const JugadoresPage(),
+        'color': const Color(0xFF0277BD),
+        'onTap': () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const JugadoresPage()),
+        ),
+      },
+      {
+        'titulo': 'Acerca del Torneo',
+        'subtitulo': 'Reglamento, sedes e información oficial',
+        'icono': Icons.info_outline,
+        'color': const Color(0xFF37474F),
+        'onTap': () => _mostrarAcercaDelTorneo(context),
       },
     ];
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      appBar: AppBar(
-        title: const Text(
-          'Torneo Intertecnologías',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onPressed: () {
-                Navigator.pushNamed(context, '/login');
-              },
-              icon: const Icon(Icons.admin_panel_settings_outlined, size: 18),
-              label: const Text(
-                'Acceso Admin',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
-      ),
+      appBar: const PublicTopNavBar(activeRoute: 'Inicio'),
       drawer: _buildDrawer(context),
       body: RefreshIndicator(
         onRefresh: _cargarResumen,
@@ -403,7 +456,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                   const PublicHeaderBanner(),
                   const SizedBox(height: 16),
 
-                  // 4 MÉTRICAS CON VIDA Y CONTRASTE
+                  // 4 MÉTRICAS CON VIDA Y CONTRASTE (Verde, Azul, Morado, Naranja)
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final isMobile = constraints.maxWidth < 600;
@@ -419,7 +472,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                             icon: Icons.groups,
                             label: 'EQUIPOS',
                             value: _totalEquipos,
-                            color: const Color(0xFF00897B),
+                            color: const Color(0xFF2E7D32), // Verde
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -431,7 +484,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                             icon: Icons.person,
                             label: 'JUGADORES',
                             value: _totalJugadores,
-                            color: const Color(0xFF1E88E5),
+                            color: const Color(0xFF1565C0), // Azul
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -443,7 +496,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                             icon: Icons.calendar_month,
                             label: 'JORNADAS',
                             value: _totalJornadas,
-                            color: const Color(0xFF5E35B1),
+                            color: const Color(0xFF7B1FA2), // Morado
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -455,7 +508,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                             icon: Icons.sports_soccer,
                             label: 'PARTIDOS',
                             value: _totalPartidos,
-                            color: const Color(0xFFFB8C00),
+                            color: const Color(0xFFE65100), // Naranja
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -503,7 +556,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
 
                   // TÍTULO DE SECCIONES
                   const Text(
-                    'Explorar Torneo',
+                    'Explora el Torneo',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -529,7 +582,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                       final subtitulo = modulo['subtitulo'] as String;
                       final icono = modulo['icono'] as IconData;
                       final color = modulo['color'] as Color;
-                      final builder = modulo['builder'] as WidgetBuilder;
+                      final onTap = modulo['onTap'] as VoidCallback;
 
                       return Card(
                         elevation: 2,
@@ -540,12 +593,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                         ),
                         color: Colors.white,
                         child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: builder),
-                            );
-                          },
+                          onTap: onTap,
                           child: Padding(
                             padding: const EdgeInsets.all(16),
                             child: Column(
@@ -664,10 +712,27 @@ class PublicHeaderBanner extends StatelessWidget {
                 end: Alignment.bottomRight,
               ),
             ),
-            padding: cardPadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Stack(
               children: [
+                Positioned(
+                  right: -25,
+                  bottom: -35,
+                  child: IgnorePointer(
+                    child: Opacity(
+                      opacity: 0.10,
+                      child: Icon(
+                        Icons.sports_soccer,
+                        size: isVerySmall ? 110 : 160,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: cardPadding,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -772,7 +837,10 @@ class PublicHeaderBanner extends StatelessWidget {
               ],
             ),
           ),
-        );
+        ],
+      ),
+    ),
+  );
       },
     );
   }
