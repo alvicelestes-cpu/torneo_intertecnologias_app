@@ -235,17 +235,17 @@ class PublicTopNavBar extends StatelessWidget implements PreferredSizeWidget {
                               padding: const EdgeInsets.all(8),
                               onPressed: () {
                                 if (isLoggedIn) {
-                                  Navigator.pushNamed(context, '/perfil');
+                                  Navigator.pushNamed(context, '/inicio');
                                 } else {
                                   Navigator.pushNamed(context, '/login');
                                 }
                               },
                               icon: Icon(
-                                isLoggedIn ? Icons.person : Icons.login,
+                                isLoggedIn ? Icons.admin_panel_settings : Icons.login,
                                 color: Colors.white,
                                 size: 18,
                               ),
-                              tooltip: isLoggedIn ? 'Perfil' : 'Iniciar sesión',
+                              tooltip: isLoggedIn ? 'Panel Admin' : 'Iniciar sesión',
                             ),
                           );
                         }
@@ -262,17 +262,17 @@ class PublicTopNavBar extends StatelessWidget implements PreferredSizeWidget {
                           ),
                           onPressed: () {
                             if (isLoggedIn) {
-                              Navigator.pushNamed(context, '/perfil');
+                              Navigator.pushNamed(context, '/inicio');
                             } else {
                               Navigator.pushNamed(context, '/login');
                             }
                           },
                           icon: Icon(
-                            isLoggedIn ? Icons.person : Icons.login,
+                            isLoggedIn ? Icons.admin_panel_settings : Icons.login,
                             size: 16,
                           ),
                           label: Text(
-                            isLoggedIn ? 'Perfil' : 'Iniciar sesión',
+                            isLoggedIn ? 'Panel Admin' : 'Iniciar sesión',
                             style: const TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.bold,

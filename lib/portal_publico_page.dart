@@ -95,50 +95,54 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: color.withAlpha(25),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: color.withAlpha(80), width: 1.2),
                 ),
-                child: Icon(icon, color: color, size: 26),
+                child: Icon(icon, color: color, size: 22),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 10),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _cargandoResumen
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(
-                            '$value',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF0D233A),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _cargandoResumen
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(
+                              '$value',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0D233A),
+                              ),
                             ),
-                          ),
-                    const SizedBox(height: 2),
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF64748B),
-                        letterSpacing: 0.5,
+                      const SizedBox(height: 2),
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF64748B),
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -277,11 +281,25 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.admin_panel_settings_outlined, color: Colors.blueGrey),
-                  title: const Text('Iniciar sesión / Acceso Admin', style: TextStyle(fontWeight: FontWeight.w600)),
+                  leading: Icon(
+                    SessionManager().isAuthenticated
+                        ? Icons.admin_panel_settings
+                        : Icons.admin_panel_settings_outlined,
+                    color: Colors.blueGrey,
+                  ),
+                  title: Text(
+                    SessionManager().isAuthenticated
+                        ? 'Panel de Administración'
+                        : 'Iniciar sesión / Acceso Admin',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.pushNamed(context, '/login');
+                    if (SessionManager().isAuthenticated) {
+                      Navigator.pushNamed(context, '/inicio');
+                    } else {
+                      Navigator.pushNamed(context, '/login');
+                    }
                   },
                 ),
               ],

@@ -39,7 +39,7 @@ class TorneoApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      initialRoute: '/',
+      home: const PortalPublicoPage(),
       onGenerateRoute: (settings) {
         final uri = Uri.parse(settings.name ?? '/');
         final path = uri.path;
@@ -51,7 +51,7 @@ class TorneoApp extends StatelessWidget {
           );
         }
 
-        if (path == '/inicio') {
+        if (path == '/inicio' || path == '/perfil' || path == '/admin-panel') {
           final session = SessionManager();
           if (session.isAuthenticated && session.currentUser != null) {
             return MaterialPageRoute(
@@ -69,7 +69,50 @@ class TorneoApp extends StatelessWidget {
           );
         }
 
-        // Por defecto: / o /publico o cualquier ruta desconocida va al portal público
+        if (path == '/equipos') {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const EquiposPage(),
+          );
+        }
+        if (path == '/partidos') {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const PartidosPage(),
+          );
+        }
+        if (path == '/jornadas') {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const JornadasPage(),
+          );
+        }
+        if (path == '/posiciones') {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const PosicionesPage(),
+          );
+        }
+        if (path == '/goleadores') {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const GoleadoresPage(),
+          );
+        }
+        if (path == '/estadisticas') {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const EstadisticasPage(),
+          );
+        }
+        if (path == '/jugadores') {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const JugadoresPage(),
+          );
+        }
+
+        // Por defecto: / o cualquier otra ruta va al portal público
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => const PortalPublicoPage(),
@@ -304,9 +347,9 @@ class InicioPage extends StatelessWidget {
 
   void cerrarSesion(BuildContext context) {
     SessionManager().clearSession();
-    Navigator.pushAndRemoveUntil(
+    Navigator.pushNamedAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => const LoginPage()),
+      '/',
       (route) => false,
     );
   }
@@ -356,6 +399,13 @@ class InicioPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Administración'),
         centerTitle: true,
+        leading: IconButton(
+          tooltip: 'Ir al Portal Público',
+          icon: const Icon(Icons.public),
+          onPressed: () {
+            Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+          },
+        ),
         actions: [
           IconButton(
             tooltip: 'Cerrar sesión',
