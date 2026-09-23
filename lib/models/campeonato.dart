@@ -12,6 +12,7 @@ class Campeonato {
   final String estado;
   final String? plan;
   final bool activo;
+  final bool publicado;
   final int totalEquipos;
   final int totalPartidos;
 
@@ -26,6 +27,7 @@ class Campeonato {
     this.estado = 'ACTIVO',
     this.plan,
     this.activo = true,
+    this.publicado = true,
     this.totalEquipos = 0,
     this.totalPartidos = 0,
   });
@@ -42,6 +44,7 @@ class Campeonato {
       estado: json['estado']?.toString().trim() ?? 'ACTIVO',
       plan: json['plan']?.toString().trim(),
       activo: json['activo'] == true || json['activo'] == 1 || json['activo'] == 'true',
+      publicado: json['publicado'] == true || json['publicado'] == 1 || json['publicado'] == 'true',
       totalEquipos: TextUtils.toInt(json['totalEquipos']),
       totalPartidos: TextUtils.toInt(json['totalPartidos']),
     );
@@ -59,6 +62,7 @@ class Campeonato {
       'estado': estado,
       if (plan != null) 'plan': plan,
       'activo': activo,
+      'publicado': publicado,
       'totalEquipos': totalEquipos,
       'totalPartidos': totalPartidos,
     };
@@ -66,6 +70,7 @@ class Campeonato {
 
   String get iniciales => TextUtils.getInitials(nombre);
   bool get estaActivo => activo && estado.toUpperCase() == 'ACTIVO';
+  bool get estaPublicado => estaActivo && publicado;
 
   Campeonato copyWith({
     int? id,
@@ -78,6 +83,7 @@ class Campeonato {
     String? estado,
     String? plan,
     bool? activo,
+    bool? publicado,
     int? totalEquipos,
     int? totalPartidos,
   }) {
@@ -92,6 +98,7 @@ class Campeonato {
       estado: estado ?? this.estado,
       plan: plan ?? this.plan,
       activo: activo ?? this.activo,
+      publicado: publicado ?? this.publicado,
       totalEquipos: totalEquipos ?? this.totalEquipos,
       totalPartidos: totalPartidos ?? this.totalPartidos,
     );

@@ -105,8 +105,10 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
                   listenable: _sessionManager,
                   builder: (context, _) {
                     final allList = _sessionManager.campeonatos;
-                    final activos = allList.where((c) => c.estaActivo).toList();
-                    final campeonatos = activos.isNotEmpty ? activos : allList;
+                    final isSuperAdmin = _sessionManager.isSuperAdmin;
+                    final campeonatos = isSuperAdmin
+                        ? allList.where((c) => c.estaActivo).toList()
+                        : allList.where((c) => c.estaPublicado).toList();
 
                     if (campeonatos.isEmpty) {
                       return Padding(
@@ -152,12 +154,37 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
                               ),
                             ),
                           ),
-                          title: Text(
-                            c.nombre,
-                            style: TextStyle(
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                              color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                            ),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  c.nombre,
+                                  style: TextStyle(
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                    color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                              if (!c.publicado) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.shade100,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: Colors.amber.shade700, width: 0.8),
+                                  ),
+                                  child: Text(
+                                    'No publicado',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.amber.shade900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           subtitle: Text(
                             '${c.totalEquipos} equipos • ${c.totalPartidos} partidos',

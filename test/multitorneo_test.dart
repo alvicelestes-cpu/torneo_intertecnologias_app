@@ -104,6 +104,41 @@ void main() {
       // Torneo 99 no existe en la lista, debe fallback al primero activo
       expect(session.selectedCampeonatoId, equals(1));
     });
+
+    test('visitante anónimo selecciona únicamente entre torneos publicados', () {
+      final session = SessionManager();
+      session.clearSession();
+
+      final lista = [
+        const Campeonato(id: 2, nombre: 'Pruebas', slug: 'pruebas', activo: true, publicado: false, estado: 'ACTIVO'),
+        const Campeonato(id: 1, nombre: 'Oficial', slug: 'oficial', activo: true, publicado: true, estado: 'ACTIVO'),
+      ];
+
+      session.setCampeonatos(lista);
+      // Aunque el torneo 2 es el primero en la lista, no está publicado. Debe seleccionar el torneo 1
+      expect(session.selectedCampeonatoId, equals(1));
+      expect(session.selectedCampeonatoNombre, equals('Oficial'));
+    });
+
+    test('SUPERADMIN puede seleccionar torneos no publicados para pruebas', () {
+      final session = SessionManager();
+      session.setSession(const AuthUser(
+        token: 'super-token',
+        usuario: 'superadmin',
+        rol: 'SUPERADMIN',
+        campeonatoId: 1,
+      ));
+
+      final lista = [
+        const Campeonato(id: 1, nombre: 'Oficial', slug: 'oficial', activo: true, publicado: true, estado: 'ACTIVO'),
+        const Campeonato(id: 2, nombre: 'Pruebas', slug: 'pruebas', activo: true, publicado: false, estado: 'ACTIVO'),
+      ];
+
+      session.setCampeonatos(lista);
+      session.selectCampeonatoById(2);
+      expect(session.selectedCampeonatoId, equals(2));
+      expect(session.selectedCampeonatoNombre, equals('Pruebas'));
+    });
   });
 
   group('ApiClient Propagación de campeonatoId', () {

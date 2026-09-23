@@ -125,7 +125,10 @@ class SessionManager extends ChangeNotifier {
     }
 
     final activos = list.where((c) => c.estaActivo).toList();
-    final disponibles = activos.isNotEmpty ? activos : list;
+    final publicados = list.where((c) => c.estaPublicado).toList();
+    final disponibles = (!isAuthenticated && publicados.isNotEmpty)
+        ? publicados
+        : (activos.isNotEmpty ? activos : list);
 
     if (_currentUser != null && !isSuperAdmin && _currentUser!.campeonatoId != null) {
       // ADMIN: estrictamente bloqueado a su propio campeonato asignado
@@ -143,9 +146,8 @@ class SessionManager extends ChangeNotifier {
             slug: 'campeonato-$assignedId',
           );
       _persistCampeonatoId(assignedId);
-    } else {
-      // SUPERADMIN o sin usuario autenticado:
-      // Validar si el campeonato guardado/seleccionado existe y está activo
+    } else if (isSuperAdmin) {
+      // SUPERADMIN: validar si el campeonato guardado/seleccionado existe y está activo
       final targetId = _selectedCampeonato?.id ??
           _persistedCampeonatoId ??
           _currentUser?.campeonatoId ??
@@ -160,7 +162,22 @@ class SessionManager extends ChangeNotifier {
         _selectedCampeonato = match;
         _persistCampeonatoId(match.id);
       } else {
-        // Si el campeonato guardado ya no existe o está inactivo, usar el primero activo disponible
+        _selectedCampeonato = disponibles.first;
+        _persistCampeonatoId(disponibles.first.id);
+      }
+    } else {
+      // VISITANTE ANÓNIMO (Portal Público):
+      // Seleccionar únicamente entre campeonatos publicados
+      final targetId = _selectedCampeonato?.id ?? _persistedCampeonatoId;
+      final match = disponibles.cast<Campeonato?>().firstWhere(
+            (c) => c?.id == targetId && c?.estaPublicado == true,
+            orElse: () => null,
+          );
+
+      if (match != null) {
+        _selectedCampeonato = match;
+        _persistCampeonatoId(match.id);
+      } else {
         _selectedCampeonato = disponibles.first;
         _persistCampeonatoId(disponibles.first.id);
       }
@@ -212,6 +229,7 @@ class SessionManager extends ChangeNotifier {
 
   void clearSession() {
     _currentUser = null;
+    _campeonatos = [];
     notifyListeners();
   }
 }
