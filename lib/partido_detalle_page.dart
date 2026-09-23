@@ -1,11 +1,19 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+
+import 'core/constants/app_colors.dart';
+import 'core/errors/app_exception.dart';
+import 'core/utils/date_utils.dart';
+import 'core/utils/text_utils.dart';
+import 'core/utils/ui_helpers.dart';
+import 'models/partido_detalle.dart';
+import 'services/partidos_service.dart';
+import 'widgets/app_error_view.dart';
+import 'widgets/app_loading_indicator.dart';
+import 'widgets/status_chip.dart';
 
 import 'editar_partido_page.dart';
-import 'resultado_partido_page.dart';
 import 'goles_partido_page.dart';
+import 'resultado_partido_page.dart';
 import 'tarjetas_partido_page.dart';
 
 class PartidoDetallePage extends StatefulWidget {
@@ -19,21 +27,16 @@ class PartidoDetallePage extends StatefulWidget {
   });
 
   @override
-  State<PartidoDetallePage> createState() =>
-      _PartidoDetallePageState();
+  State<PartidoDetallePage> createState() => _PartidoDetallePageState();
 }
 
 class _PartidoDetallePageState extends State<PartidoDetallePage> {
-  static const String baseUrl =
-      'https://torneointertecnologias-production-7ae9.up.railway.app';
+  final PartidosService _partidosService = PartidosService();
 
   bool cargando = true;
   bool reabriendo = false;
-
   String? error;
-
-  Map<String, dynamic>? partido;
-  Map<String, dynamic>? resumen;
+  PartidoDetalle? detalle;
 
   @override
   void initState() {
@@ -42,263 +45,51 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   }
 
   Future<void> cargarPartido() async {
-    if (mounted) {
-      setState(() {
-        cargando = true;
-        error = null;
-      });
-    }
+    setState(() {
+      cargando = true;
+      error = null;
+    });
 
     try {
-      final respuesta = await http.get(
-        Uri.parse(
-          '$baseUrl/api/partidos/${widget.partidoId}',
-        ),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer ${widget.token}',
-        },
+      final res = await _partidosService.getPartidoById(
+        widget.partidoId,
+        token: widget.token,
       );
-
-      if (respuesta.statusCode == 200) {
-        final dynamic datos = jsonDecode(respuesta.body);
-
-        if (datos is Map<String, dynamic> &&
-            datos['partido'] is Map<String, dynamic>) {
-          if (!mounted) return;
-
-          setState(() {
-            partido = Map<String, dynamic>.from(
-              datos['partido'],
-            );
-
-            if (datos['resumen'] is Map<String, dynamic>) {
-              resumen = Map<String, dynamic>.from(
-                datos['resumen'],
-              );
-            } else {
-              resumen = null;
-            }
-          });
-        } else {
-          if (!mounted) return;
-
-          setState(() {
-            error =
-                'La respuesta del servidor no tiene el formato esperado.';
-          });
-        }
-      } else if (respuesta.statusCode == 401) {
-        if (!mounted) return;
-
-        setState(() {
-          error =
-              'Sesión no autorizada o token vencido.';
-        });
-      } else if (respuesta.statusCode == 404) {
-        if (!mounted) return;
-
-        setState(() {
-          error =
-              'Partido no encontrado.';
-        });
-      } else {
-        if (!mounted) return;
-
-        setState(() {
-          error =
-              'No fue posible cargar el partido. Código ${respuesta.statusCode}.';
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        error =
-            'No se pudo conectar con el servidor.';
-      });
-    } finally {
       if (mounted) {
         setState(() {
-          cargando = false;
+          detalle = res;
         });
       }
+    } on AppException catch (e) {
+      if (mounted) setState(() => error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => error = 'No se pudo conectar con el servidor.');
+    } finally {
+      if (mounted) setState(() => cargando = false);
     }
   }
 
-  String obtenerNombreEquipo(
-    dynamic equipo,
-    String valorDefecto,
-  ) {
-    if (equipo is Map) {
-      final nombre =
-          equipo['nombre']?.toString().trim();
-
-      if (nombre != null &&
-          nombre.isNotEmpty) {
-        return nombre;
-      }
-    }
-
-    if (equipo is String &&
-        equipo.trim().isNotEmpty) {
-      return equipo.trim();
-    }
-
-    return valorDefecto;
-  }
-
-  String formatearFechaHora(
-    dynamic fechaHora,
-  ) {
-    if (fechaHora == null) {
-      return 'Fecha por definir';
-    }
-
-    final valor =
-        fechaHora.toString().trim();
-
-    if (valor.isEmpty) {
-      return 'Fecha por definir';
-    }
-
-    final fecha =
-        DateTime.tryParse(valor);
-
-    if (fecha == null) {
-      return valor;
-    }
-
-    final dia =
-        fecha.day
-            .toString()
-            .padLeft(2, '0');
-
-    final mes =
-        fecha.month
-            .toString()
-            .padLeft(2, '0');
-
-    final anio =
-        fecha.year.toString();
-
-    final hora =
-        fecha.hour
-            .toString()
-            .padLeft(2, '0');
-
-    final minuto =
-        fecha.minute
-            .toString()
-            .padLeft(2, '0');
-
-    return '$dia/$mes/$anio - $hora:$minuto';
-  }
-
-  String formatearFase(
-    dynamic fase,
-  ) {
-    if (fase == null) {
-      return 'Sin fase';
-    }
-
-    final valor = fase
-        .toString()
-        .replaceAll('_', ' ')
-        .trim();
-
-    if (valor.isEmpty) {
-      return 'Sin fase';
-    }
-
-    return valor;
-  }
-
-  String obtenerMarcador() {
-    if (partido == null) {
-      return '-';
-    }
-
-    final golesLocal =
-        partido!['golesLocal'];
-
-    final golesVisitante =
-        partido!['golesVisitante'];
-
-    if (golesLocal == null ||
-        golesVisitante == null) {
-      return '-';
-    }
-
-    return '$golesLocal - $golesVisitante';
-  }
-
-  Color obtenerColorEstado(
-    String estado,
-  ) {
-    switch (estado.toUpperCase()) {
-      case 'FINALIZADO':
-        return Colors.green;
-
-      case 'EN_CURSO':
-        return Colors.orange;
-
-      case 'PROGRAMADO':
-        return Colors.blue;
-
-      case 'CANCELADO':
-        return Colors.red;
-
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Widget filaDato(
-    IconData icono,
-    String titulo,
-    String valor,
-  ) {
+  Widget filaDato(IconData icono, String titulo, String valor) {
     return Card(
       elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
-        leading: Icon(icono),
+        leading: Icon(icono, color: AppColors.primary),
         title: Text(
           titulo,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
           valor,
-          style: const TextStyle(
-            fontSize: 16,
-          ),
+          style: const TextStyle(fontSize: 16),
         ),
-      ),
-    );
-  }
-
-  void mostrarMensaje(
-    String mensaje, {
-    bool esError = false,
-  }) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje),
-        backgroundColor:
-            esError
-                ? Colors.red.shade700
-                : Colors.green.shade700,
       ),
     );
   }
 
   Future<void> abrirEdicion() async {
-    final actualizado =
-        await Navigator.push<bool>(
+    final actualizado = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => EditarPartidoPage(
@@ -309,13 +100,12 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     );
 
     if (actualizado == true && mounted) {
-      await cargarPartido();
+      cargarPartido();
     }
   }
 
   Future<void> abrirResultado() async {
-    final actualizado =
-        await Navigator.push<bool>(
+    final actualizado = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => ResultadoPartidoPage(
@@ -326,7 +116,7 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     );
 
     if (actualizado == true && mounted) {
-      await cargarPartido();
+      cargarPartido();
     }
   }
 
@@ -342,7 +132,7 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     );
 
     if (mounted) {
-      await cargarPartido();
+      cargarPartido();
     }
   }
 
@@ -358,573 +148,312 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     );
 
     if (mounted) {
-      await cargarPartido();
+      cargarPartido();
     }
   }
 
   Future<void> confirmarReapertura() async {
-    if (partido == null ||
-        reabriendo) {
-      return;
-    }
-
-    final local =
-        obtenerNombreEquipo(
-      partido!['equipoLocal'],
-      'Equipo local',
-    );
-
-    final visitante =
-        obtenerNombreEquipo(
-      partido!['equipoVisitante'],
-      'Equipo visitante',
-    );
-
-    final confirmar =
-        await showDialog<bool>(
+    final confirmar = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text(
-            'Reabrir partido',
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Reabrir partido'),
+        content: const Text(
+          '¿Está seguro de reabrir este partido? El estado cambiará a EN CURSO y se recalcularán estadísticas.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('CANCELAR'),
           ),
-          content: Text(
-            '¿Deseas reabrir el partido '
-            '$local vs $visitante?\n\n'
-            'El marcador será eliminado y el partido '
-            'volverá al estado PROGRAMADO.\n\n'
-            'La fecha y hora se conservarán.',
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.orange.shade800),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('REABRIR'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(
-                  context,
-                  false,
-                );
-              },
-              child: const Text(
-                'CANCELAR',
-              ),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(
-                  context,
-                  true,
-                );
-              },
-              child: const Text(
-                'REABRIR',
-              ),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
 
-    if (confirmar == true) {
-      await reabrirPartido();
+    if (confirmar != true) return;
+
+    setState(() => reabriendo = true);
+
+    try {
+      await _partidosService.reabrirPartido(widget.partidoId, token: widget.token);
+      if (!mounted) return;
+      UiHelpers.showSuccess(context, 'Partido reabierto correctamente.');
+      await cargarPartido();
+    } on AppException catch (e) {
+      if (!mounted) return;
+      UiHelpers.showError(context, e.message);
+    } catch (_) {
+      if (!mounted) return;
+      UiHelpers.showError(context, 'Error al reabrir el partido.');
+    } finally {
+      if (mounted) setState(() => reabriendo = false);
     }
   }
 
-  Future<void> reabrirPartido() async {
-    setState(() {
-      reabriendo = true;
-    });
+  Widget construirResumenIncidencias(PartidoDetalle det) {
+    final resumen = det.resumen;
+    if (resumen == null) return const SizedBox.shrink();
 
-    try {
-      final respuesta =
-          await http.put(
-        Uri.parse(
-          '$baseUrl/api/partidos/${widget.partidoId}/reabrir',
+    final golesLocal = resumen.golesLocal;
+    final golesVisitante = resumen.golesVisitante;
+    final tarjetasLocal = resumen.tarjetasLocal;
+    final tarjetasVisitante = resumen.tarjetasVisitante;
+
+    final tieneGoles = golesLocal.isNotEmpty || golesVisitante.isNotEmpty;
+    final tieneTarjetas = tarjetasLocal.isNotEmpty || tarjetasVisitante.isNotEmpty;
+
+    if (!tieneGoles && !tieneTarjetas) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 20),
+        const Text(
+          'Resumen de incidencias',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        headers: {
-          'Accept':
-              'application/json',
-          'Authorization':
-              'Bearer ${widget.token}',
-        },
-      );
-
-      if (respuesta.statusCode ==
-          200) {
-        mostrarMensaje(
-          'Partido reabierto correctamente.',
-        );
-
-        await cargarPartido();
-      } else {
-        String mensaje =
-            'No fue posible reabrir el partido. Código ${respuesta.statusCode}.';
-
-        try {
-          final dynamic datos =
-              jsonDecode(
-            respuesta.body,
-          );
-
-          if (datos is Map<String, dynamic>) {
-            mensaje =
-                datos['mensaje']?.toString() ??
-                    datos['message']?.toString() ??
-                    mensaje;
-          }
-        } catch (_) {}
-
-        mostrarMensaje(
-          mensaje,
-          esError: true,
-        );
-      }
-    } catch (e) {
-      mostrarMensaje(
-        'No se pudo conectar con el servidor.',
-        esError: true,
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          reabriendo = false;
-        });
-      }
-    }
+        const SizedBox(height: 10),
+        if (tieneGoles)
+          Card(
+            elevation: 1,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.sports_soccer, size: 20, color: AppColors.primary),
+                      SizedBox(width: 8),
+                      Text('Goles', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
+                  const Divider(),
+                  if (golesLocal.isNotEmpty) ...[
+                    Text('${det.partido.equipoLocalNombre}:', style: const TextStyle(fontWeight: FontWeight.w600)),
+                    ...golesLocal.map((g) => Padding(
+                          padding: const EdgeInsets.only(left: 8, top: 4),
+                          child: Text('• ${g.toString()}'),
+                        )),
+                    const SizedBox(height: 8),
+                  ],
+                  if (golesVisitante.isNotEmpty) ...[
+                    Text('${det.partido.equipoVisitanteNombre}:', style: const TextStyle(fontWeight: FontWeight.w600)),
+                    ...golesVisitante.map((g) => Padding(
+                          padding: const EdgeInsets.only(left: 8, top: 4),
+                          child: Text('• ${g.toString()}'),
+                        )),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        if (tieneTarjetas) ...[
+          const SizedBox(height: 10),
+          Card(
+            elevation: 1,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, size: 20, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Text('Tarjetas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
+                  const Divider(),
+                  if (tarjetasLocal.isNotEmpty) ...[
+                    Text('${det.partido.equipoLocalNombre}:', style: const TextStyle(fontWeight: FontWeight.w600)),
+                    ...tarjetasLocal.map((t) => Padding(
+                          padding: const EdgeInsets.only(left: 8, top: 4),
+                          child: Text('• ${t.toString()}'),
+                        )),
+                    const SizedBox(height: 8),
+                  ],
+                  if (tarjetasVisitante.isNotEmpty) ...[
+                    Text('${det.partido.equipoVisitanteNombre}:', style: const TextStyle(fontWeight: FontWeight.w600)),
+                    ...tarjetasVisitante.map((t) => Padding(
+                          padding: const EdgeInsets.only(left: 8, top: 4),
+                          child: Text('• ${t.toString()}'),
+                        )),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     if (cargando) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+      return Scaffold(
+        backgroundColor: AppColors.scaffoldBackground,
+        appBar: AppBar(title: const Text('Detalle del partido')),
+        body: const AppLoadingIndicator(),
       );
     }
 
     if (error != null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Detalle del partido',
-          ),
-        ),
-        body: Center(
-          child: Padding(
-            padding:
-                const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize:
-                  MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 70,
-                  color: Colors.red,
-                ),
-                const SizedBox(
-                  height: 18,
-                ),
-                Text(
-                  error!,
-                  textAlign:
-                      TextAlign.center,
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                FilledButton.icon(
-                  onPressed:
-                      cargarPartido,
-                  icon: const Icon(
-                    Icons.refresh,
-                  ),
-                  label: const Text(
-                    'REINTENTAR',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        backgroundColor: AppColors.scaffoldBackground,
+        appBar: AppBar(title: const Text('Detalle del partido')),
+        body: AppErrorView(message: error!, onRetry: cargarPartido),
       );
     }
 
-    if (partido == null) {
-      return const Scaffold(
-        body: Center(
-          child: Text(
-            'No hay información del partido.',
-          ),
-        ),
+    final det = detalle;
+    if (det == null) {
+      return Scaffold(
+        backgroundColor: AppColors.scaffoldBackground,
+        appBar: AppBar(title: const Text('Detalle del partido')),
+        body: const Center(child: Text('No hay información del partido.')),
       );
     }
 
-    final local =
-        obtenerNombreEquipo(
-      partido!['equipoLocal'],
-      'Equipo local',
-    );
-
-    final visitante =
-        obtenerNombreEquipo(
-      partido!['equipoVisitante'],
-      'Equipo visitante',
-    );
-
-    final estado =
-        partido!['estado']
-                ?.toString()
-                .trim() ??
-            'SIN ESTADO';
-
-    final estadoNormalizado =
-        estado.toUpperCase();
-
-    final jornada =
-        partido!['jornada']
-                ?.toString() ??
-            '-';
-
-    final fase =
-        formatearFase(
-      partido!['fase'],
-    );
-
-    final llave =
-        partido!['llave']
-                ?.toString()
-                .trim() ??
-            '';
-
-    final observaciones =
-        partido!['observaciones']
-                ?.toString()
-                .trim() ??
-            '';
-
-    final fechaHora =
-        formatearFechaHora(
-      partido!['fechaHora'],
-    );
-
-    final marcador =
-        obtenerMarcador();
-
-    final esFinalizado =
-        estadoNormalizado ==
-            'FINALIZADO';
+    final partido = det.partido;
+    final fase = TextUtils.formatFase(partido.fase);
+    final fechaHora = AppDateUtils.formatDateTime(partido.fechaHora);
 
     return Scaffold(
-      backgroundColor:
-          const Color(
-        0xFFF4F7FB,
-      ),
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        title: const Text(
-          'Detalle del partido',
-        ),
+        title: const Text('Detalle del partido'),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding:
-            const EdgeInsets.all(
-                20),
+        padding: const EdgeInsets.all(20),
         child: Center(
           child: ConstrainedBox(
-            constraints:
-                const BoxConstraints(
-              maxWidth: 700,
-            ),
+            constraints: const BoxConstraints(maxWidth: 700),
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Card(
                   elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   child: Padding(
-                    padding:
-                        const EdgeInsets.all(
-                            24),
+                    padding: const EdgeInsets.all(24),
                     child: Column(
                       children: [
-                        Text(
-                          'Jornada $jornada',
-                          style:
-                              const TextStyle(
-                            fontSize: 18,
-                            fontWeight:
-                                FontWeight.bold,
+                        if (partido.jornada != null)
+                          Text(
+                            'Jornada ${partido.jornada}',
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
-                        ),
-                        const SizedBox(
-                          height: 6,
-                        ),
+                        const SizedBox(height: 6),
                         Text(
                           fase,
-                          style:
-                              const TextStyle(
-                            color:
-                                Colors.black54,
-                          ),
+                          style: const TextStyle(color: Colors.black54),
                         ),
-                        const SizedBox(
-                          height: 24,
-                        ),
+                        const SizedBox(height: 24),
                         Row(
                           children: [
                             Expanded(
                               child: Text(
-                                local,
-                                textAlign:
-                                    TextAlign.center,
-                                style:
-                                    const TextStyle(
-                                  fontSize: 21,
-                                  fontWeight:
-                                      FontWeight.bold,
-                                ),
+                                partido.equipoLocalNombre,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
                               ),
                             ),
                             Container(
-                              padding:
-                                  const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 12,
-                              ),
-                              decoration:
-                                  BoxDecoration(
-                                color:
-                                    const Color(
-                                  0xFFEAF2FB,
-                                ),
-                                borderRadius:
-                                    BorderRadius.circular(
-                                  12,
-                                ),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryLight,
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                marcador,
-                                style:
-                                    const TextStyle(
+                                partido.marcador,
+                                style: const TextStyle(
                                   fontSize: 26,
-                                  fontWeight:
-                                      FontWeight.bold,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
                                 ),
                               ),
                             ),
                             Expanded(
                               child: Text(
-                                visitante,
-                                textAlign:
-                                    TextAlign.center,
-                                style:
-                                    const TextStyle(
-                                  fontSize: 21,
-                                  fontWeight:
-                                      FontWeight.bold,
-                                ),
+                                partido.equipoVisitanteNombre,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(
-                          height: 22,
-                        ),
-                        Container(
-                          padding:
-                              const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration:
-                              BoxDecoration(
-                            color:
-                                obtenerColorEstado(
-                              estado,
-                            ).withValues(
-                              alpha: 0.12,
-                            ),
-                            borderRadius:
-                                BorderRadius.circular(
-                              20,
-                            ),
-                          ),
-                          child: Text(
-                            estado,
-                            style:
-                                TextStyle(
-                              color:
-                                  obtenerColorEstado(
-                                estado,
-                              ),
-                              fontWeight:
-                                  FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                        const SizedBox(height: 22),
+                        StatusChip(status: partido.estado, fontSize: 13),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(
-                  height: 18,
-                ),
-                filaDato(
-                  Icons.calendar_month,
-                  'Fecha y hora',
-                  fechaHora,
-                ),
-                filaDato(
-                  Icons.flag,
-                  'Fase',
-                  fase,
-                ),
-                filaDato(
-                  Icons.numbers,
-                  'Jornada',
-                  jornada,
-                ),
-                if (llave.isNotEmpty)
-                  filaDato(
-                    Icons.account_tree,
-                    'Llave',
-                    llave,
-                  ),
-                filaDato(
-                  Icons.info_outline,
-                  'Estado',
-                  estado,
-                ),
-                if (observaciones.isNotEmpty)
-                  filaDato(
-                    Icons.notes,
-                    'Observaciones',
-                    observaciones,
-                  ),
-                const SizedBox(
-                  height: 24,
-                ),
-
-                SizedBox(
-                  height: 52,
-                  child: FilledButton.icon(
-                    onPressed:
-                        abrirResultado,
-                    icon: Icon(
-                      esFinalizado
-                          ? Icons.edit_note
-                          : Icons.scoreboard,
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+                      onPressed: abrirEdicion,
+                      icon: const Icon(Icons.edit),
+                      label: const Text('EDITAR PARTIDO'),
                     ),
-                    label: Text(
-                      esFinalizado
-                          ? 'EDITAR RESULTADO'
-                          : 'REGISTRAR RESULTADO',
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(backgroundColor: Colors.teal.shade700),
+                      onPressed: abrirResultado,
+                      icon: const Icon(Icons.sports_score),
+                      label: const Text('RESULTADO'),
                     ),
-                  ),
-                ),
-
-                if (esFinalizado) ...[
-                  const SizedBox(
-                    height: 12,
-                  ),
-                  SizedBox(
-                    height: 52,
-                    child:
-                        OutlinedButton.icon(
-                      onPressed:
-                          reabriendo
-                              ? null
-                              : confirmarReapertura,
-                      icon:
-                          reabriendo
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child:
-                                      CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.restart_alt,
-                                ),
-                      label: Text(
-                        reabriendo
-                            ? 'REABRIENDO...'
-                            : 'REABRIR PARTIDO',
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(backgroundColor: Colors.indigo.shade700),
+                      onPressed: abrirGoles,
+                      icon: const Icon(Icons.sports_soccer),
+                      label: const Text('GOLES'),
+                    ),
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(backgroundColor: Colors.amber.shade900),
+                      onPressed: abrirTarjetas,
+                      icon: const Icon(Icons.style),
+                      label: const Text('TARJETAS'),
+                    ),
+                    if (partido.esFinalizado)
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(backgroundColor: Colors.orange.shade800),
+                        onPressed: reabriendo ? null : confirmarReapertura,
+                        icon: reabriendo
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.lock_open),
+                        label: const Text('REABRIR PARTIDO'),
                       ),
-                    ),
-                  ),
-                ],
-
-                const SizedBox(
-                  height: 12,
+                  ],
                 ),
-
-                SizedBox(
-                  height: 52,
-                  child:
-                      OutlinedButton.icon(
-                    onPressed:
-                        abrirGoles,
-                    icon:
-                        const Icon(
-                      Icons.sports_soccer,
-                    ),
-                    label:
-                        const Text(
-                      'GOLES DEL PARTIDO',
-                    ),
-                  ),
+                const SizedBox(height: 24),
+                filaDato(Icons.access_time, 'Fecha y hora', fechaHora),
+                filaDato(
+                  Icons.stadium_outlined,
+                  'Cancha',
+                  partido.cancha?.isNotEmpty == true ? partido.cancha! : 'Por definir',
                 ),
-
-                const SizedBox(
-                  height: 12,
-                ),
-
-                SizedBox(
-                  height: 52,
-                  child:
-                      OutlinedButton.icon(
-                    onPressed:
-                        abrirTarjetas,
-                    icon:
-                        const Icon(
-                      Icons.style,
-                    ),
-                    label:
-                        const Text(
-                      'TARJETAS DEL PARTIDO',
-                    ),
-                  ),
-                ),
-
-                const SizedBox(
-                  height: 12,
-                ),
-
-                SizedBox(
-                  height: 52,
-                  child:
-                      OutlinedButton.icon(
-                    onPressed:
-                        abrirEdicion,
-                    icon:
-                        const Icon(
-                      Icons.edit,
-                    ),
-                    label:
-                        const Text(
-                      'EDITAR PARTIDO',
-                    ),
-                  ),
-                ),
-
-                const SizedBox(
-                  height: 20,
-                ),
+                if (partido.llave != null && partido.llave!.isNotEmpty)
+                  filaDato(Icons.account_tree_outlined, 'Llave', partido.llave!),
+                if (partido.observaciones != null && partido.observaciones!.isNotEmpty)
+                  filaDato(Icons.note_outlined, 'Observaciones', partido.observaciones!),
+                construirResumenIncidencias(det),
+                const SizedBox(height: 20),
               ],
             ),
           ),

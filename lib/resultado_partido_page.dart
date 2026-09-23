@@ -1,7 +1,12 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+
+import 'core/constants/app_colors.dart';
+import 'core/errors/app_exception.dart';
+import 'core/utils/ui_helpers.dart';
+import 'models/partido_detalle.dart';
+import 'services/partidos_service.dart';
+import 'widgets/app_error_view.dart';
+import 'widgets/app_loading_indicator.dart';
 
 class ResultadoPartidoPage extends StatefulWidget {
   final int partidoId;
@@ -14,16 +19,12 @@ class ResultadoPartidoPage extends StatefulWidget {
   });
 
   @override
-  State<ResultadoPartidoPage> createState() =>
-      _ResultadoPartidoPageState();
+  State<ResultadoPartidoPage> createState() => _ResultadoPartidoPageState();
 }
 
-class _ResultadoPartidoPageState
-    extends State<ResultadoPartidoPage> {
-  static const String baseUrl =
-      'https://torneointertecnologias-production-7ae9.up.railway.app';
-
+class _ResultadoPartidoPageState extends State<ResultadoPartidoPage> {
   final _formKey = GlobalKey<FormState>();
+  final PartidosService _partidosService = PartidosService();
 
   final golesLocalCtrl = TextEditingController();
   final golesVisitanteCtrl = TextEditingController();
@@ -33,11 +34,10 @@ class _ResultadoPartidoPageState
 
   bool cargando = true;
   bool guardando = false;
-
   String? error;
 
-  String equipoLocal = '';
-  String equipoVisitante = '';
+  String equipoLocal = 'Equipo local';
+  String equipoVisitante = 'Equipo visitante';
 
   @override
   void initState() {
@@ -62,183 +62,90 @@ class _ResultadoPartidoPageState
     });
 
     try {
-      final respuesta = await http.get(
-        Uri.parse(
-          '$baseUrl/api/partidos/${widget.partidoId}',
-        ),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer ${widget.token}',
-        },
+      final PartidoDetalle detalle = await _partidosService.getPartidoById(
+        widget.partidoId,
+        token: widget.token,
       );
 
-      if (respuesta.statusCode == 200) {
-        final dynamic datos =
-            jsonDecode(respuesta.body);
-
-        if (datos is Map<String, dynamic> &&
-            datos['partido'] is Map<String, dynamic>) {
-          final partido =
-              Map<String, dynamic>.from(
-            datos['partido'],
-          );
-
-          final local = partido['equipoLocal'];
-          final visitante = partido['equipoVisitante'];
-
-          if (local is Map) {
-            equipoLocal =
-                local['nombre']?.toString() ?? '';
-          }
-
-          if (visitante is Map) {
-            equipoVisitante =
-                visitante['nombre']?.toString() ?? '';
-          }
-
-          golesLocalCtrl.text =
-              partido['golesLocal']?.toString() ?? '';
-
-          golesVisitanteCtrl.text =
-              partido['golesVisitante']?.toString() ?? '';
-
-          observacionesCtrl.text =
-              partido['observaciones']?.toString() ?? '';
-
-          final fechaHora = partido['fechaHora'];
-
-          if (fechaHora != null) {
-            final fecha =
-                DateTime.tryParse(
-              fechaHora.toString(),
-            );
-
-            if (fecha != null) {
-              fechaCtrl.text =
-                  '${fecha.year.toString().padLeft(4, '0')}-'
-                  '${fecha.month.toString().padLeft(2, '0')}-'
-                  '${fecha.day.toString().padLeft(2, '0')}';
-
-              horaCtrl.text =
-                  '${fecha.hour.toString().padLeft(2, '0')}:'
-                  '${fecha.minute.toString().padLeft(2, '0')}';
-            }
-          }
-
-          if (mounted) {
-            setState(() {});
-          }
-        } else {
-          setState(() {
-            error =
-                'La respuesta del servidor no tiene el formato esperado.';
-          });
-        }
-      } else if (respuesta.statusCode == 401) {
-        setState(() {
-          error =
-              'Sesión no autorizada o token vencido.';
-        });
-      } else {
-        setState(() {
-          error =
-              'No fue posible cargar el partido. Código ${respuesta.statusCode}.';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        error =
-            'No se pudo conectar con el servidor.';
-      });
-    } finally {
+      final partido = detalle.partido;
       if (mounted) {
         setState(() {
-          cargando = false;
+          equipoLocal = partido.equipoLocalNombre;
+          equipoVisitante = partido.equipoVisitanteNombre;
+          golesLocalCtrl.text = partido.golesLocal != null ? partido.golesLocal.toString() : '';
+          golesVisitanteCtrl.text =
+              partido.golesVisitante != null ? partido.golesVisitante.toString() : '';
+          observacionesCtrl.text = partido.observaciones ?? '';
+
+          if (partido.fechaHora != null && partido.fechaHora!.isNotEmpty) {
+            final dt = DateTime.tryParse(partido.fechaHora!);
+            if (dt != null) {
+              fechaCtrl.text =
+                  '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+              horaCtrl.text =
+                  '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+            }
+          }
         });
       }
+    } on AppException catch (e) {
+      if (mounted) setState(() => error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => error = 'No se pudo conectar con el servidor.');
+    } finally {
+      if (mounted) setState(() => cargando = false);
     }
   }
 
   Future<void> seleccionarFecha() async {
-    DateTime inicial = DateTime.now();
-
-    final actual =
-        DateTime.tryParse(fechaCtrl.text);
-
-    if (actual != null) {
-      inicial = actual;
+    DateTime fechaInicial = DateTime.now();
+    final fechaActual = DateTime.tryParse(fechaCtrl.text.trim());
+    if (fechaActual != null) {
+      fechaInicial = fechaActual;
     }
 
-    final seleccionada =
-        await showDatePicker(
+    final seleccionada = await showDatePicker(
       context: context,
-      initialDate: inicial,
+      initialDate: fechaInicial,
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
     );
 
-    if (seleccionada == null) {
-      return;
-    }
+    if (seleccionada == null) return;
+
+    final anio = seleccionada.year.toString().padLeft(4, '0');
+    final mes = seleccionada.month.toString().padLeft(2, '0');
+    final dia = seleccionada.day.toString().padLeft(2, '0');
 
     setState(() {
-      fechaCtrl.text =
-          '${seleccionada.year.toString().padLeft(4, '0')}-'
-          '${seleccionada.month.toString().padLeft(2, '0')}-'
-          '${seleccionada.day.toString().padLeft(2, '0')}';
+      fechaCtrl.text = '$anio-$mes-$dia';
     });
   }
 
   Future<void> seleccionarHora() async {
-    TimeOfDay inicial = TimeOfDay.now();
-
-    final partes =
-        horaCtrl.text.split(':');
-
+    TimeOfDay horaInicial = TimeOfDay.now();
+    final partes = horaCtrl.text.split(':');
     if (partes.length == 2) {
       final h = int.tryParse(partes[0]);
       final m = int.tryParse(partes[1]);
-
-      if (h != null && m != null) {
-        inicial = TimeOfDay(
-          hour: h,
-          minute: m,
-        );
+      if (h != null && m != null && h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+        horaInicial = TimeOfDay(hour: h, minute: m);
       }
     }
 
-    final seleccionada =
-        await showTimePicker(
+    final seleccionada = await showTimePicker(
       context: context,
-      initialTime: inicial,
+      initialTime: horaInicial,
     );
 
-    if (seleccionada == null) {
-      return;
-    }
+    if (seleccionada == null) return;
+
+    final h = seleccionada.hour.toString().padLeft(2, '0');
+    final m = seleccionada.minute.toString().padLeft(2, '0');
 
     setState(() {
-      horaCtrl.text =
-          '${seleccionada.hour.toString().padLeft(2, '0')}:'
-          '${seleccionada.minute.toString().padLeft(2, '0')}';
+      horaCtrl.text = '$h:$m';
     });
-  }
-
-  void mostrarMensaje(
-    String mensaje, {
-    bool esError = false,
-  }) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje),
-        backgroundColor:
-            esError
-                ? Colors.red.shade700
-                : Colors.green.shade700,
-      ),
-    );
   }
 
   Future<void> guardarResultado() async {
@@ -246,458 +153,257 @@ class _ResultadoPartidoPageState
       return;
     }
 
-    final golesLocal =
-        int.tryParse(
-      golesLocalCtrl.text.trim(),
-    );
+    final golesLocal = int.tryParse(golesLocalCtrl.text.trim());
+    final golesVisitante = int.tryParse(golesVisitanteCtrl.text.trim());
 
-    final golesVisitante =
-        int.tryParse(
-      golesVisitanteCtrl.text.trim(),
-    );
-
-    if (golesLocal == null ||
-        golesVisitante == null) {
-      mostrarMensaje(
-        'Los goles deben ser valores numéricos.',
-        esError: true,
-      );
+    if (golesLocal == null || golesVisitante == null) {
+      UiHelpers.showError(context, 'Los goles deben ser valores numéricos.');
       return;
     }
 
-    if (golesLocal < 0 ||
-        golesVisitante < 0) {
-      mostrarMensaje(
-        'Los goles no pueden ser negativos.',
-        esError: true,
-      );
+    if (golesLocal < 0 || golesVisitante < 0) {
+      UiHelpers.showError(context, 'Los goles no pueden ser negativos.');
       return;
     }
 
-    final fecha =
-        fechaCtrl.text.trim();
-
-    final hora =
-        horaCtrl.text.trim();
-
-    if (fecha.isEmpty || hora.isEmpty) {
-      mostrarMensaje(
-        'Debe seleccionar fecha y hora.',
-        esError: true,
-      );
-      return;
+    String? fechaHora;
+    if (fechaCtrl.text.trim().isNotEmpty && horaCtrl.text.trim().isNotEmpty) {
+      final fechaTexto = '${fechaCtrl.text.trim()} ${horaCtrl.text.trim()}:00';
+      final parsed = DateTime.tryParse(fechaTexto);
+      if (parsed == null) {
+        UiHelpers.showError(context, 'La fecha y hora no son válidas.');
+        return;
+      }
+      fechaHora = parsed.toIso8601String();
     }
 
-    final fechaHora =
-        DateTime.tryParse(
-      '${fecha}T$hora:00',
-    );
-
-    if (fechaHora == null) {
-      mostrarMensaje(
-        'La fecha u hora no es válida.',
-        esError: true,
-      );
-      return;
-    }
-
-    setState(() {
-      guardando = true;
-    });
-
-    final body = {
+    final body = <String, dynamic>{
       'golesLocal': golesLocal,
       'golesVisitante': golesVisitante,
-      'fechaHora':
-          fechaHora.toIso8601String(),
-      'observaciones':
-          observacionesCtrl.text
-                  .trim()
-                  .isEmpty
-              ? null
-              : observacionesCtrl.text.trim(),
+      'fechaHora': fechaHora,
+      'observaciones': observacionesCtrl.text.trim().isEmpty ? null : observacionesCtrl.text.trim(),
     };
 
+    setState(() => guardando = true);
+
     try {
-      final respuesta =
-          await http.put(
-        Uri.parse(
-          '$baseUrl/api/partidos/${widget.partidoId}/resultado',
-        ),
-        headers: {
-          'Content-Type':
-              'application/json',
-          'Accept':
-              'application/json',
-          'Authorization':
-              'Bearer ${widget.token}',
-        },
-        body: jsonEncode(body),
+      await _partidosService.registrarResultado(
+        widget.partidoId,
+        body,
+        token: widget.token,
       );
 
-      if (respuesta.statusCode == 200 ||
-          respuesta.statusCode == 204) {
-        if (!mounted) return;
-
-        mostrarMensaje(
-          'Resultado registrado correctamente.',
-        );
-
-        await Future.delayed(
-          const Duration(
-            milliseconds: 400,
-          ),
-        );
-
-        if (!mounted) return;
-
-        Navigator.pop(
-          context,
-          true,
-        );
-      } else {
-        String mensaje =
-            'No fue posible registrar el resultado. Código ${respuesta.statusCode}.';
-
-        try {
-          final dynamic datos =
-              jsonDecode(
-            respuesta.body,
-          );
-
-          if (datos is Map<String, dynamic>) {
-            mensaje =
-                datos['mensaje']?.toString() ??
-                    datos['message']?.toString() ??
-                    mensaje;
-          }
-        } catch (_) {}
-
-        mostrarMensaje(
-          mensaje,
-          esError: true,
-        );
-      }
-    } catch (e) {
-      mostrarMensaje(
-        'No se pudo conectar con el servidor.',
-        esError: true,
-      );
+      if (!mounted) return;
+      UiHelpers.showSuccess(context, 'Resultado registrado correctamente.');
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } on AppException catch (e) {
+      if (!mounted) return;
+      UiHelpers.showError(context, e.message);
+    } catch (_) {
+      if (!mounted) return;
+      UiHelpers.showError(context, 'Error al registrar el resultado.');
     } finally {
-      if (mounted) {
-        setState(() {
-          guardando = false;
-        });
-      }
+      if (mounted) setState(() => guardando = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (cargando) {
-      return const Scaffold(
-        body: Center(
-          child:
-              CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (error != null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Registrar resultado',
-          ),
-          centerTitle: true,
-        ),
-        body: Center(
-          child: Padding(
-            padding:
-                const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize:
-                  MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 70,
-                  color: Colors.red,
-                ),
-                const SizedBox(
-                    height: 18),
-                Text(
-                  error!,
-                  textAlign:
-                      TextAlign.center,
-                ),
-                const SizedBox(
-                    height: 20),
-                FilledButton.icon(
-                  onPressed:
-                      cargarPartido,
-                  icon: const Icon(
-                    Icons.refresh,
-                  ),
-                  label: const Text(
-                    'REINTENTAR',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
-      backgroundColor:
-          const Color(0xFFF4F7FB),
-
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        title: const Text(
-          'Registrar resultado',
-        ),
+        title: const Text('Registrar resultado'),
         centerTitle: true,
       ),
+      body: Builder(
+        builder: (context) {
+          if (cargando) {
+            return const AppLoadingIndicator();
+          }
 
-      body: SingleChildScrollView(
-        padding:
-            const EdgeInsets.all(20),
+          if (error != null) {
+            return AppErrorView(
+              message: error!,
+              onRetry: cargarPartido,
+            );
+          }
 
-        child: Center(
-          child: ConstrainedBox(
-            constraints:
-                const BoxConstraints(
-              maxWidth: 650,
-            ),
-
-            child: Form(
-              key: _formKey,
-
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.stretch,
-                children: [
-                  Card(
-                    child: Padding(
-                      padding:
-                          const EdgeInsets
-                              .all(20),
-                      child: Text(
-                        '$equipoLocal  vs  $equipoVisitante',
-                        textAlign:
-                            TextAlign.center,
-                        style:
-                            const TextStyle(
-                          fontSize: 21,
-                          fontWeight:
-                              FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(
-                      height: 20),
-
-                  Row(
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 650),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller:
-                              golesLocalCtrl,
-                          keyboardType:
-                              TextInputType.number,
-                          decoration:
-                              InputDecoration(
-                            labelText:
-                                equipoLocal.isEmpty
-                                    ? 'Goles local'
-                                    : 'Goles $equipoLocal',
-                            prefixIcon:
-                                const Icon(
-                              Icons
-                                  .sports_soccer,
-                            ),
-                            border:
-                                const OutlineInputBorder(),
+                      Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              const Text(
+                                'Marcador final',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          equipoLocal,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        TextFormField(
+                                          controller: golesLocalCtrl,
+                                          textAlign: TextAlign.center,
+                                          keyboardType: TextInputType.number,
+                                          style: const TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          decoration: const InputDecoration(
+                                            labelText: 'Goles',
+                                            border: OutlineInputBorder(),
+                                          ),
+                                          validator: (v) =>
+                                              v == null || v.trim().isEmpty ? 'Ingrese goles' : null,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 16),
+                                    child: Text(
+                                      '-',
+                                      style: TextStyle(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          equipoVisitante,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        TextFormField(
+                                          controller: golesVisitanteCtrl,
+                                          textAlign: TextAlign.center,
+                                          keyboardType: TextInputType.number,
+                                          style: const TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          decoration: const InputDecoration(
+                                            labelText: 'Goles',
+                                            border: OutlineInputBorder(),
+                                          ),
+                                          validator: (v) =>
+                                              v == null || v.trim().isEmpty ? 'Ingrese goles' : null,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          validator:
-                              (valor) {
-                            final goles =
-                                int.tryParse(
-                              valor?.trim() ??
-                                  '',
-                            );
-
-                            if (goles ==
-                                null) {
-                              return 'Ingrese los goles.';
-                            }
-
-                            if (goles <
-                                0) {
-                              return 'Valor inválido.';
-                            }
-
-                            return null;
-                          },
                         ),
                       ),
-
-                      const SizedBox(
-                          width: 14),
-
-                      Expanded(
-                        child: TextFormField(
-                          controller:
-                              golesVisitanteCtrl,
-                          keyboardType:
-                              TextInputType.number,
-                          decoration:
-                              InputDecoration(
-                            labelText:
-                                equipoVisitante
-                                        .isEmpty
-                                    ? 'Goles visitante'
-                                    : 'Goles $equipoVisitante',
-                            prefixIcon:
-                                const Icon(
-                              Icons
-                                  .sports_soccer,
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: fechaCtrl,
+                              readOnly: true,
+                              onTap: seleccionarFecha,
+                              decoration: const InputDecoration(
+                                labelText: 'Fecha',
+                                prefixIcon: Icon(Icons.calendar_today),
+                                border: OutlineInputBorder(),
+                              ),
                             ),
-                            border:
-                                const OutlineInputBorder(),
                           ),
-                          validator:
-                              (valor) {
-                            final goles =
-                                int.tryParse(
-                              valor?.trim() ??
-                                  '',
-                            );
-
-                            if (goles ==
-                                null) {
-                              return 'Ingrese los goles.';
-                            }
-
-                            if (goles <
-                                0) {
-                              return 'Valor inválido.';
-                            }
-
-                            return null;
-                          },
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: horaCtrl,
+                              readOnly: true,
+                              onTap: seleccionarHora,
+                              decoration: const InputDecoration(
+                                labelText: 'Hora',
+                                prefixIcon: Icon(Icons.access_time),
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: observacionesCtrl,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'Observaciones del resultado',
+                          prefixIcon: Icon(Icons.note_outlined),
+                          border: OutlineInputBorder(),
                         ),
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(
-                      height: 14),
-
-                  TextFormField(
-                    controller:
-                        fechaCtrl,
-                    readOnly: true,
-                    onTap:
-                        seleccionarFecha,
-                    decoration:
-                        const InputDecoration(
-                      labelText:
-                          'Fecha del partido',
-                      prefixIcon:
-                          Icon(
-                        Icons.calendar_month,
-                      ),
-                      suffixIcon:
-                          Icon(
-                        Icons.edit_calendar,
-                      ),
-                      border:
-                          OutlineInputBorder(),
-                    ),
-                  ),
-
-                  const SizedBox(
-                      height: 14),
-
-                  TextFormField(
-                    controller:
-                        horaCtrl,
-                    readOnly: true,
-                    onTap:
-                        seleccionarHora,
-                    decoration:
-                        const InputDecoration(
-                      labelText:
-                          'Hora del partido',
-                      prefixIcon:
-                          Icon(
-                        Icons.access_time,
-                      ),
-                      border:
-                          OutlineInputBorder(),
-                    ),
-                  ),
-
-                  const SizedBox(
-                      height: 14),
-
-                  TextFormField(
-                    controller:
-                        observacionesCtrl,
-                    maxLines: 3,
-                    decoration:
-                        const InputDecoration(
-                      labelText:
-                          'Observaciones',
-                      prefixIcon:
-                          Icon(Icons.notes),
-                      border:
-                          OutlineInputBorder(),
-                    ),
-                  ),
-
-                  const SizedBox(
-                      height: 24),
-
-                  SizedBox(
-                    height: 52,
-                    child:
-                        FilledButton.icon(
-                      onPressed:
-                          guardando
-                              ? null
-                              : guardarResultado,
-                      icon:
-                          guardando
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.teal.shade700,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: guardando ? null : guardarResultado,
+                          icon: guardando
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child:
-                                      CircularProgressIndicator(
-                                    strokeWidth:
-                                        2,
-                                  ),
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                 )
-                              : const Icon(
-                                  Icons.save,
-                                ),
-                      label: Text(
-                        guardando
-                            ? 'GUARDANDO...'
-                            : 'REGISTRAR RESULTADO',
+                              : const Icon(Icons.check_circle_outline),
+                          label: Text(
+                            guardando ? 'GUARDANDO...' : 'GUARDAR Y FINALIZAR',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

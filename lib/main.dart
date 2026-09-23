@@ -1,15 +1,18 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+
+import 'core/constants/app_colors.dart';
+import 'core/errors/app_exception.dart';
+import 'core/session/session_manager.dart';
+import 'core/utils/ui_helpers.dart';
+import 'services/auth_service.dart';
 
 import 'equipos_page.dart';
+import 'estadisticas_page.dart';
+import 'goleadores_page.dart';
+import 'jornadas_page.dart';
 import 'jugadores_page.dart';
 import 'partidos_page.dart';
-import 'jornadas_page.dart';
 import 'posiciones_page.dart';
-import 'goleadores_page.dart';
-import 'estadisticas_page.dart';
 
 void main() {
   runApp(const TorneoApp());
@@ -26,6 +29,11 @@ class TorneoApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.blue,
+        scaffoldBackgroundColor: AppColors.scaffoldBackground,
+        appBarTheme: const AppBarTheme(
+          centerTitle: true,
+          elevation: 0,
+        ),
       ),
       home: const LoginPage(),
     );
@@ -40,10 +48,8 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  static const String baseUrl =
-      'https://torneointertecnologias-production-7ae9.up.railway.app';
-
   final _formKey = GlobalKey<FormState>();
+  final _authService = AuthService();
 
   final usuarioCtrl = TextEditingController();
   final contrasenaCtrl = TextEditingController();
@@ -68,77 +74,29 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final respuesta = await http.post(
-        Uri.parse('$baseUrl/api/auth/login'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
-          'usuario': usuarioCtrl.text.trim(),
-          'contrasena': contrasenaCtrl.text,
-        }),
+      final authUser = await _authService.login(
+        usuario: usuarioCtrl.text.trim(),
+        contrasena: contrasenaCtrl.text,
       );
 
-      if (respuesta.statusCode == 200) {
-        final dynamic datos =
-            jsonDecode(respuesta.body);
+      if (!mounted) return;
 
-        if (datos is! Map<String, dynamic>) {
-          mostrarMensaje(
-            'La respuesta del servidor no es válida.',
-            esError: true,
-          );
-          return;
-        }
-
-        final token =
-            datos['token']?.toString() ?? '';
-
-        if (token.isEmpty) {
-          mostrarMensaje(
-            'El servidor no devolvió el token de acceso.',
-            esError: true,
-          );
-          return;
-        }
-
-        final usuario =
-            datos['usuario']?.toString() ??
-                usuarioCtrl.text.trim();
-
-        final rol =
-            datos['rol']?.toString() ??
-                'Administrador';
-
-        if (!mounted) return;
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => InicioPage(
-              token: token,
-              usuario: usuario,
-              rol: rol,
-            ),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => InicioPage(
+            token: authUser.token,
+            usuario: authUser.usuario,
+            rol: authUser.rol,
           ),
-        );
-      } else if (respuesta.statusCode == 401) {
-        mostrarMensaje(
-          'Usuario o contraseña incorrectos.',
-          esError: true,
-        );
-      } else {
-        mostrarMensaje(
-          'No fue posible iniciar sesión. Código ${respuesta.statusCode}.',
-          esError: true,
-        );
-      }
-    } catch (e) {
-      mostrarMensaje(
-        'No se pudo conectar con el servidor.',
-        esError: true,
+        ),
       );
+    } on AppException catch (e) {
+      if (!mounted) return;
+      UiHelpers.showError(context, e.message);
+    } catch (_) {
+      if (!mounted) return;
+      UiHelpers.showError(context, 'No se pudo conectar con el servidor.');
     } finally {
       if (mounted) {
         setState(() {
@@ -148,36 +106,21 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void mostrarMensaje(
-    String mensaje, {
-    bool esError = false,
-  }) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje),
-        backgroundColor: esError
-            ? Colors.red.shade700
-            : Colors.green.shade700,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: AppColors.scaffoldBackground,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 430,
-              ),
+              constraints: const BoxConstraints(maxWidth: 430),
               child: Card(
                 elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(28),
                   child: Form(
@@ -188,11 +131,9 @@ class _LoginPageState extends State<LoginPage> {
                         const Icon(
                           Icons.sports_soccer,
                           size: 72,
-                          color: Color(0xFF1D4F7A),
+                          color: AppColors.primary,
                         ),
-
                         const SizedBox(height: 16),
-
                         const Text(
                           'Torneo Intertecnologías',
                           textAlign: TextAlign.center,
@@ -201,9 +142,7 @@ class _LoginPageState extends State<LoginPage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-
                         const SizedBox(height: 8),
-
                         const Text(
                           'Panel de administración',
                           style: TextStyle(
@@ -211,44 +150,32 @@ class _LoginPageState extends State<LoginPage> {
                             color: Colors.grey,
                           ),
                         ),
-
                         const SizedBox(height: 28),
-
                         TextFormField(
                           controller: usuarioCtrl,
-                          decoration:
-                              const InputDecoration(
+                          decoration: const InputDecoration(
                             labelText: 'Usuario',
-                            prefixIcon:
-                                Icon(Icons.person),
-                            border:
-                                OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.person),
+                            border: OutlineInputBorder(),
                           ),
                           validator: (valor) {
-                            if (valor == null ||
-                                valor.trim().isEmpty) {
+                            if (valor == null || valor.trim().isEmpty) {
                               return 'Ingrese el usuario.';
                             }
-
                             return null;
                           },
                         ),
-
                         const SizedBox(height: 16),
-
                         TextFormField(
                           controller: contrasenaCtrl,
-                          obscureText:
-                              ocultarContrasena,
+                          obscureText: ocultarContrasena,
                           decoration: InputDecoration(
                             labelText: 'Contraseña',
-                            prefixIcon:
-                                const Icon(Icons.lock),
+                            prefixIcon: const Icon(Icons.lock),
                             suffixIcon: IconButton(
                               onPressed: () {
                                 setState(() {
-                                  ocultarContrasena =
-                                      !ocultarContrasena;
+                                  ocultarContrasena = !ocultarContrasena;
                                 });
                               },
                               icon: Icon(
@@ -257,15 +184,12 @@ class _LoginPageState extends State<LoginPage> {
                                     : Icons.visibility_off,
                               ),
                             ),
-                            border:
-                                const OutlineInputBorder(),
+                            border: const OutlineInputBorder(),
                           ),
                           validator: (valor) {
-                            if (valor == null ||
-                                valor.isEmpty) {
+                            if (valor == null || valor.isEmpty) {
                               return 'Ingrese la contraseña.';
                             }
-
                             return null;
                           },
                           onFieldSubmitted: (_) {
@@ -274,32 +198,31 @@ class _LoginPageState extends State<LoginPage> {
                             }
                           },
                         ),
-
                         const SizedBox(height: 24),
-
                         SizedBox(
                           width: double.infinity,
                           height: 52,
                           child: FilledButton.icon(
-                            onPressed: cargando
-                                ? null
-                                : iniciarSesion,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed: cargando ? null : iniciarSesion,
                             icon: cargando
                                 ? const SizedBox(
                                     width: 20,
                                     height: 20,
-                                    child:
-                                        CircularProgressIndicator(
+                                    child: CircularProgressIndicator(
                                       strokeWidth: 2,
+                                      color: Colors.white,
                                     ),
                                   )
-                                : const Icon(
-                                    Icons.login,
-                                  ),
+                                : const Icon(Icons.login),
                             label: Text(
-                              cargando
-                                  ? 'INGRESANDO...'
-                                  : 'INICIAR SESIÓN',
+                              cargando ? 'INGRESANDO...' : 'INICIAR SESIÓN',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
@@ -329,117 +252,97 @@ class InicioPage extends StatelessWidget {
   });
 
   void cerrarSesion(BuildContext context) {
+    SessionManager().clearSession();
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(
-        builder: (_) => const LoginPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const LoginPage()),
       (route) => false,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final opciones =
-        <Map<String, dynamic>>[
+    final opciones = <Map<String, dynamic>>[
       {
         'titulo': 'Equipos',
-        'subtitulo':
-            'Consultar equipos del torneo',
+        'subtitulo': 'Consultar equipos del torneo',
         'icono': Icons.groups,
       },
       {
         'titulo': 'Jugadores',
-        'subtitulo':
-            'Consultar y administrar jugadores',
+        'subtitulo': 'Consultar y administrar jugadores',
         'icono': Icons.person_search,
       },
       {
         'titulo': 'Partidos',
-        'subtitulo':
-            'Consultar partidos',
+        'subtitulo': 'Consultar partidos',
         'icono': Icons.sports_soccer,
       },
       {
         'titulo': 'Jornadas',
-        'subtitulo':
-            'Consultar jornadas',
+        'subtitulo': 'Consultar jornadas',
         'icono': Icons.calendar_month,
       },
       {
         'titulo': 'Posiciones',
-        'subtitulo':
-            'Tabla de posiciones',
+        'subtitulo': 'Tabla de posiciones',
         'icono': Icons.leaderboard,
       },
       {
         'titulo': 'Goleadores',
-        'subtitulo':
-            'Tabla de goleadores',
+        'subtitulo': 'Tabla de goleadores',
         'icono': Icons.emoji_events,
       },
       {
         'titulo': 'Estadísticas',
-        'subtitulo':
-            'Estadísticas del torneo',
+        'subtitulo': 'Estadísticas del torneo',
         'icono': Icons.bar_chart,
       },
     ];
 
     return Scaffold(
-      backgroundColor:
-          const Color(0xFFF4F7FB),
-
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        title: const Text(
-          'Administración',
-        ),
+        title: const Text('Administración'),
         centerTitle: true,
         actions: [
           IconButton(
             tooltip: 'Cerrar sesión',
-            onPressed: () {
-              cerrarSesion(context);
-            },
-            icon: const Icon(
-              Icons.logout,
-            ),
+            onPressed: () => cerrarSesion(context),
+            icon: const Icon(Icons.logout),
           ),
         ],
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 900,
-            ),
+            constraints: const BoxConstraints(maxWidth: 900),
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Card(
                   elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   child: Padding(
-                    padding:
-                        const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(20),
                     child: Row(
                       children: [
                         const CircleAvatar(
                           radius: 30,
+                          backgroundColor: AppColors.primaryLight,
                           child: Icon(
                             Icons.admin_panel_settings,
                             size: 32,
+                            color: AppColors.primary,
                           ),
                         ),
-
                         const SizedBox(width: 16),
-
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
                                 'Bienvenido',
@@ -448,226 +351,122 @@ class InicioPage extends StatelessWidget {
                                   color: Colors.grey,
                                 ),
                               ),
-
                               Text(
                                 usuario,
-                                style:
-                                    const TextStyle(
+                                style: const TextStyle(
                                   fontSize: 22,
-                                  fontWeight:
-                                      FontWeight.bold,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-
                               Text(
                                 'Rol: $rol',
+                                style: const TextStyle(color: Colors.black54),
                               ),
                             ],
                           ),
                         ),
-
                         IconButton(
                           tooltip: 'Cerrar sesión',
-                          onPressed: () {
-                            cerrarSesion(context);
-                          },
-                          icon: const Icon(
-                            Icons.logout,
-                          ),
+                          onPressed: () => cerrarSesion(context),
+                          icon: const Icon(Icons.logout),
                         ),
                       ],
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 const Text(
                   'Panel principal',
                   style: TextStyle(
                     fontSize: 24,
-                    fontWeight:
-                        FontWeight.bold,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
                 GridView.builder(
                   shrinkWrap: true,
-                  physics:
-                      const NeverScrollableScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: opciones.length,
-                  gridDelegate:
-                      const SliverGridDelegateWithMaxCrossAxisExtent(
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 320,
                     mainAxisExtent: 165,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
                   ),
-                  itemBuilder:
-                      (context, index) {
-                    final opcion =
-                        opciones[index];
-
-                    final titulo =
-                        opcion['titulo']
-                            as String;
-
-                    final subtitulo =
-                        opcion['subtitulo']
-                            as String;
-
-                    final icono =
-                        opcion['icono']
-                            as IconData;
+                  itemBuilder: (context, index) {
+                    final opcion = opciones[index];
+                    final titulo = opcion['titulo'] as String;
+                    final subtitulo = opcion['subtitulo'] as String;
+                    final icono = opcion['icono'] as IconData;
 
                     return Card(
                       elevation: 2,
-                      clipBehavior:
-                          Clip.antiAlias,
+                      clipBehavior: Clip.antiAlias,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                       child: InkWell(
                         onTap: () {
-                          if (titulo ==
-                              'Equipos') {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    EquiposPage(
-                                  token: token,
-                                ),
-                              ),
-                            );
-
-                            return;
-                          }
-
-                          if (titulo ==
-                              'Jugadores') {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    JugadoresPage(
-                                  token: token,
-                                ),
-                              ),
-                            );
-
-                            return;
-                          }
-
-                          if (titulo ==
-                              'Partidos') {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    PartidosPage(
-                                  token: token,
-                                ),
-                              ),
-                            );
-
-                            return;
-                          }
-if (titulo == 'Jornadas') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => JornadasPage(
-        token: token,
-      ),
-    ),
-  );
-
-  return;
-}
-if (titulo == 'Posiciones') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => PosicionesPage(
-        token: token,
-      ),
-    ),
-  );
-
-  return;
-}
-if (titulo == 'Goleadores') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => GoleadoresPage(
-        token: token,
-      ),
-    ),
-  );
-
-  return;
-}
-if (titulo == 'Estadísticas') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => EstadisticasPage(
-        token: token,
-      ),
-    ),
-  );
-
-  return;
-}
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(
-                            SnackBar(
-                              content: Text(
+                          Widget destination;
+                          switch (titulo) {
+                            case 'Equipos':
+                              destination = EquiposPage(token: token);
+                              break;
+                            case 'Jugadores':
+                              destination = JugadoresPage(token: token);
+                              break;
+                            case 'Partidos':
+                              destination = PartidosPage(token: token);
+                              break;
+                            case 'Jornadas':
+                              destination = JornadasPage(token: token);
+                              break;
+                            case 'Posiciones':
+                              destination = PosicionesPage(token: token);
+                              break;
+                            case 'Goleadores':
+                              destination = GoleadoresPage(token: token);
+                              break;
+                            case 'Estadísticas':
+                              destination = EstadisticasPage(token: token);
+                              break;
+                            default:
+                              UiHelpers.showSnackBar(
+                                context,
                                 'Módulo $titulo pendiente de conectar.',
-                              ),
-                            ),
+                              );
+                              return;
+                          }
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => destination),
                           );
                         },
                         child: Padding(
-                          padding:
-                              const EdgeInsets.all(
-                                  18),
+                          padding: const EdgeInsets.all(18),
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Icon(
                                 icono,
                                 size: 40,
-                                color:
-                                    const Color(
-                                  0xFF1D4F7A,
-                                ),
+                                color: AppColors.primary,
                               ),
-
                               const Spacer(),
-
                               Text(
                                 titulo,
-                                style:
-                                    const TextStyle(
+                                style: const TextStyle(
                                   fontSize: 19,
-                                  fontWeight:
-                                      FontWeight.bold,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-
                               const SizedBox(height: 4),
-
                               Text(
                                 subtitulo,
                                 maxLines: 2,
-                                overflow:
-                                    TextOverflow.ellipsis,
-                                style:
-                                    const TextStyle(
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
                                   color: Colors.grey,
                                 ),
                               ),

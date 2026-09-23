@@ -1,7 +1,13 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+
+import 'core/constants/app_colors.dart';
+import 'core/errors/app_exception.dart';
+import 'models/jornada.dart';
+import 'services/jornadas_service.dart';
+import 'widgets/app_empty_view.dart';
+import 'widgets/app_error_view.dart';
+import 'widgets/app_loading_indicator.dart';
+import 'widgets/status_chip.dart';
 
 import 'jornada_detalle_page.dart';
 
@@ -18,14 +24,12 @@ class JornadasPage extends StatefulWidget {
 }
 
 class _JornadasPageState extends State<JornadasPage> {
-  static const String baseUrl =
-      'https://torneointertecnologias-production-7ae9.up.railway.app';
+  final JornadasService _jornadasService = JornadasService();
 
   bool cargando = true;
   String? error;
-
   int cantidadJornadas = 0;
-  List<dynamic> jornadas = [];
+  List<Jornada> jornadas = [];
 
   @override
   void initState() {
@@ -40,102 +44,23 @@ class _JornadasPageState extends State<JornadasPage> {
     });
 
     try {
-      final respuesta = await http.get(
-        Uri.parse('$baseUrl/api/jornadas'),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer ${widget.token}',
-        },
-      );
-
-      if (respuesta.statusCode == 200) {
-        final dynamic datos = jsonDecode(respuesta.body);
-
-        if (datos is Map<String, dynamic>) {
-          final lista = datos['jornadas'];
-
-          if (lista is List) {
-            setState(() {
-              cantidadJornadas =
-                  datos['cantidadJornadas'] is int
-                      ? datos['cantidadJornadas']
-                      : int.tryParse(
-                            datos['cantidadJornadas']?.toString() ?? '',
-                          ) ??
-                          lista.length;
-
-              jornadas = lista;
-            });
-          } else {
-            setState(() {
-              error =
-                  'La respuesta no contiene una lista válida de jornadas.';
-            });
-          }
-        } else {
-          setState(() {
-            error =
-                'La respuesta del servidor no tiene el formato esperado.';
-          });
-        }
-      } else if (respuesta.statusCode == 401) {
-        setState(() {
-          error = 'Sesión no autorizada o token vencido.';
-        });
-      } else {
-        setState(() {
-          error =
-              'No fue posible cargar las jornadas. Código ${respuesta.statusCode}.';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        error = 'No se pudo conectar con el servidor.';
-      });
-    } finally {
+      final res = await _jornadasService.getJornadas(token: widget.token);
       if (mounted) {
         setState(() {
-          cargando = false;
+          cantidadJornadas = res.cantidadJornadas;
+          jornadas = res.jornadas;
         });
       }
+    } on AppException catch (e) {
+      if (mounted) setState(() => error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => error = 'No se pudo conectar con el servidor.');
+    } finally {
+      if (mounted) setState(() => cargando = false);
     }
   }
 
-  int obtenerEntero(dynamic valor) {
-    if (valor is int) {
-      return valor;
-    }
-
-    return int.tryParse(
-          valor?.toString() ?? '',
-        ) ??
-        0;
-  }
-
-  Color obtenerColorEstado(String estado) {
-    switch (estado.toUpperCase()) {
-      case 'FINALIZADA':
-        return Colors.green;
-
-      case 'EN_CURSO':
-        return Colors.orange;
-
-      case 'PROGRAMADA':
-        return Colors.blue;
-
-      case 'CANCELADA':
-        return Colors.red;
-
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Widget datoResumen(
-    IconData icono,
-    String titulo,
-    int valor,
-  ) {
+  Widget datoResumen(IconData icono, String titulo, int valor) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -145,10 +70,7 @@ class _JornadasPageState extends State<JornadasPage> {
         ),
         child: Column(
           children: [
-            Icon(
-              icono,
-              size: 24,
-            ),
+            Icon(icono, size: 24, color: AppColors.primary),
             const SizedBox(height: 6),
             Text(
               valor.toString(),
@@ -161,10 +83,7 @@ class _JornadasPageState extends State<JornadasPage> {
             Text(
               titulo,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black54,
-              ),
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
             ),
           ],
         ),
@@ -172,9 +91,7 @@ class _JornadasPageState extends State<JornadasPage> {
     );
   }
 
-  Future<void> abrirJornada(
-    int numeroJornada,
-  ) async {
+  Future<void> abrirJornada(int numeroJornada) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -186,77 +103,37 @@ class _JornadasPageState extends State<JornadasPage> {
     );
 
     if (mounted) {
-      await cargarJornadas();
+      cargarJornadas();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
-
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
         title: const Text('Jornadas'),
         centerTitle: true,
       ),
-
       body: RefreshIndicator(
         onRefresh: cargarJornadas,
         child: Builder(
           builder: (context) {
             if (cargando) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
+              return const AppLoadingIndicator();
             }
 
             if (error != null) {
-              return ListView(
-                padding: const EdgeInsets.all(24),
-                children: [
-                  const SizedBox(height: 80),
-
-                  const Icon(
-                    Icons.error_outline,
-                    size: 70,
-                    color: Colors.red,
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  Text(
-                    error!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 18,
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  Center(
-                    child: FilledButton.icon(
-                      onPressed: cargarJornadas,
-                      icon: const Icon(
-                        Icons.refresh,
-                      ),
-                      label: const Text(
-                        'REINTENTAR',
-                      ),
-                    ),
-                  ),
-                ],
+              return AppErrorView(
+                message: error!,
+                onRetry: cargarJornadas,
               );
             }
 
             if (jornadas.isEmpty) {
-              return const Center(
-                child: Text(
-                  'No hay jornadas registradas.',
-                  style: TextStyle(
-                    fontSize: 18,
-                  ),
-                ),
+              return const AppEmptyView(
+                message: 'No hay jornadas registradas.',
+                icon: Icons.calendar_month_outlined,
               );
             }
 
@@ -265,29 +142,24 @@ class _JornadasPageState extends State<JornadasPage> {
               children: [
                 Card(
                   elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   child: Padding(
                     padding: const EdgeInsets.all(18),
                     child: Row(
                       children: [
                         const CircleAvatar(
                           radius: 26,
-                          child: Icon(
-                            Icons.calendar_month,
-                          ),
+                          backgroundColor: AppColors.primaryLight,
+                          child: Icon(Icons.calendar_month, color: AppColors.primary),
                         ),
-
                         const SizedBox(width: 16),
-
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
                                 'Total de jornadas',
-                                style: TextStyle(
-                                  color: Colors.black54,
-                                ),
+                                style: TextStyle(color: Colors.black54),
                               ),
                               Text(
                                 cantidadJornadas.toString(),
@@ -303,174 +175,53 @@ class _JornadasPageState extends State<JornadasPage> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
-                ...jornadas.map((item) {
-                  final jornada =
-                      Map<String, dynamic>.from(item);
-
-                  final numero =
-                      obtenerEntero(
-                    jornada['jornada'],
-                  );
-
-                  final cantidadPartidos =
-                      obtenerEntero(
-                    jornada['cantidadPartidos'],
-                  );
-
-                  final finalizados =
-                      obtenerEntero(
-                    jornada['partidosFinalizados'],
-                  );
-
-                  final programados =
-                      obtenerEntero(
-                    jornada['partidosProgramados'],
-                  );
-
-                  final cancelados =
-                      obtenerEntero(
-                    jornada['partidosCancelados'],
-                  );
-
-                  final conFecha =
-                      obtenerEntero(
-                    jornada['partidosConFecha'],
-                  );
-
-                  final sinFecha =
-                      obtenerEntero(
-                    jornada['partidosSinFecha'],
-                  );
-
-                  final estado =
-                      jornada['estado']
-                              ?.toString()
-                              .trim() ??
-                          'SIN ESTADO';
-
+                ...jornadas.map((jornada) {
                   return Padding(
-                    padding:
-                        const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.only(bottom: 12),
                     child: Card(
                       elevation: 2,
                       clipBehavior: Clip.antiAlias,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       child: InkWell(
-                        onTap: numero > 0
-                            ? () {
-                                abrirJornada(
-                                  numero,
-                                );
-                              }
-                            : null,
+                        onTap: jornada.numero > 0 ? () => abrirJornada(jornada.numero) : null,
                         child: Padding(
-                          padding:
-                              const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(16),
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.stretch,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Row(
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      'Jornada $numero',
-                                      style:
-                                          const TextStyle(
+                                      'Jornada ${jornada.numero}',
+                                      style: const TextStyle(
                                         fontSize: 20,
-                                        fontWeight:
-                                            FontWeight.bold,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
-
-                                  Container(
-                                    padding:
-                                        const EdgeInsets
-                                            .symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration:
-                                        BoxDecoration(
-                                      color:
-                                          obtenerColorEstado(
-                                        estado,
-                                      ).withValues(
-                                        alpha: 0.12,
-                                      ),
-                                      borderRadius:
-                                          BorderRadius.circular(
-                                              20),
-                                    ),
-                                    child: Text(
-                                      estado,
-                                      style: TextStyle(
-                                        color:
-                                            obtenerColorEstado(
-                                          estado,
-                                        ),
-                                        fontWeight:
-                                            FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-
-                                  const SizedBox(width: 8),
-
-                                  const Icon(
-                                    Icons.chevron_right,
-                                  ),
+                                  StatusChip(status: jornada.estado),
                                 ],
                               ),
-
-                              const SizedBox(height: 16),
-
+                              const SizedBox(height: 14),
                               Row(
                                 children: [
-                                  datoResumen(
-                                    Icons.sports_soccer,
-                                    'Partidos',
-                                    cantidadPartidos,
-                                  ),
+                                  datoResumen(Icons.sports_soccer, 'Partidos', jornada.cantidadPartidos),
                                   const SizedBox(width: 8),
-                                  datoResumen(
-                                    Icons.check_circle,
-                                    'Finalizados',
-                                    finalizados,
-                                  ),
+                                  datoResumen(Icons.check_circle, 'Finalizados', jornada.partidosFinalizados),
                                   const SizedBox(width: 8),
-                                  datoResumen(
-                                    Icons.schedule,
-                                    'Programados',
-                                    programados,
-                                  ),
+                                  datoResumen(Icons.schedule, 'Programados', jornada.partidosProgramados),
                                 ],
                               ),
-
                               const SizedBox(height: 8),
-
                               Row(
                                 children: [
-                                  datoResumen(
-                                    Icons.event_available,
-                                    'Con fecha',
-                                    conFecha,
-                                  ),
+                                  datoResumen(Icons.cancel, 'Cancelados', jornada.partidosCancelados),
                                   const SizedBox(width: 8),
-                                  datoResumen(
-                                    Icons.event_busy,
-                                    'Sin fecha',
-                                    sinFecha,
-                                  ),
+                                  datoResumen(Icons.event_available, 'Con fecha', jornada.partidosConFecha),
                                   const SizedBox(width: 8),
-                                  datoResumen(
-                                    Icons.cancel,
-                                    'Cancelados',
-                                    cancelados,
-                                  ),
+                                  datoResumen(Icons.event_busy, 'Sin fecha', jornada.partidosSinFecha),
                                 ],
                               ),
                             ],

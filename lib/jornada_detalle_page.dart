@@ -1,7 +1,16 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+
+import 'core/constants/app_colors.dart';
+import 'core/errors/app_exception.dart';
+import 'core/utils/date_utils.dart';
+import 'core/utils/text_utils.dart';
+import 'models/jornada.dart';
+import 'models/partido.dart';
+import 'services/jornadas_service.dart';
+import 'widgets/app_empty_view.dart';
+import 'widgets/app_error_view.dart';
+import 'widgets/app_loading_indicator.dart';
+import 'widgets/status_chip.dart';
 
 import 'partido_detalle_page.dart';
 
@@ -16,19 +25,15 @@ class JornadaDetallePage extends StatefulWidget {
   });
 
   @override
-  State<JornadaDetallePage> createState() =>
-      _JornadaDetallePageState();
+  State<JornadaDetallePage> createState() => _JornadaDetallePageState();
 }
 
 class _JornadaDetallePageState extends State<JornadaDetallePage> {
-  static const String baseUrl =
-      'https://torneointertecnologias-production-7ae9.up.railway.app';
+  final JornadasService _jornadasService = JornadasService();
 
   bool cargando = true;
   String? error;
-
-  Map<String, dynamic>? jornada;
-  List<dynamic> partidos = [];
+  Jornada? jornada;
 
   @override
   void initState() {
@@ -43,170 +48,25 @@ class _JornadaDetallePageState extends State<JornadaDetallePage> {
     });
 
     try {
-      final respuesta = await http.get(
-        Uri.parse(
-          '$baseUrl/api/jornadas/${widget.numeroJornada}',
-        ),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer ${widget.token}',
-        },
+      final res = await _jornadasService.getJornadaDetalle(
+        widget.numeroJornada,
+        token: widget.token,
       );
-
-      if (respuesta.statusCode == 200) {
-        final dynamic datos = jsonDecode(respuesta.body);
-
-        if (datos is Map<String, dynamic>) {
-          final listaPartidos = datos['partidos'];
-
-          setState(() {
-            jornada = datos;
-
-            if (listaPartidos is List) {
-              partidos = listaPartidos;
-            } else {
-              partidos = [];
-            }
-          });
-        } else {
-          setState(() {
-            error =
-                'La respuesta del servidor no tiene el formato esperado.';
-          });
-        }
-      } else if (respuesta.statusCode == 401) {
-        setState(() {
-          error = 'Sesión no autorizada o token vencido.';
-        });
-      } else if (respuesta.statusCode == 404) {
-        setState(() {
-          error = 'La jornada no fue encontrada.';
-        });
-      } else {
-        setState(() {
-          error =
-              'No fue posible cargar la jornada. Código ${respuesta.statusCode}.';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        error = 'No se pudo conectar con el servidor.';
-      });
-    } finally {
       if (mounted) {
         setState(() {
-          cargando = false;
+          jornada = res;
         });
       }
+    } on AppException catch (e) {
+      if (mounted) setState(() => error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => error = 'No se pudo conectar con el servidor.');
+    } finally {
+      if (mounted) setState(() => cargando = false);
     }
   }
 
-  int obtenerEntero(dynamic valor) {
-    if (valor is int) {
-      return valor;
-    }
-
-    return int.tryParse(
-          valor?.toString() ?? '',
-        ) ??
-        0;
-  }
-
-  String formatearFase(dynamic fase) {
-    if (fase == null) {
-      return 'Sin fase';
-    }
-
-    final valor = fase
-        .toString()
-        .replaceAll('_', ' ')
-        .trim();
-
-    if (valor.isEmpty) {
-      return 'Sin fase';
-    }
-
-    return valor;
-  }
-
-  String formatearFechaHora(dynamic fechaHora) {
-    if (fechaHora == null) {
-      return 'Fecha por definir';
-    }
-
-    final valor = fechaHora.toString().trim();
-
-    if (valor.isEmpty) {
-      return 'Fecha por definir';
-    }
-
-    final fecha = DateTime.tryParse(valor);
-
-    if (fecha == null) {
-      return valor;
-    }
-
-    final dia =
-        fecha.day.toString().padLeft(2, '0');
-
-    final mes =
-        fecha.month.toString().padLeft(2, '0');
-
-    final anio = fecha.year.toString();
-
-    final hora =
-        fecha.hour.toString().padLeft(2, '0');
-
-    final minuto =
-        fecha.minute.toString().padLeft(2, '0');
-
-    return '$dia/$mes/$anio - $hora:$minuto';
-  }
-
-  String obtenerMarcador(
-    Map<String, dynamic> partido,
-  ) {
-    final golesLocal =
-        partido['golesLocal'];
-
-    final golesVisitante =
-        partido['golesVisitante'];
-
-    if (golesLocal == null ||
-        golesVisitante == null) {
-      return '-';
-    }
-
-    return '$golesLocal - $golesVisitante';
-  }
-
-  Color obtenerColorEstado(String estado) {
-    switch (estado.toUpperCase()) {
-      case 'FINALIZADA':
-      case 'FINALIZADO':
-        return Colors.green;
-
-      case 'EN_CURSO':
-        return Colors.orange;
-
-      case 'PROGRAMADA':
-      case 'PROGRAMADO':
-        return Colors.blue;
-
-      case 'CANCELADA':
-      case 'CANCELADO':
-        return Colors.red;
-
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Widget datoResumen(
-    IconData icono,
-    String titulo,
-    int valor,
-  ) {
+  Widget datoResumen(IconData icono, String titulo, int valor) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -216,10 +76,7 @@ class _JornadaDetallePageState extends State<JornadaDetallePage> {
         ),
         child: Column(
           children: [
-            Icon(
-              icono,
-              size: 25,
-            ),
+            Icon(icono, size: 25, color: AppColors.primary),
             const SizedBox(height: 6),
             Text(
               valor.toString(),
@@ -232,10 +89,7 @@ class _JornadaDetallePageState extends State<JornadaDetallePage> {
             Text(
               titulo,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.black54,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Colors.black54, fontSize: 12),
             ),
           ],
         ),
@@ -255,478 +109,211 @@ class _JornadaDetallePageState extends State<JornadaDetallePage> {
     );
 
     if (mounted) {
-      await cargarJornada();
+      cargarJornada();
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (cargando) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'Jornada ${widget.numeroJornada}',
-          ),
-          centerTitle: true,
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
+  Widget construirTarjetaPartido(Partido partido) {
+    final fase = TextUtils.formatFase(partido.fase);
+    final fechaHora = AppDateUtils.formatDateTime(partido.fechaHora);
 
-    if (error != null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'Jornada ${widget.numeroJornada}',
-          ),
-          centerTitle: true,
-        ),
-        body: Center(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Card(
+        elevation: 2,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        child: InkWell(
+          onTap: partido.id > 0 ? () => abrirPartido(partido.id) : null,
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(16),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 70,
-                  color: Colors.red,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      fase,
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    StatusChip(status: partido.estado),
+                  ],
                 ),
-                const SizedBox(height: 18),
-                Text(
-                  error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 17,
-                  ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        partido.equipoLocalNombre,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        partido.marcador,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        partido.equipoVisitanteNombre,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: cargarJornada,
-                  icon: const Icon(
-                    Icons.refresh,
-                  ),
-                  label: const Text(
-                    'REINTENTAR',
-                  ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      fechaHora,
+                      style: const TextStyle(fontSize: 13, color: Colors.black54),
+                    ),
+                    if (partido.cancha != null && partido.cancha!.isNotEmpty) ...[
+                      const SizedBox(width: 14),
+                      const Icon(Icons.stadium_outlined, size: 16, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(
+                        partido.cancha!,
+                        style: const TextStyle(fontSize: 13, color: Colors.black54),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
           ),
         ),
-      );
-    }
-
-    if (jornada == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'Jornada ${widget.numeroJornada}',
-          ),
-        ),
-        body: const Center(
-          child: Text(
-            'No hay información de la jornada.',
-          ),
-        ),
-      );
-    }
-
-    final numero =
-        jornada!['jornada']?.toString() ??
-            widget.numeroJornada.toString();
-
-    final estado =
-        jornada!['estado']
-                ?.toString()
-                .trim() ??
-            'SIN ESTADO';
-
-    final cantidadPartidos =
-        obtenerEntero(
-      jornada!['cantidadPartidos'],
+      ),
     );
+  }
 
-    final finalizados =
-        obtenerEntero(
-      jornada!['partidosFinalizados'],
-    );
-
-    final programados =
-        obtenerEntero(
-      jornada!['partidosProgramados'],
-    );
-
-    final cancelados =
-        obtenerEntero(
-      jornada!['partidosCancelados'],
-    );
-
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          const Color(0xFFF4F7FB),
-
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        title: Text(
-          'Jornada $numero',
-        ),
+        title: Text('Jornada ${widget.numeroJornada}'),
         centerTitle: true,
       ),
-
       body: RefreshIndicator(
         onRefresh: cargarJornada,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Card(
-              elevation: 2,
-              child: Padding(
-                padding:
-                    const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          child: Text(
-                            numero,
-                            style:
-                                const TextStyle(
-                              fontSize: 20,
-                              fontWeight:
-                                  FontWeight.bold,
-                            ),
-                          ),
-                        ),
+        child: Builder(
+          builder: (context) {
+            if (cargando) {
+              return const AppLoadingIndicator();
+            }
 
-                        const SizedBox(width: 16),
-
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
-                            children: [
-                              Text(
-                                'Jornada $numero',
-                                style:
-                                    const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight:
-                                      FontWeight.bold,
-                                ),
-                              ),
-
-                              const SizedBox(height: 6),
-
-                              Container(
-                                padding:
-                                    const EdgeInsets
-                                        .symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration:
-                                    BoxDecoration(
-                                  color:
-                                      obtenerColorEstado(
-                                    estado,
-                                  ).withValues(
-                                    alpha: 0.12,
-                                  ),
-                                  borderRadius:
-                                      BorderRadius
-                                          .circular(20),
-                                ),
-                                child: Text(
-                                  estado,
-                                  style: TextStyle(
-                                    color:
-                                        obtenerColorEstado(
-                                      estado,
-                                    ),
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    Row(
-                      children: [
-                        datoResumen(
-                          Icons.sports_soccer,
-                          'Partidos',
-                          cantidadPartidos,
-                        ),
-                        const SizedBox(width: 8),
-                        datoResumen(
-                          Icons.check_circle,
-                          'Finalizados',
-                          finalizados,
-                        ),
-                        const SizedBox(width: 8),
-                        datoResumen(
-                          Icons.schedule,
-                          'Programados',
-                          programados,
-                        ),
-                        const SizedBox(width: 8),
-                        datoResumen(
-                          Icons.cancel,
-                          'Cancelados',
-                          cancelados,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 22),
-
-            Text(
-              'Partidos de la jornada',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(
-                    fontWeight:
-                        FontWeight.bold,
-                  ),
-            ),
-
-            const SizedBox(height: 12),
-
-            if (partidos.isEmpty)
-              const Card(
-                child: Padding(
-                  padding:
-                      EdgeInsets.all(24),
-                  child: Center(
-                    child: Text(
-                      'No hay partidos registrados en esta jornada.',
-                    ),
-                  ),
-                ),
-              ),
-
-            ...partidos.map((item) {
-              final partido =
-                  Map<String, dynamic>.from(
-                item,
+            if (error != null) {
+              return AppErrorView(
+                message: error!,
+                onRetry: cargarJornada,
               );
+            }
 
-              final partidoId =
-                  obtenerEntero(
-                partido['id'],
+            final j = jornada;
+            if (j == null) {
+              return const AppEmptyView(
+                message: 'No hay información de la jornada.',
+                icon: Icons.calendar_today_outlined,
               );
+            }
 
-              final local =
-                  partido['equipoLocal']
-                          ?.toString()
-                          .trim() ??
-                      'Equipo local';
-
-              final visitante =
-                  partido['equipoVisitante']
-                          ?.toString()
-                          .trim() ??
-                      'Equipo visitante';
-
-              final fase =
-                  formatearFase(
-                partido['fase'],
-              );
-
-              final fechaHora =
-                  formatearFechaHora(
-                partido['fechaHora'],
-              );
-
-              final estadoPartido =
-                  partido['estado']
-                          ?.toString()
-                          .trim() ??
-                      'SIN ESTADO';
-
-              final marcador =
-                  obtenerMarcador(
-                partido,
-              );
-
-              return Padding(
-                padding:
-                    const EdgeInsets.only(
-                  bottom: 12,
-                ),
-                child: Card(
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Card(
                   elevation: 2,
-                  child: InkWell(
-                    borderRadius:
-                        BorderRadius.circular(
-                            12),
-                    onTap: partidoId > 0
-                        ? () {
-                            abrirPartido(
-                              partidoId,
-                            );
-                          }
-                        : null,
-                    child: Padding(
-                      padding:
-                          const EdgeInsets.all(
-                              18),
-                      child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment
-                                .stretch,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  fase,
-                                  style:
-                                      const TextStyle(
-                                    color:
-                                        Colors.black54,
-                                  ),
-                                ),
-                              ),
-
-                              Container(
-                                padding:
-                                    const EdgeInsets
-                                        .symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration:
-                                    BoxDecoration(
-                                  color:
-                                      obtenerColorEstado(
-                                    estadoPartido,
-                                  ).withValues(
-                                    alpha: 0.12,
-                                  ),
-                                  borderRadius:
-                                      BorderRadius
-                                          .circular(20),
-                                ),
-                                child: Text(
-                                  estadoPartido,
-                                  style: TextStyle(
-                                    color:
-                                        obtenerColorEstado(
-                                      estadoPartido,
-                                    ),
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          Text(
-                            fechaHora,
-                            style:
-                                const TextStyle(
-                              color:
-                                  Colors.black54,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            const CircleAvatar(
+                              radius: 28,
+                              backgroundColor: AppColors.primaryLight,
+                              child: Icon(Icons.calendar_month, color: AppColors.primary),
                             ),
-                          ),
-
-                          const SizedBox(height: 18),
-
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  local,
-                                  textAlign:
-                                      TextAlign.right,
-                                  style:
-                                      const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight:
-                                        FontWeight.w600,
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Jornada ${j.numero}',
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(height: 6),
+                                  StatusChip(status: j.estado),
+                                ],
                               ),
-
-                              const SizedBox(width: 14),
-
-                              Container(
-                                padding:
-                                    const EdgeInsets
-                                        .symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
-                                ),
-                                decoration:
-                                    BoxDecoration(
-                                  color:
-                                      const Color(
-                                    0xFFEAF2FB,
-                                  ),
-                                  borderRadius:
-                                      BorderRadius
-                                          .circular(10),
-                                ),
-                                child: Text(
-                                  marcador,
-                                  style:
-                                      const TextStyle(
-                                    fontSize: 19,
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(width: 14),
-
-                              Expanded(
-                                child: Text(
-                                  visitante,
-                                  style:
-                                      const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight:
-                                        FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(width: 8),
-
-                              const Icon(
-                                Icons.chevron_right,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            datoResumen(Icons.sports_soccer, 'Partidos', j.cantidadPartidos),
+                            const SizedBox(width: 8),
+                            datoResumen(Icons.check_circle, 'Finalizados', j.partidosFinalizados),
+                            const SizedBox(width: 8),
+                            datoResumen(Icons.schedule, 'Programados', j.partidosProgramados),
+                            const SizedBox(width: 8),
+                            datoResumen(Icons.cancel, 'Cancelados', j.partidosCancelados),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              );
-            }),
-          ],
+                const SizedBox(height: 22),
+                Text(
+                  'Partidos de la jornada',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                if (j.partidos.isEmpty)
+                  const AppEmptyView(
+                    message: 'No hay partidos registrados en esta jornada.',
+                    icon: Icons.sports_soccer_outlined,
+                  )
+                else
+                  ...j.partidos.map(construirTarjetaPartido),
+              ],
+            );
+          },
         ),
       ),
     );

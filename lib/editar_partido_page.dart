@@ -1,7 +1,12 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+
+import 'core/constants/app_colors.dart';
+import 'core/errors/app_exception.dart';
+import 'core/utils/ui_helpers.dart';
+import 'models/partido_detalle.dart';
+import 'services/partidos_service.dart';
+import 'widgets/app_error_view.dart';
+import 'widgets/app_loading_indicator.dart';
 
 class EditarPartidoPage extends StatefulWidget {
   final int partidoId;
@@ -14,33 +19,30 @@ class EditarPartidoPage extends StatefulWidget {
   });
 
   @override
-  State<EditarPartidoPage> createState() =>
-      _EditarPartidoPageState();
+  State<EditarPartidoPage> createState() => _EditarPartidoPageState();
 }
 
 class _EditarPartidoPageState extends State<EditarPartidoPage> {
-  static const String baseUrl =
-      'https://torneointertecnologias-production-7ae9.up.railway.app';
-
   final _formKey = GlobalKey<FormState>();
+  final PartidosService _partidosService = PartidosService();
 
   final faseCtrl = TextEditingController();
   final llaveCtrl = TextEditingController();
   final jornadaCtrl = TextEditingController();
   final equipoLocalIdCtrl = TextEditingController();
   final equipoVisitanteIdCtrl = TextEditingController();
+  final canchaCtrl = TextEditingController();
   final fechaCtrl = TextEditingController();
   final horaCtrl = TextEditingController();
   final observacionesCtrl = TextEditingController();
 
   bool cargando = true;
   bool guardando = false;
-
   String? error;
-  String estado = 'PROGRAMADO';
 
   String equipoLocalNombre = '';
   String equipoVisitanteNombre = '';
+  String estado = 'PROGRAMADO';
 
   @override
   void initState() {
@@ -55,6 +57,7 @@ class _EditarPartidoPageState extends State<EditarPartidoPage> {
     jornadaCtrl.dispose();
     equipoLocalIdCtrl.dispose();
     equipoVisitanteIdCtrl.dispose();
+    canchaCtrl.dispose();
     fechaCtrl.dispose();
     horaCtrl.dispose();
     observacionesCtrl.dispose();
@@ -68,239 +71,106 @@ class _EditarPartidoPageState extends State<EditarPartidoPage> {
     });
 
     try {
-      final respuesta = await http.get(
-        Uri.parse(
-          '$baseUrl/api/partidos/${widget.partidoId}',
-        ),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer ${widget.token}',
-        },
+      final PartidoDetalle detalle = await _partidosService.getPartidoById(
+        widget.partidoId,
+        token: widget.token,
       );
 
-      if (respuesta.statusCode == 200) {
-        final dynamic datos = jsonDecode(respuesta.body);
+      final partido = detalle.partido;
+      if (mounted) {
+        setState(() {
+          faseCtrl.text = partido.fase ?? '';
+          llaveCtrl.text = partido.llave ?? '';
+          jornadaCtrl.text = partido.jornada != null ? partido.jornada.toString() : '';
 
-        if (datos is Map<String, dynamic> &&
-            datos['partido'] is Map<String, dynamic>) {
-          final partido = Map<String, dynamic>.from(
-            datos['partido'],
-          );
-
-          final local = partido['equipoLocal'];
-          final visitante = partido['equipoVisitante'];
-
-          faseCtrl.text =
-              partido['fase']?.toString() ?? '';
-
-          llaveCtrl.text =
-              partido['llave']?.toString() ?? '';
-
-          jornadaCtrl.text =
-              partido['jornada']?.toString() ?? '';
-
-          if (local is Map) {
-            equipoLocalIdCtrl.text =
-                local['id']?.toString() ?? '';
-
-            equipoLocalNombre =
-                local['nombre']?.toString() ?? '';
+          if (partido.equipoLocalId != null) {
+            equipoLocalIdCtrl.text = partido.equipoLocalId.toString();
           }
+          equipoLocalNombre = partido.equipoLocalNombre;
 
-          if (visitante is Map) {
-            equipoVisitanteIdCtrl.text =
-                visitante['id']?.toString() ?? '';
-
-            equipoVisitanteNombre =
-                visitante['nombre']?.toString() ?? '';
+          if (partido.equipoVisitanteId != null) {
+            equipoVisitanteIdCtrl.text = partido.equipoVisitanteId.toString();
           }
+          equipoVisitanteNombre = partido.equipoVisitanteNombre;
 
-          final fechaHora = partido['fechaHora'];
+          canchaCtrl.text = partido.cancha ?? '';
 
-          if (fechaHora != null) {
-            final fecha =
-                DateTime.tryParse(fechaHora.toString());
+          if (partido.fechaHora != null && partido.fechaHora!.isNotEmpty) {
+            final dt = DateTime.tryParse(partido.fechaHora!);
+            if (dt != null) {
+              final anio = dt.year.toString();
+              final mes = dt.month.toString().padLeft(2, '0');
+              final dia = dt.day.toString().padLeft(2, '0');
+              final hora = dt.hour.toString().padLeft(2, '0');
+              final minuto = dt.minute.toString().padLeft(2, '0');
 
-            if (fecha != null) {
-              final anio = fecha.year.toString();
-
-              final mes = fecha.month
-                  .toString()
-                  .padLeft(2, '0');
-
-              final dia = fecha.day
-                  .toString()
-                  .padLeft(2, '0');
-
-              final hora = fecha.hour
-                  .toString()
-                  .padLeft(2, '0');
-
-              final minuto = fecha.minute
-                  .toString()
-                  .padLeft(2, '0');
-
-              fechaCtrl.text =
-                  '$anio-$mes-$dia';
-
-              horaCtrl.text =
-                  '$hora:$minuto';
+              fechaCtrl.text = '$anio-$mes-$dia';
+              horaCtrl.text = '$hora:$minuto';
             }
           }
 
-          final estadoServidor =
-              partido['estado']?.toString().trim();
-
-          if (estadoServidor != null &&
-              estadoServidor.isNotEmpty) {
-            estado = estadoServidor;
-          }
-
-          observacionesCtrl.text =
-              partido['observaciones']?.toString() ?? '';
-
-          if (mounted) {
-            setState(() {});
-          }
-        } else {
-          setState(() {
-            error =
-                'La respuesta del servidor no tiene el formato esperado.';
-          });
-        }
-      } else if (respuesta.statusCode == 401) {
-        setState(() {
-          error =
-              'Sesión no autorizada o token vencido.';
-        });
-      } else if (respuesta.statusCode == 404) {
-        setState(() {
-          error = 'Partido no encontrado.';
-        });
-      } else {
-        setState(() {
-          error =
-              'No fue posible cargar el partido. Código ${respuesta.statusCode}.';
+          estado = partido.estado.isNotEmpty ? partido.estado : 'PROGRAMADO';
+          observacionesCtrl.text = partido.observaciones ?? '';
         });
       }
-    } catch (e) {
-      setState(() {
-        error =
-            'No se pudo conectar con el servidor.';
-      });
+    } on AppException catch (e) {
+      if (mounted) setState(() => error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => error = 'No se pudo conectar con el servidor.');
     } finally {
-      if (mounted) {
-        setState(() {
-          cargando = false;
-        });
-      }
+      if (mounted) setState(() => cargando = false);
     }
   }
 
   Future<void> seleccionarFecha() async {
     DateTime fechaInicial = DateTime.now();
-
-    final fechaActual =
-        DateTime.tryParse(fechaCtrl.text);
-
+    final fechaActual = DateTime.tryParse(fechaCtrl.text.trim());
     if (fechaActual != null) {
       fechaInicial = fechaActual;
     }
 
-    final seleccionada =
-        await showDatePicker(
+    final seleccionada = await showDatePicker(
       context: context,
       initialDate: fechaInicial,
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
     );
 
-    if (seleccionada == null) {
-      return;
-    }
+    if (seleccionada == null) return;
 
-    final anio =
-        seleccionada.year.toString();
-
-    final mes = seleccionada.month
-        .toString()
-        .padLeft(2, '0');
-
-    final dia = seleccionada.day
-        .toString()
-        .padLeft(2, '0');
+    final anio = seleccionada.year.toString();
+    final mes = seleccionada.month.toString().padLeft(2, '0');
+    final dia = seleccionada.day.toString().padLeft(2, '0');
 
     setState(() {
-      fechaCtrl.text =
-          '$anio-$mes-$dia';
+      fechaCtrl.text = '$anio-$mes-$dia';
     });
   }
 
   Future<void> seleccionarHora() async {
-    TimeOfDay horaInicial =
-        TimeOfDay.now();
-
-    final partes =
-        horaCtrl.text.split(':');
-
+    TimeOfDay horaInicial = TimeOfDay.now();
+    final partes = horaCtrl.text.split(':');
     if (partes.length == 2) {
-      final hora =
-          int.tryParse(partes[0]);
-
-      final minuto =
-          int.tryParse(partes[1]);
-
-      if (hora != null &&
-          minuto != null &&
-          hora >= 0 &&
-          hora <= 23 &&
-          minuto >= 0 &&
-          minuto <= 59) {
-        horaInicial = TimeOfDay(
-          hour: hora,
-          minute: minuto,
-        );
+      final h = int.tryParse(partes[0]);
+      final m = int.tryParse(partes[1]);
+      if (h != null && m != null && h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+        horaInicial = TimeOfDay(hour: h, minute: m);
       }
     }
 
-    final seleccionada =
-        await showTimePicker(
+    final seleccionada = await showTimePicker(
       context: context,
       initialTime: horaInicial,
     );
 
-    if (seleccionada == null) {
-      return;
-    }
+    if (seleccionada == null) return;
 
-    final hora = seleccionada.hour
-        .toString()
-        .padLeft(2, '0');
-
-    final minuto = seleccionada.minute
-        .toString()
-        .padLeft(2, '0');
+    final h = seleccionada.hour.toString().padLeft(2, '0');
+    final m = seleccionada.minute.toString().padLeft(2, '0');
 
     setState(() {
-      horaCtrl.text =
-          '$hora:$minuto';
+      horaCtrl.text = '$h:$m';
     });
-  }
-
-  void mostrarMensaje(
-    String mensaje, {
-    bool esError = false,
-  }) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje),
-        backgroundColor: esError
-            ? Colors.red.shade700
-            : Colors.green.shade700,
-      ),
-    );
   }
 
   Future<void> guardarCambios() async {
@@ -308,567 +178,276 @@ class _EditarPartidoPageState extends State<EditarPartidoPage> {
       return;
     }
 
-    final jornada =
-        int.tryParse(jornadaCtrl.text.trim());
+    final jornada = int.tryParse(jornadaCtrl.text.trim());
+    final equipoLocalId = int.tryParse(equipoLocalIdCtrl.text.trim());
+    final equipoVisitanteId = int.tryParse(equipoVisitanteIdCtrl.text.trim());
 
-    final equipoLocalId =
-        int.tryParse(
-      equipoLocalIdCtrl.text.trim(),
-    );
-
-    final equipoVisitanteId =
-        int.tryParse(
-      equipoVisitanteIdCtrl.text.trim(),
-    );
-
-    if (jornada == null ||
-        equipoLocalId == null ||
-        equipoVisitanteId == null) {
-      mostrarMensaje(
-        'Jornada y equipos deben tener valores válidos.',
-        esError: true,
-      );
+    if (equipoLocalId == null || equipoVisitanteId == null) {
+      UiHelpers.showError(context, 'Los IDs de los equipos deben ser numéricos.');
       return;
     }
 
     if (equipoLocalId == equipoVisitanteId) {
-      mostrarMensaje(
-        'El equipo local y visitante no pueden ser el mismo.',
-        esError: true,
-      );
+      UiHelpers.showError(context, 'El equipo local y visitante no pueden ser el mismo.');
       return;
     }
 
     String? fechaHora;
-
-    final fecha =
-        fechaCtrl.text.trim();
-
-    final hora =
-        horaCtrl.text.trim();
-
-    if (fecha.isNotEmpty ||
-        hora.isNotEmpty) {
-      if (fecha.isEmpty ||
-          hora.isEmpty) {
-        mostrarMensaje(
-          'Debe seleccionar tanto la fecha como la hora.',
-          esError: true,
-        );
+    if (fechaCtrl.text.trim().isNotEmpty && horaCtrl.text.trim().isNotEmpty) {
+      final fechaTexto = '${fechaCtrl.text.trim()} ${horaCtrl.text.trim()}:00';
+      final parsed = DateTime.tryParse(fechaTexto);
+      if (parsed == null) {
+        UiHelpers.showError(context, 'La combinación de fecha y hora no es válida.');
         return;
       }
-
-      final fechaCompleta =
-          DateTime.tryParse(
-        '${fecha}T$hora:00',
-      );
-
-      if (fechaCompleta == null) {
-        mostrarMensaje(
-          'La fecha u hora seleccionada no es válida.',
-          esError: true,
-        );
-        return;
-      }
-
-      fechaHora =
-          fechaCompleta.toIso8601String();
+      fechaHora = parsed.toIso8601String();
     }
 
-    final body = {
-      'fase':
-          faseCtrl.text.trim(),
-      'llave':
-          llaveCtrl.text.trim().isEmpty
-              ? null
-              : llaveCtrl.text.trim(),
-      'jornada':
-          jornada,
-      'equipoLocalId':
-          equipoLocalId,
-      'equipoVisitanteId':
-          equipoVisitanteId,
-      'fechaHora':
-          fechaHora,
-      'estado':
-          estado,
-      'observaciones':
-          observacionesCtrl.text.trim().isEmpty
-              ? null
-              : observacionesCtrl.text.trim(),
+    final body = <String, dynamic>{
+      'cancha': canchaCtrl.text.trim().isEmpty ? null : canchaCtrl.text.trim(),
+      'fase': faseCtrl.text.trim().isEmpty ? null : faseCtrl.text.trim(),
+      'llave': llaveCtrl.text.trim().isEmpty ? null : llaveCtrl.text.trim(),
+      'jornada': jornada,
+      'equipoLocalId': equipoLocalId,
+      'equipoVisitanteId': equipoVisitanteId,
+      'fechaHora': fechaHora,
+      'estado': estado,
+      'observaciones': observacionesCtrl.text.trim().isEmpty ? null : observacionesCtrl.text.trim(),
     };
 
-    setState(() {
-      guardando = true;
-    });
+    setState(() => guardando = true);
 
     try {
-      final respuesta = await http.put(
-        Uri.parse(
-          '$baseUrl/api/partidos/${widget.partidoId}',
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer ${widget.token}',
-        },
-        body: jsonEncode(body),
+      await _partidosService.updatePartido(
+        widget.partidoId,
+        body,
+        token: widget.token,
       );
 
-      if (respuesta.statusCode == 200 ||
-          respuesta.statusCode == 204) {
-        if (!mounted) return;
-
-        mostrarMensaje(
-          'Partido actualizado correctamente.',
-        );
-
-        await Future.delayed(
-          const Duration(
-            milliseconds: 400,
-          ),
-        );
-
-        if (!mounted) return;
-
-        Navigator.pop(
-          context,
-          true,
-        );
-      } else {
-        String mensaje =
-            'No fue posible actualizar el partido. Código ${respuesta.statusCode}.';
-
-        try {
-          final dynamic datos =
-              jsonDecode(respuesta.body);
-
-          if (datos is Map<String, dynamic>) {
-            mensaje =
-                datos['mensaje']?.toString() ??
-                    datos['message']?.toString() ??
-                    mensaje;
-          }
-        } catch (_) {}
-
-        mostrarMensaje(
-          mensaje,
-          esError: true,
-        );
-      }
-    } catch (e) {
-      mostrarMensaje(
-        'No se pudo conectar con el servidor.',
-        esError: true,
-      );
+      if (!mounted) return;
+      UiHelpers.showSuccess(context, 'Partido actualizado correctamente.');
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } on AppException catch (e) {
+      if (!mounted) return;
+      UiHelpers.showError(context, e.message);
+    } catch (_) {
+      if (!mounted) return;
+      UiHelpers.showError(context, 'Error al actualizar el partido.');
     } finally {
-      if (mounted) {
-        setState(() {
-          guardando = false;
-        });
-      }
+      if (mounted) setState(() => guardando = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (cargando) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (error != null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Editar partido',
-          ),
-          centerTitle: true,
-        ),
-        body: Center(
-          child: Padding(
-            padding:
-                const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize:
-                  MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 70,
-                  color: Colors.red,
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  error!,
-                  textAlign:
-                      TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed:
-                      cargarPartido,
-                  icon: const Icon(
-                    Icons.refresh,
-                  ),
-                  label: const Text(
-                    'REINTENTAR',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
-      backgroundColor:
-          const Color(0xFFF4F7FB),
-
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        title: const Text(
-          'Editar partido',
-        ),
+        title: const Text('Editar partido'),
         centerTitle: true,
       ),
+      body: Builder(
+        builder: (context) {
+          if (cargando) {
+            return const AppLoadingIndicator();
+          }
 
-      body: SingleChildScrollView(
-        padding:
-            const EdgeInsets.all(20),
+          if (error != null) {
+            return AppErrorView(
+              message: error!,
+              onRetry: cargarPartido,
+            );
+          }
 
-        child: Center(
-          child: ConstrainedBox(
-            constraints:
-                const BoxConstraints(
-              maxWidth: 650,
-            ),
-
-            child: Form(
-              key: _formKey,
-
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.stretch,
-                children: [
-                  Card(
-                    elevation: 2,
-                    child: Padding(
-                      padding:
-                          const EdgeInsets.all(20),
-                      child: Column(
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 650),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      Card(
+                        elevation: 1,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  equipoLocalNombre.isNotEmpty ? equipoLocalNombre : 'Equipo local',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 10),
+                                child: Text('VS', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  equipoVisitanteNombre.isNotEmpty ? equipoVisitanteNombre : 'Equipo visitante',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        controller: faseCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Fase',
+                          prefixIcon: Icon(Icons.flag_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: llaveCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Llave',
+                          prefixIcon: Icon(Icons.account_tree_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: jornadaCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Jornada',
+                          prefixIcon: Icon(Icons.calendar_month),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: equipoLocalIdCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'ID Equipo Local ($equipoLocalNombre)',
+                          prefixIcon: const Icon(Icons.shield),
+                          border: const OutlineInputBorder(),
+                        ),
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Ingrese ID del equipo local.' : null,
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: equipoVisitanteIdCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'ID Equipo Visitante ($equipoVisitanteNombre)',
+                          prefixIcon: const Icon(Icons.shield_outlined),
+                          border: const OutlineInputBorder(),
+                        ),
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Ingrese ID del equipo visitante.' : null,
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: canchaCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Cancha',
+                          prefixIcon: Icon(Icons.stadium_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
                         children: [
-                          const Text(
-                            'Partido',
-                            style: TextStyle(
-                              color: Colors.grey,
+                          Expanded(
+                            child: TextFormField(
+                              controller: fechaCtrl,
+                              readOnly: true,
+                              onTap: seleccionarFecha,
+                              decoration: const InputDecoration(
+                                labelText: 'Fecha',
+                                prefixIcon: Icon(Icons.calendar_today),
+                                border: OutlineInputBorder(),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '$equipoLocalNombre  vs  $equipoVisitanteNombre',
-                            textAlign:
-                                TextAlign.center,
-                            style:
-                                const TextStyle(
-                              fontSize: 20,
-                              fontWeight:
-                                  FontWeight.bold,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: horaCtrl,
+                              readOnly: true,
+                              onTap: seleccionarHora,
+                              decoration: const InputDecoration(
+                                labelText: 'Hora',
+                                prefixIcon: Icon(Icons.access_time),
+                                border: OutlineInputBorder(),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  TextFormField(
-                    controller:
-                        faseCtrl,
-                    decoration:
-                        const InputDecoration(
-                      labelText: 'Fase',
-                      prefixIcon:
-                          Icon(Icons.flag),
-                      border:
-                          OutlineInputBorder(),
-                    ),
-                    validator: (valor) {
-                      if (valor == null ||
-                          valor.trim().isEmpty) {
-                        return 'Ingrese la fase.';
-                      }
-
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  TextFormField(
-                    controller:
-                        llaveCtrl,
-                    decoration:
-                        const InputDecoration(
-                      labelText:
-                          'Llave (opcional)',
-                      prefixIcon:
-                          Icon(
-                        Icons.account_tree,
+                      const SizedBox(height: 14),
+                      DropdownButtonFormField<String>(
+                        initialValue: estado.isEmpty ? 'PROGRAMADO' : estado,
+                        decoration: const InputDecoration(
+                          labelText: 'Estado del partido',
+                          prefixIcon: Icon(Icons.verified),
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'PROGRAMADO', child: Text('PROGRAMADO')),
+                          DropdownMenuItem(value: 'EN_CURSO', child: Text('EN_CURSO')),
+                          DropdownMenuItem(value: 'FINALIZADO', child: Text('FINALIZADO')),
+                          DropdownMenuItem(value: 'CANCELADO', child: Text('CANCELADO')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setState(() => estado = val);
+                        },
                       ),
-                      border:
-                          OutlineInputBorder(),
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  TextFormField(
-                    controller:
-                        jornadaCtrl,
-                    keyboardType:
-                        TextInputType.number,
-                    decoration:
-                        const InputDecoration(
-                      labelText: 'Jornada',
-                      prefixIcon:
-                          Icon(Icons.numbers),
-                      border:
-                          OutlineInputBorder(),
-                    ),
-                    validator: (valor) {
-                      if (valor == null ||
-                          int.tryParse(
-                                valor.trim(),
-                              ) ==
-                              null) {
-                        return 'Ingrese una jornada válida.';
-                      }
-
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  TextFormField(
-                    controller:
-                        equipoLocalIdCtrl,
-                    keyboardType:
-                        TextInputType.number,
-                    decoration:
-                        InputDecoration(
-                      labelText:
-                          'ID equipo local',
-                      helperText:
-                          equipoLocalNombre,
-                      prefixIcon:
-                          const Icon(
-                        Icons.home,
-                      ),
-                      border:
-                          const OutlineInputBorder(),
-                    ),
-                    validator: (valor) {
-                      if (valor == null ||
-                          int.tryParse(
-                                valor.trim(),
-                              ) ==
-                              null) {
-                        return 'Ingrese un ID válido.';
-                      }
-
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  TextFormField(
-                    controller:
-                        equipoVisitanteIdCtrl,
-                    keyboardType:
-                        TextInputType.number,
-                    decoration:
-                        InputDecoration(
-                      labelText:
-                          'ID equipo visitante',
-                      helperText:
-                          equipoVisitanteNombre,
-                      prefixIcon:
-                          const Icon(
-                        Icons.groups,
-                      ),
-                      border:
-                          const OutlineInputBorder(),
-                    ),
-                    validator: (valor) {
-                      if (valor == null ||
-                          int.tryParse(
-                                valor.trim(),
-                              ) ==
-                              null) {
-                        return 'Ingrese un ID válido.';
-                      }
-
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  TextFormField(
-                    controller:
-                        fechaCtrl,
-                    readOnly: true,
-                    onTap:
-                        seleccionarFecha,
-                    decoration:
-                        const InputDecoration(
-                      labelText: 'Fecha',
-                      hintText:
-                          'Fecha por definir',
-                      prefixIcon:
-                          Icon(
-                        Icons.calendar_month,
-                      ),
-                      suffixIcon:
-                          Icon(
-                        Icons.edit_calendar,
-                      ),
-                      border:
-                          OutlineInputBorder(),
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  TextFormField(
-                    controller:
-                        horaCtrl,
-                    readOnly: true,
-                    onTap:
-                        seleccionarHora,
-                    decoration:
-                        const InputDecoration(
-                      labelText: 'Hora',
-                      hintText:
-                          'Hora por definir',
-                      prefixIcon:
-                          Icon(
-                        Icons.access_time,
-                      ),
-                      border:
-                          OutlineInputBorder(),
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  DropdownButtonFormField<String>(
-                    initialValue:
-                        estado.isEmpty
-                            ? null
-                            : estado,
-                    decoration:
-                        const InputDecoration(
-                      labelText: 'Estado',
-                      prefixIcon:
-                          Icon(
-                        Icons.info_outline,
-                      ),
-                      border:
-                          OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'PROGRAMADO',
-                        child: Text(
-                          'PROGRAMADO',
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: observacionesCtrl,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'Observaciones',
+                          prefixIcon: Icon(Icons.note_outlined),
+                          border: OutlineInputBorder(),
                         ),
                       ),
-                      DropdownMenuItem(
-                        value: 'EN_CURSO',
-                        child: Text(
-                          'EN CURSO',
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: guardando ? null : guardarCambios,
+                          icon: guardando
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.save),
+                          label: Text(
+                            guardando ? 'GUARDANDO...' : 'GUARDAR CAMBIOS',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
-                      DropdownMenuItem(
-                        value: 'FINALIZADO',
-                        child: Text(
-                          'FINALIZADO',
-                        ),
-                      ),
+                      const SizedBox(height: 20),
                     ],
-                    onChanged: guardando
-                        ? null
-                        : (valor) {
-                            if (valor == null) {
-                              return;
-                            }
-
-                            setState(() {
-                              estado = valor;
-                            });
-                          },
                   ),
-
-                  const SizedBox(height: 14),
-
-                  TextFormField(
-                    controller:
-                        observacionesCtrl,
-                    maxLines: 3,
-                    decoration:
-                        const InputDecoration(
-                      labelText:
-                          'Observaciones',
-                      prefixIcon:
-                          Icon(Icons.notes),
-                      border:
-                          OutlineInputBorder(),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  SizedBox(
-                    height: 52,
-                    child:
-                        FilledButton.icon(
-                      onPressed: guardando
-                          ? null
-                          : guardarCambios,
-                      icon: guardando
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child:
-                                  CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.save,
-                            ),
-                      label: Text(
-                        guardando
-                            ? 'GUARDANDO...'
-                            : 'GUARDAR CAMBIOS',
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
