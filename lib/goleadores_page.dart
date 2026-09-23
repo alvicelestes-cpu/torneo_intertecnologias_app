@@ -75,14 +75,41 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
   Color colorPosicion(int pos) {
     switch (pos) {
       case 1:
-        return AppColors.podioOro;
+        return Colors.amber.shade700;
       case 2:
-        return AppColors.podioPlata;
+        return Colors.blueGrey;
       case 3:
-        return AppColors.podioBronce;
+        return Colors.brown.shade400;
       default:
         return Colors.blueGrey.shade100;
     }
+  }
+
+  Widget construirPosicion(int pos) {
+    final esPodio = pos <= 3;
+    return Container(
+      width: 40,
+      height: 40,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: colorPosicion(pos),
+        shape: BoxShape.circle,
+      ),
+      child: esPodio
+          ? Icon(
+              pos == 1 ? Icons.emoji_events : Icons.workspace_premium,
+              color: Colors.white,
+              size: 22,
+            )
+          : Text(
+              pos.toString(),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Colors.black87,
+              ),
+            ),
+    );
   }
 
   @override
@@ -93,7 +120,7 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
         title: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Tabla de goleadores'),
+            const Text('Goleadores'),
             ListenableBuilder(
               listenable: SessionManager(),
               builder: (context, _) => Text(
@@ -128,104 +155,197 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
 
             if (goleadores.isEmpty) {
               return const AppEmptyView(
-                message: 'No hay goleadores registrados.',
+                message: 'No hay goleadores registrados en este campeonato.',
                 icon: Icons.emoji_events_outlined,
               );
             }
 
-            return ListView.separated(
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
-              itemCount: goleadores.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final goleador = goleadores[index];
-                final rank = goleador.posicion ?? (index + 1);
-
-                return Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: colorPosicion(rank),
-                          child: Text(
-                            rank.toString(),
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: rank <= 3 ? Colors.white : Colors.black87,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 850),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Cabecera deportiva azul
+                      Card(
+                        elevation: 3,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        clipBehavior: Clip.antiAlias,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Color(0xFF0B3C68),
+                                Color(0xFF1565C0),
+                                Color(0xFF1E88E5),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 14),
-                        PlayerAvatar(
-                          photoUrl: goleador.fotoJugador,
-                          playerName: goleador.nombreCompleto,
-                          radius: 28,
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          padding: const EdgeInsets.all(20),
+                          child: Row(
                             children: [
-                              Text(
-                                goleador.nombreCompleto,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withAlpha(35),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
+                                child: const Icon(Icons.emoji_events, color: Colors.white, size: 28),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                goleador.equipo,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black54,
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'TABLA DE GOLEADORES',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        letterSpacing: 1.1,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    ListenableBuilder(
+                                      listenable: SessionManager(),
+                                      builder: (context, _) => Text(
+                                        SessionManager().selectedCampeonatoNombre,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${goleadores.length} jugadores clasificados',
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                goleador.goles.toString(),
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Lista de goleadores con podio
+                      ...goleadores.map((goleador) {
+                        final rank = goleador.posicion ?? (goleadores.indexOf(goleador) + 1);
+                        final sigla = goleador.siglaEquipo;
+                        final equipoTexto = (sigla != null && sigla.isNotEmpty)
+                            ? '${goleador.equipo} ($sigla)'
+                            : goleador.equipo;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              side: rank == 1
+                                  ? BorderSide(color: Colors.amber.shade300, width: 1.5)
+                                  : BorderSide.none,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                children: [
+                                  construirPosicion(rank),
+                                  const SizedBox(width: 14),
+                                  PlayerAvatar(
+                                    photoUrl: goleador.fotoJugador,
+                                    playerName: goleador.nombreCompleto,
+                                    radius: 26,
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          goleador.nombreCompleto,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          equipoTexto,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.black54,
+                                          ),
+                                        ),
+                                        if (goleador.numeroCamiseta != null) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Camiseta: #${goleador.numeroCamiseta}',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.black45,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEAF2FB),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          goleador.goles.toString(),
+                                          style: const TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF1D4F7A),
+                                          ),
+                                        ),
+                                        const Text(
+                                          'GOLES',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black54,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const Text(
-                                'GOLES',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        );
+                      }),
+                      const SizedBox(height: 20),
+                    ],
                   ),
-                );
-              },
+                ),
+              ),
             );
           },
         ),

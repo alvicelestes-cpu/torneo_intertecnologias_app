@@ -42,4 +42,15 @@ class AppDateUtils {
 
     return '$dia/$mes/$anio';
   }
+
+  static int? calculateAge(dynamic fechaNacimiento) {
+    final dt = tryParse(fechaNacimiento);
+    if (dt == null) return null;
+    final now = DateTime.now();
+    int age = now.year - dt.year;
+    if (now.month < dt.month || (now.month == dt.month && now.day < dt.day)) {
+      age--;
+    }
+    return age >= 0 ? age : null;
+  }
 }

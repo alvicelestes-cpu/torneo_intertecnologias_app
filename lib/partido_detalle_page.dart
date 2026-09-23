@@ -479,7 +479,9 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                 ),
                 if (partido.llave != null && partido.llave!.isNotEmpty)
                   filaDato(Icons.account_tree_outlined, 'Llave', partido.llave!),
-                if (partido.observaciones != null && partido.observaciones!.isNotEmpty)
+                if (SessionManager().isAuthenticated &&
+                    partido.observaciones != null &&
+                    partido.observaciones!.isNotEmpty)
                   filaDato(Icons.note_outlined, 'Observaciones', partido.observaciones!),
                 construirResumenIncidencias(det),
                 const SizedBox(height: 20),

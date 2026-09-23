@@ -171,17 +171,34 @@ class _JornadasPageState extends State<JornadasPage> {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                // Cabecera azul deportiva
                 Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  clipBehavior: Clip.antiAlias,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xFF0B3C68),
+                          Color(0xFF1565C0),
+                          Color(0xFF1E88E5),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(20),
                     child: Row(
                       children: [
-                        const CircleAvatar(
-                          radius: 26,
-                          backgroundColor: AppColors.primaryLight,
-                          child: Icon(Icons.calendar_month, color: AppColors.primary),
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(35),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(Icons.calendar_month, color: Colors.white, size: 28),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -189,14 +206,21 @@ class _JornadasPageState extends State<JornadasPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'Total de jornadas',
-                                style: TextStyle(color: Colors.black54),
-                              ),
-                              Text(
-                                cantidadJornadas.toString(),
-                                style: const TextStyle(
-                                  fontSize: 24,
+                                'CALENDARIO DE COMPETENCIA',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                  letterSpacing: 1.1,
                                   fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$cantidadJornadas ${cantidadJornadas == 1 ? 'Jornada programada' : 'Jornadas programadas'}',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
                                 ),
                               ),
                             ],
@@ -223,11 +247,27 @@ class _JornadasPageState extends State<JornadasPage> {
                             children: [
                               Row(
                                 children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withAlpha(20),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      'PRIMERA FASE',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
                                       'Jornada ${jornada.numero}',
                                       style: const TextStyle(
-                                        fontSize: 20,
+                                        fontSize: 18,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),

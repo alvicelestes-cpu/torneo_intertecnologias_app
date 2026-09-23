@@ -69,8 +69,47 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
     }
   }
 
-  Widget tarjetaEquipo(String titulo, EquipoEstadistica? equipo, IconData icono) {
+  Widget _buildStatChip(String label, String value, {Color? color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: (color ?? const Color(0xFF1D4F7A)).withAlpha(18),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: (color ?? const Color(0xFF1D4F7A)).withAlpha(40),
+        ),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(fontSize: 12, color: Colors.black87),
+          children: [
+            TextSpan(
+              text: '$label: ',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: color ?? const Color(0xFF1D4F7A),
+              ),
+            ),
+            TextSpan(
+              text: value,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget tarjetaEquipo({
+    required String titulo,
+    required EquipoEstadistica? equipo,
+    required IconData icono,
+    required Color iconoColor,
+    required Color iconoBgColor,
+  }) {
     if (equipo == null) return const SizedBox.shrink();
+
+    final siglaTexto = equipo.sigla.isNotEmpty ? ' (${equipo.sigla})' : '';
 
     return Card(
       elevation: 2,
@@ -83,39 +122,45 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: AppColors.primaryLight,
-                  child: Icon(icono, color: AppColors.primary),
+                  radius: 20,
+                  backgroundColor: iconoBgColor,
+                  child: Icon(icono, color: iconoColor, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     titulo,
-                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1D4F7A),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             Text(
-              equipo.nombre,
-              style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
-            ),
-            if (equipo.sigla.isNotEmpty)
-              Text(
-                equipo.sigla,
-                style: const TextStyle(color: Colors.black54),
+              '${equipo.nombre}$siglaTexto',
+              style: const TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.bold,
               ),
+            ),
             const SizedBox(height: 12),
             Wrap(
-              spacing: 14,
+              spacing: 8,
               runSpacing: 8,
               children: [
-                Text('PJ: ${equipo.partidosJugados}'),
-                Text('GF: ${equipo.golesFavor}'),
-                Text('GC: ${equipo.golesContra}'),
-                Text('DG: ${equipo.diferenciaGol > 0 ? '+' : ''}${equipo.diferenciaGol}'),
-                Text('Amarillas: ${equipo.amarillas}'),
-                Text('Rojas: ${equipo.rojas}'),
+                _buildStatChip('PJ', equipo.partidosJugados.toString()),
+                _buildStatChip('GF', equipo.golesFavor.toString()),
+                _buildStatChip('GC', equipo.golesContra.toString()),
+                _buildStatChip(
+                  'DG',
+                  '${equipo.diferenciaGol > 0 ? '+' : ''}${equipo.diferenciaGol}',
+                ),
+                _buildStatChip('Amarillas', equipo.amarillas.toString(), color: Colors.amber.shade800),
+                _buildStatChip('Rojas', equipo.rojas.toString(), color: Colors.red.shade700),
               ],
             ),
           ],
@@ -129,7 +174,10 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: Colors.amber.shade300, width: 1.5),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Row(
@@ -137,51 +185,70 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
             PlayerAvatar(
               photoUrl: goleador.fotoJugador,
               playerName: goleador.nombreCompleto,
-              radius: 40,
+              radius: 36,
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Goleador del torneo',
-                    style: TextStyle(color: Colors.black54),
+                  Row(
+                    children: [
+                      Icon(Icons.emoji_events, size: 16, color: Colors.amber.shade800),
+                      const SizedBox(width: 5),
+                      Text(
+                        'GOLEADOR DEL TORNEO',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                          color: Colors.amber.shade900,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
                     goleador.nombreCompleto,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
                     goleador.equipoNombre,
-                    style: const TextStyle(color: Colors.black54),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black54,
+                    ),
                   ),
                 ],
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.primaryLight,
+                color: const Color(0xFFEAF2FB),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     goleador.goles.toString(),
                     style: const TextStyle(
-                      fontSize: 28,
+                      fontSize: 26,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                      color: Color(0xFF1D4F7A),
                     ),
                   ),
                   const Text(
                     'GOLES',
                     style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.black54,
+                      fontSize: 10,
                       fontWeight: FontWeight.w600,
+                      color: Colors.black54,
                     ),
                   ),
                 ],
@@ -202,6 +269,12 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
+            headingRowColor: WidgetStateProperty.all(const Color(0xFF1D4F7A).withAlpha(15)),
+            headingTextStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1D4F7A),
+              fontSize: 13,
+            ),
             columns: const [
               DataColumn(label: Text('Equipo')),
               DataColumn(label: Text('PJ')),
@@ -212,11 +285,26 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
             rows: fairPlay.map((item) {
               return DataRow(
                 cells: [
-                  DataCell(Text(item.nombre)),
+                  DataCell(Text(
+                    item.nombre,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  )),
                   DataCell(Text(item.partidosJugados.toString())),
-                  DataCell(Text(item.amarillas.toString())),
-                  DataCell(Text(item.rojas.toString())),
-                  DataCell(Text(item.puntosFairPlay.toString())),
+                  DataCell(Text(
+                    item.amarillas.toString(),
+                    style: TextStyle(color: Colors.amber.shade900, fontWeight: FontWeight.bold),
+                  )),
+                  DataCell(Text(
+                    item.rojas.toString(),
+                    style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold),
+                  )),
+                  DataCell(Text(
+                    item.puntosFairPlay.toString(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1D4F7A),
+                    ),
+                  )),
                 ],
               );
             }).toList(),
@@ -275,85 +363,158 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
               );
             }
 
-            return ListView(
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
-              children: [
-                const Card(
-                  elevation: 2,
-                  child: Padding(
-                    padding: EdgeInsets.all(18),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundColor: AppColors.primaryLight,
-                          child: Icon(
-                            Icons.bar_chart,
-                            size: 30,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            'Resumen estadístico del torneo',
-                            style: TextStyle(
-                              fontSize: 21,
-                              fontWeight: FontWeight.bold,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 850),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Cabecera deportiva azul
+                      Card(
+                        elevation: 3,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        clipBehavior: Clip.antiAlias,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Color(0xFF0B3C68),
+                                Color(0xFF1565C0),
+                                Color(0xFF1E88E5),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
                           ),
+                          padding: const EdgeInsets.all(20),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withAlpha(35),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(Icons.bar_chart, color: Colors.white, size: 28),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'RESUMEN ESTADÍSTICO DEL TORNEO',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        letterSpacing: 1.1,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    ListenableBuilder(
+                                      listenable: SessionManager(),
+                                      builder: (context, _) => Text(
+                                        SessionManager().selectedCampeonatoNombre,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Goleador del torneo
+                      tarjetaGoleador(stats.goleador),
+                      const SizedBox(height: 12),
+
+                      // Valla menos vencida
+                      tarjetaEquipo(
+                        titulo: 'Valla menos vencida',
+                        equipo: stats.vallaMenosVencida,
+                        icono: Icons.shield,
+                        iconoColor: const Color(0xFF1D4F7A),
+                        iconoBgColor: const Color(0xFFEAF2FB),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Equipo más goleador
+                      tarjetaEquipo(
+                        titulo: 'Equipo más goleador',
+                        equipo: stats.equipoMasGoleador,
+                        icono: Icons.sports_soccer,
+                        iconoColor: Colors.green.shade700,
+                        iconoBgColor: Colors.green.shade50,
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Mejor diferencia de gol
+                      tarjetaEquipo(
+                        titulo: 'Mejor diferencia de gol',
+                        equipo: stats.mejorDiferenciaGol,
+                        icono: Icons.trending_up,
+                        iconoColor: Colors.teal.shade700,
+                        iconoBgColor: Colors.teal.shade50,
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Menos amarillas
+                      tarjetaEquipo(
+                        titulo: 'Equipo con menos amarillas',
+                        equipo: stats.menosAmarillas,
+                        icono: Icons.crop_portrait,
+                        iconoColor: Colors.amber.shade800,
+                        iconoBgColor: Colors.amber.shade50,
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Menos rojas
+                      tarjetaEquipo(
+                        titulo: 'Equipo con menos rojas',
+                        equipo: stats.menosRojas,
+                        icono: Icons.crop_portrait,
+                        iconoColor: Colors.red.shade700,
+                        iconoBgColor: Colors.red.shade50,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Sección Fair Play
+                      Row(
+                        children: [
+                          Icon(Icons.workspace_premium, color: Colors.blue.shade800, size: 22),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Tabla Fair Play',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1D4F7A),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      if (stats.fairPlay.isNotEmpty)
+                        tablaFairPlay(stats.fairPlay)
+                      else
+                        const AppEmptyView(message: 'Sin registros de Fair Play.'),
+                      const SizedBox(height: 20),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                tarjetaGoleador(stats.goleador),
-                const SizedBox(height: 12),
-                tarjetaEquipo(
-                  'Valla menos vencida',
-                  stats.vallaMenosVencida,
-                  Icons.shield,
-                ),
-                const SizedBox(height: 12),
-                tarjetaEquipo(
-                  'Equipo más goleador',
-                  stats.equipoMasGoleador,
-                  Icons.sports_soccer,
-                ),
-                const SizedBox(height: 12),
-                tarjetaEquipo(
-                  'Mejor diferencia de gol',
-                  stats.mejorDiferenciaGol,
-                  Icons.trending_up,
-                ),
-                const SizedBox(height: 12),
-                tarjetaEquipo(
-                  'Equipo con menos amarillas',
-                  stats.menosAmarillas,
-                  Icons.square,
-                ),
-                const SizedBox(height: 12),
-                tarjetaEquipo(
-                  'Equipo con menos rojas',
-                  stats.menosRojas,
-                  Icons.warning,
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Tabla Fair Play',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                if (stats.fairPlay.isNotEmpty)
-                  tablaFairPlay(stats.fairPlay)
-                else
-                  const AppEmptyView(message: 'Sin registros de Fair Play.'),
-                const SizedBox(height: 20),
-              ],
+              ),
             );
           },
         ),

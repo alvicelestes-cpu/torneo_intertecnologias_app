@@ -260,50 +260,99 @@ class _JornadaDetallePageState extends State<JornadaDetallePage> {
               padding: const EdgeInsets.all(16),
               children: [
                 Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  clipBehavior: Clip.antiAlias,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xFF0B3C68),
+                          Color(0xFF1565C0),
+                          Color(0xFF1E88E5),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Row(
                           children: [
-                            const CircleAvatar(
-                              radius: 28,
-                              backgroundColor: AppColors.primaryLight,
-                              child: Icon(Icons.calendar_month, color: AppColors.primary),
+                            CircleAvatar(
+                              radius: 26,
+                              backgroundColor: Colors.white24,
+                              child: Text(
+                                '${j.numero}',
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white24,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      'PRIMERA FASE',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
                                   Text(
                                     'Jornada ${j.numero}',
                                     style: const TextStyle(
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold,
+                                      color: Colors.white,
                                     ),
                                   ),
-                                  const SizedBox(height: 6),
-                                  StatusChip(status: j.estado),
+                                  Text(
+                                    '${j.cantidadPartidos} ${j.cantidadPartidos == 1 ? 'partido' : 'partidos'} • ${j.estado}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            datoResumen(Icons.sports_soccer, 'Partidos', j.cantidadPartidos),
-                            const SizedBox(width: 8),
-                            datoResumen(Icons.check_circle, 'Finalizados', j.partidosFinalizados),
-                            const SizedBox(width: 8),
-                            datoResumen(Icons.schedule, 'Programados', j.partidosProgramados),
-                            const SizedBox(width: 8),
-                            datoResumen(Icons.cancel, 'Cancelados', j.partidosCancelados),
-                          ],
+                        const SizedBox(height: 18),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              datoResumen(Icons.sports_soccer, 'Partidos', j.cantidadPartidos),
+                              const SizedBox(width: 6),
+                              datoResumen(Icons.check_circle, 'Finalizados', j.partidosFinalizados),
+                              const SizedBox(width: 6),
+                              datoResumen(Icons.schedule, 'Programados', j.partidosProgramados),
+                              const SizedBox(width: 6),
+                              datoResumen(Icons.cancel, 'Cancelados', j.partidosCancelados),
+                            ],
+                          ),
                         ),
                       ],
                     ),

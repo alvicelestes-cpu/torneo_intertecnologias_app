@@ -40,11 +40,14 @@ class JugadoresService {
 
     if (response is Map<String, dynamic>) {
       if (response['jugador'] is Map) {
-        return Jugador.fromJson(
-          response['jugador'] is Map<String, dynamic>
-              ? response['jugador']
-              : Map<String, dynamic>.from(response['jugador']),
-        );
+        final jMap = Map<String, dynamic>.from(response['jugador'] as Map);
+        if (response['estadisticas'] is Map) {
+          final stats = response['estadisticas'] as Map;
+          jMap['goles'] = stats['totalGoles'];
+          jMap['amarillas'] = stats['amarillas'];
+          jMap['rojas'] = stats['rojas'];
+        }
+        return Jugador.fromJson(jMap);
       }
       return Jugador.fromJson(response);
     }

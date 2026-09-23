@@ -4,10 +4,11 @@ import 'core/constants/app_colors.dart';
 import 'core/session/session_manager.dart';
 import 'core/utils/date_utils.dart';
 import 'core/utils/ui_helpers.dart';
-import 'models/jugador.dart';
+import 'services/jugadores_service.dart';
 import 'widgets/player_avatar.dart';
 
 import 'editar_jugador_page.dart';
+import 'models/jugador.dart';
 
 class JugadorDetallePage extends StatefulWidget {
   final Map<String, dynamic> jugador;
@@ -27,11 +28,25 @@ class JugadorDetallePage extends StatefulWidget {
 
 class _JugadorDetallePageState extends State<JugadorDetallePage> {
   late Jugador jugador;
+  final JugadoresService _jugadoresService = JugadoresService();
 
   @override
   void initState() {
     super.initState();
     jugador = Jugador.fromJson(widget.jugador);
+    _cargarDetallesCompletos();
+  }
+
+  Future<void> _cargarDetallesCompletos() async {
+    if (jugador.id <= 0) return;
+    try {
+      final j = await _jugadoresService.getJugadorById(jugador.id, token: widget.token);
+      if (mounted) {
+        setState(() {
+          jugador = j;
+        });
+      }
+    } catch (_) {}
   }
 
   Widget filaDato(IconData icono, String titulo, String valor) {
@@ -156,6 +171,71 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
                   Icons.cake_outlined,
                   'Fecha de nacimiento',
                   fechaNacimiento,
+                ),
+                filaDato(
+                  Icons.calendar_today_outlined,
+                  'Edad',
+                  jugador.edad != null ? '${jugador.edad} años' : 'No registrada',
+                ),
+                Card(
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  margin: const EdgeInsets.symmetric(vertical: 5),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Column(
+                          children: [
+                            const Icon(Icons.sports_soccer, color: Color(0xFF2E7D32), size: 28),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${jugador.goles}',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2E7D32),
+                              ),
+                            ),
+                            const Text('Goles', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            const Icon(Icons.crop_portrait, color: Color(0xFFF57F17), size: 28),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${jugador.amarillas}',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFF57F17),
+                              ),
+                            ),
+                            const Text('Amarillas', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            const Icon(Icons.crop_portrait, color: Color(0xFFC62828), size: 28),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${jugador.rojas}',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFC62828),
+                              ),
+                            ),
+                            const Text('Rojas', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 if (SessionManager().isAuthenticated &&
                     jugador.documento != null &&

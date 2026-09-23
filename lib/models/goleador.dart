@@ -7,6 +7,8 @@ class Goleador {
   final String apellidos;
   final int? equipoId;
   final String equipo;
+  final String? siglaEquipo;
+  final int? numeroCamiseta;
   final int goles;
   final String? fotoJugador;
 
@@ -17,6 +19,8 @@ class Goleador {
     required this.apellidos,
     this.equipoId,
     required this.equipo,
+    this.siglaEquipo,
+    this.numeroCamiseta,
     required this.goles,
     this.fotoJugador,
   });
@@ -31,6 +35,8 @@ class Goleador {
       equipo: json['equipo']?.toString().trim() ??
           json['equipoNombre']?.toString().trim() ??
           'Sin equipo',
+      siglaEquipo: json['siglaEquipo']?.toString().trim() ?? json['sigla']?.toString().trim(),
+      numeroCamiseta: json['numeroCamiseta'] != null ? TextUtils.toInt(json['numeroCamiseta']) : null,
       goles: TextUtils.toInt(json['goles']),
       fotoJugador: json['fotoJugador']?.toString().trim() ?? json['foto_jugador']?.toString().trim(),
     );
@@ -43,6 +49,8 @@ class Goleador {
     String? apellidos,
     int? equipoId,
     String? equipo,
+    String? siglaEquipo,
+    int? numeroCamiseta,
     int? goles,
     String? fotoJugador,
   }) {
@@ -53,6 +61,8 @@ class Goleador {
       apellidos: apellidos ?? this.apellidos,
       equipoId: equipoId ?? this.equipoId,
       equipo: equipo ?? this.equipo,
+      siglaEquipo: siglaEquipo ?? this.siglaEquipo,
+      numeroCamiseta: numeroCamiseta ?? this.numeroCamiseta,
       goles: goles ?? this.goles,
       fotoJugador: fotoJugador ?? this.fotoJugador,
     );
@@ -66,6 +76,8 @@ class Goleador {
       'apellidos': apellidos,
       if (equipoId != null) 'equipoId': equipoId,
       'equipo': equipo,
+      if (siglaEquipo != null) 'siglaEquipo': siglaEquipo,
+      if (numeroCamiseta != null) 'numeroCamiseta': numeroCamiseta,
       'goles': goles,
       if (fotoJugador != null) 'fotoJugador': fotoJugador,
     };

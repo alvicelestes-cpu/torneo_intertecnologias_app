@@ -1,3 +1,5 @@
+import 'package:flutter/painting.dart';
+
 class TextUtils {
   TextUtils._();
 
@@ -46,5 +48,19 @@ class TextUtils {
     return nombreValido.length >= 2
         ? nombreValido.substring(0, 2).toUpperCase()
         : nombreValido.toUpperCase();
+  }
+
+  static Color parseColor(String? hexString, {Color defaultColor = const Color(0xFF1976D2)}) {
+    if (hexString == null) return defaultColor;
+    String clean = hexString.replaceAll('#', '').trim();
+    if (clean.isEmpty) return defaultColor;
+    if (clean.length == 6) {
+      clean = 'FF$clean';
+    } else if (clean.length == 3) {
+      clean = 'FF${clean[0]}${clean[0]}${clean[1]}${clean[1]}${clean[2]}${clean[2]}';
+    }
+    final val = int.tryParse(clean, radix: 16);
+    if (val == null) return defaultColor;
+    return Color(val);
   }
 }

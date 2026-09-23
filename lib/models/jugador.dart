@@ -1,3 +1,4 @@
+import '../core/utils/date_utils.dart';
 import '../core/utils/text_utils.dart';
 
 class Jugador {
@@ -13,6 +14,9 @@ class Jugador {
   final String? fotoJugador;
   final String estado;
   final String? observacionAdmin;
+  final int goles;
+  final int amarillas;
+  final int rojas;
 
   const Jugador({
     required this.id,
@@ -27,6 +31,9 @@ class Jugador {
     this.fotoJugador,
     this.estado = 'ACTIVO',
     this.observacionAdmin,
+    this.goles = 0,
+    this.amarillas = 0,
+    this.rojas = 0,
   });
 
   factory Jugador.fromJson(Map<String, dynamic> json) {
@@ -45,6 +52,9 @@ class Jugador {
       fotoJugador: json['fotoJugador']?.toString().trim() ?? json['foto_jugador']?.toString().trim(),
       estado: json['estado']?.toString().trim() ?? 'ACTIVO',
       observacionAdmin: json['observacionAdmin']?.toString().trim() ?? json['observacion_admin']?.toString().trim(),
+      goles: TextUtils.toInt(json['goles'] ?? json['totalGoles'] ?? 0),
+      amarillas: TextUtils.toInt(json['amarillas'] ?? 0),
+      rojas: TextUtils.toInt(json['rojas'] ?? 0),
     );
   }
 
@@ -62,9 +72,49 @@ class Jugador {
       if (fotoJugador != null) 'fotoJugador': fotoJugador,
       'estado': estado,
       if (observacionAdmin != null) 'observacionAdmin': observacionAdmin,
+      'goles': goles,
+      'amarillas': amarillas,
+      'rojas': rojas,
     };
   }
 
+  Jugador copyWith({
+    int? id,
+    int? equipoId,
+    String? equipoNombre,
+    String? nombres,
+    String? apellidos,
+    int? numeroCamiseta,
+    String? documento,
+    String? fechaNacimiento,
+    String? posicion,
+    String? fotoJugador,
+    String? estado,
+    String? observacionAdmin,
+    int? goles,
+    int? amarillas,
+    int? rojas,
+  }) {
+    return Jugador(
+      id: id ?? this.id,
+      equipoId: equipoId ?? this.equipoId,
+      equipoNombre: equipoNombre ?? this.equipoNombre,
+      nombres: nombres ?? this.nombres,
+      apellidos: apellidos ?? this.apellidos,
+      numeroCamiseta: numeroCamiseta ?? this.numeroCamiseta,
+      documento: documento ?? this.documento,
+      fechaNacimiento: fechaNacimiento ?? this.fechaNacimiento,
+      posicion: posicion ?? this.posicion,
+      fotoJugador: fotoJugador ?? this.fotoJugador,
+      estado: estado ?? this.estado,
+      observacionAdmin: observacionAdmin ?? this.observacionAdmin,
+      goles: goles ?? this.goles,
+      amarillas: amarillas ?? this.amarillas,
+      rojas: rojas ?? this.rojas,
+    );
+  }
+
+  int? get edad => AppDateUtils.calculateAge(fechaNacimiento);
   String get nombreCompleto => '$nombres $apellidos'.trim();
   String get iniciales => TextUtils.getInitials('$nombres $apellidos');
 }

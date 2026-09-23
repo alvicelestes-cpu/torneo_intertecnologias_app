@@ -72,11 +72,11 @@ class _PosicionesPageState extends State<PosicionesPage> {
   Color colorPosicion(int pos) {
     switch (pos) {
       case 1:
-        return AppColors.podioOro;
+        return Colors.amber.shade700;
       case 2:
-        return AppColors.podioPlata;
+        return Colors.blueGrey;
       case 3:
-        return AppColors.podioBronce;
+        return Colors.brown.shade400;
       default:
         return Colors.blueGrey.shade100;
     }
@@ -91,13 +91,14 @@ class _PosicionesPageState extends State<PosicionesPage> {
         style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.bold,
-          color: Colors.black54,
+          color: Colors.white,
+          letterSpacing: 0.5,
         ),
       ),
     );
   }
 
-  Widget dato(String texto, {double ancho = 50, bool negrita = false, TextAlign alineacion = TextAlign.center}) {
+  Widget dato(String texto, {double ancho = 50, bool negrita = false, TextAlign alineacion = TextAlign.center, Color? color}) {
     return SizedBox(
       width: ancho,
       child: Text(
@@ -106,6 +107,7 @@ class _PosicionesPageState extends State<PosicionesPage> {
         style: TextStyle(
           fontSize: 14,
           fontWeight: negrita ? FontWeight.bold : FontWeight.normal,
+          color: color ?? Colors.black87,
         ),
       ),
     );
@@ -113,15 +115,15 @@ class _PosicionesPageState extends State<PosicionesPage> {
 
   Widget construirEncabezado() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
       decoration: BoxDecoration(
-        color: AppColors.headerBackground,
+        color: const Color(0xFF1D4F7A),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
           encabezado('POS', ancho: 45),
-          encabezado('EQUIPO', ancho: 180, alineacion: TextAlign.left),
+          encabezado('EQUIPO', ancho: 190, alineacion: TextAlign.left),
           encabezado('PJ'),
           encabezado('PG'),
           encabezado('PE'),
@@ -136,40 +138,55 @@ class _PosicionesPageState extends State<PosicionesPage> {
   }
 
   Widget construirFila(Posicion pos) {
+    final esPodio = pos.posicion <= 3;
+    final esPrimero = pos.posicion == 1;
+
     return Container(
+      margin: const EdgeInsets.only(top: 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
+      decoration: BoxDecoration(
+        color: esPrimero ? const Color(0xFFFFFDE7) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: esPrimero ? Colors.amber.shade200 : Colors.black12,
+        ),
       ),
       child: Row(
         children: [
           SizedBox(
             width: 45,
-            child: CircleAvatar(
-              radius: 14,
-              backgroundColor: colorPosicion(pos.posicion),
-              child: Text(
-                pos.posicion.toString(),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: pos.posicion <= 3 ? Colors.white : Colors.black87,
+            child: Center(
+              child: Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: colorPosicion(pos.posicion),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  pos.posicion.toString(),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: esPodio ? Colors.white : Colors.black87,
+                  ),
                 ),
               ),
             ),
           ),
           SizedBox(
-            width: 180,
+            width: 190,
             child: Row(
               children: [
                 TeamLogoAvatar(
                   logoUrl: pos.logo,
                   teamName: pos.equipo,
                   sigla: pos.sigla,
-                  size: 32,
+                  size: 34,
                   borderRadius: 8,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,7 +196,7 @@ class _PosicionesPageState extends State<PosicionesPage> {
                         pos.equipo,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                       ),
                       if (pos.sigla.isNotEmpty)
                         Text(
@@ -199,7 +216,12 @@ class _PosicionesPageState extends State<PosicionesPage> {
           dato(pos.gf.toString()),
           dato(pos.gc.toString()),
           dato(pos.diferenciaGolTexto),
-          dato(pos.pts.toString(), ancho: 60, negrita: true),
+          dato(
+            pos.pts.toString(),
+            ancho: 60,
+            negrita: true,
+            color: const Color(0xFF1D4F7A),
+          ),
         ],
       ),
     );
@@ -254,24 +276,98 @@ class _PosicionesPageState extends State<PosicionesPage> {
             }
 
             return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
-              child: Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        construirEncabezado(),
-                        const SizedBox(height: 6),
-                        ...posiciones.map(construirFila),
-                      ],
-                    ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Cabecera deportiva azul
+                      Card(
+                        elevation: 3,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        clipBehavior: Clip.antiAlias,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Color(0xFF0B3C68),
+                                Color(0xFF1565C0),
+                                Color(0xFF1E88E5),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          padding: const EdgeInsets.all(20),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withAlpha(35),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(Icons.leaderboard, color: Colors.white, size: 28),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'TABLA OFICIAL DE CLASIFICACIÓN',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        letterSpacing: 1.1,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    ListenableBuilder(
+                                      listenable: SessionManager(),
+                                      builder: (context, _) => Text(
+                                        SessionManager().selectedCampeonatoNombre,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                construirEncabezado(),
+                                const SizedBox(height: 6),
+                                ...posiciones.map(construirFila),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
