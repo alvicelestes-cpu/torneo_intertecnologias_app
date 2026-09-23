@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
+import 'core/session/session_manager.dart';
 import 'core/utils/date_utils.dart';
 import 'core/utils/text_utils.dart';
 import 'core/utils/ui_helpers.dart';
@@ -295,12 +296,31 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     );
   }
 
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Detalle del partido'),
+          ListenableBuilder(
+            listenable: SessionManager(),
+            builder: (context, _) => Text(
+              SessionManager().selectedCampeonatoNombre,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+            ),
+          ),
+        ],
+      ),
+      centerTitle: true,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (cargando) {
       return Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
-        appBar: AppBar(title: const Text('Detalle del partido')),
+        appBar: _buildAppBar(),
         body: const AppLoadingIndicator(),
       );
     }
@@ -308,7 +328,7 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     if (error != null) {
       return Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
-        appBar: AppBar(title: const Text('Detalle del partido')),
+        appBar: _buildAppBar(),
         body: AppErrorView(message: error!, onRetry: cargarPartido),
       );
     }
@@ -317,7 +337,7 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     if (det == null) {
       return Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
-        appBar: AppBar(title: const Text('Detalle del partido')),
+        appBar: _buildAppBar(),
         body: const Center(child: Text('No hay información del partido.')),
       );
     }
@@ -328,10 +348,7 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      appBar: AppBar(
-        title: const Text('Detalle del partido'),
-        centerTitle: true,
-      ),
+      appBar: _buildAppBar(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Center(

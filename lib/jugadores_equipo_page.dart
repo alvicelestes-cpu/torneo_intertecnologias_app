@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
+import 'core/session/session_manager.dart';
 import 'models/jugador.dart';
 import 'services/equipos_service.dart';
 import 'widgets/app_empty_view.dart';
@@ -82,7 +83,19 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        title: Text(widget.equipoNombre),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(widget.equipoNombre),
+            ListenableBuilder(
+              listenable: SessionManager(),
+              builder: (context, _) => Text(
+                SessionManager().selectedCampeonatoNombre,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              ),
+            ),
+          ],
+        ),
         centerTitle: true,
       ),
       body: RefreshIndicator(

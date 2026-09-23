@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/auth_user.dart';
 import '../../models/campeonato.dart';
 
@@ -7,9 +8,12 @@ class SessionManager extends ChangeNotifier {
   factory SessionManager() => _instance;
   SessionManager._internal();
 
+  static const String _keySelectedCampeonatoId = 'selected_campeonato_id';
+
   AuthUser? _currentUser;
   Campeonato? _selectedCampeonato;
   List<Campeonato> _campeonatos = [];
+  int? _persistedCampeonatoId;
 
   AuthUser? get currentUser => _currentUser;
   bool get isAuthenticated => _currentUser != null && _currentUser!.token.isNotEmpty;
@@ -17,55 +21,171 @@ class SessionManager extends ChangeNotifier {
   String get usuario => _currentUser?.usuario ?? '';
   String get rol => _currentUser?.rol ?? 'Administrador';
 
+  // Control de roles
+  bool get isSuperAdmin =>
+      _currentUser != null &&
+      _currentUser!.rol.trim().toUpperCase() == 'SUPERADMIN';
+
+  bool get isAdmin =>
+      _currentUser != null &&
+      (_currentUser!.rol.trim().toUpperCase() == 'ADMIN' ||
+       _currentUser!.rol.trim().toUpperCase() == 'ADMINISTRADOR');
+
+  /// SUPERADMIN puede cambiar libremente de torneo; ADMIN está restringido a su propio torneo
+  bool get canChangeCampeonato => _currentUser == null || isSuperAdmin;
+
   // Multitorneo
   Campeonato? get selectedCampeonato => _selectedCampeonato;
   List<Campeonato> get campeonatos => List.unmodifiable(_campeonatos);
 
   int get selectedCampeonatoId =>
-      _selectedCampeonato?.id ?? _currentUser?.campeonatoId ?? 1;
+      _selectedCampeonato?.id ??
+      _persistedCampeonatoId ??
+      _currentUser?.campeonatoId ??
+      1;
 
   String get selectedCampeonatoNombre =>
-      _selectedCampeonato?.nombre ?? _currentUser?.campeonato ?? 'Torneo Intertecnologías';
+      _selectedCampeonato?.nombre ??
+      _currentUser?.campeonato ??
+      'Torneo Intertecnologías';
+
+  /// Inicializa la sesión cargando el campeonatoId previamente guardado
+  Future<void> init() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedId = prefs.getInt(_keySelectedCampeonatoId);
+      if (savedId != null && savedId > 0) {
+        _persistedCampeonatoId = savedId;
+        _selectedCampeonato ??= Campeonato(
+          id: savedId,
+          nombre: 'Torneo #$savedId',
+          slug: 'campeonato-$savedId',
+        );
+      }
+    } catch (_) {
+      // Ignorar fallo al leer SharedPreferences para no bloquear inicio
+    }
+  }
+
+  void _persistCampeonatoId(int id) {
+    _persistedCampeonatoId = id;
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setInt(_keySelectedCampeonatoId, id);
+    }).catchError((_) {});
+  }
 
   void setSession(AuthUser user) {
     _currentUser = user;
-    if (user.campeonatoId != null && _campeonatos.isNotEmpty) {
+
+    final isUserSuperAdmin = user.rol.trim().toUpperCase() == 'SUPERADMIN';
+
+    if (!isUserSuperAdmin && user.campeonatoId != null && user.campeonatoId! > 0) {
+      // ADMIN: Forzar que trabaje únicamente con su propio campeonato asignado
+      final assignedId = user.campeonatoId!;
       final match = _campeonatos.cast<Campeonato?>().firstWhere(
-            (c) => c?.id == user.campeonatoId,
+            (c) => c?.id == assignedId,
             orElse: () => null,
           );
-      if (match != null) {
-        _selectedCampeonato = match;
+      _selectedCampeonato = match ??
+          Campeonato(
+            id: assignedId,
+            nombre: user.campeonato?.isNotEmpty == true
+                ? user.campeonato!
+                : 'Campeonato #$assignedId',
+            slug: 'campeonato-$assignedId',
+          );
+      _persistCampeonatoId(assignedId);
+    } else if (isUserSuperAdmin) {
+      // SUPERADMIN: conservar el campeonato seleccionado o guardado válido si existe
+      final targetId = _selectedCampeonato?.id ??
+          _persistedCampeonatoId ??
+          user.campeonatoId;
+
+      if (targetId != null && _campeonatos.isNotEmpty) {
+        final match = _campeonatos.cast<Campeonato?>().firstWhere(
+              (c) => c?.id == targetId && c?.estaActivo == true,
+              orElse: () => null,
+            );
+        if (match != null) {
+          _selectedCampeonato = match;
+          _persistCampeonatoId(match.id);
+        }
       }
     }
+
     notifyListeners();
   }
 
   void setCampeonatos(List<Campeonato> list) {
     _campeonatos = list;
-    if (list.isNotEmpty) {
-      final currentTargetId = _selectedCampeonato?.id ?? _currentUser?.campeonatoId ?? 1;
-      final match = list.cast<Campeonato?>().firstWhere(
-            (c) => c?.id == currentTargetId,
-            orElse: () => list.first,
-          );
-      _selectedCampeonato = match;
+
+    if (list.isEmpty) {
+      notifyListeners();
+      return;
     }
+
+    final activos = list.where((c) => c.estaActivo).toList();
+    final disponibles = activos.isNotEmpty ? activos : list;
+
+    if (_currentUser != null && !isSuperAdmin && _currentUser!.campeonatoId != null) {
+      // ADMIN: estrictamente bloqueado a su propio campeonato asignado
+      final assignedId = _currentUser!.campeonatoId!;
+      final match = list.cast<Campeonato?>().firstWhere(
+            (c) => c?.id == assignedId,
+            orElse: () => null,
+          );
+      _selectedCampeonato = match ??
+          Campeonato(
+            id: assignedId,
+            nombre: _currentUser!.campeonato?.isNotEmpty == true
+                ? _currentUser!.campeonato!
+                : 'Campeonato #$assignedId',
+            slug: 'campeonato-$assignedId',
+          );
+      _persistCampeonatoId(assignedId);
+    } else {
+      // SUPERADMIN o sin usuario autenticado:
+      // Validar si el campeonato guardado/seleccionado existe y está activo
+      final targetId = _selectedCampeonato?.id ??
+          _persistedCampeonatoId ??
+          _currentUser?.campeonatoId ??
+          1;
+
+      final match = disponibles.cast<Campeonato?>().firstWhere(
+            (c) => c?.id == targetId,
+            orElse: () => null,
+          );
+
+      if (match != null) {
+        _selectedCampeonato = match;
+        _persistCampeonatoId(match.id);
+      } else {
+        // Si el campeonato guardado ya no existe o está inactivo, usar el primero activo disponible
+        _selectedCampeonato = disponibles.first;
+        _persistCampeonatoId(disponibles.first.id);
+      }
+    }
+
     notifyListeners();
   }
 
   void selectCampeonato(Campeonato campeonato) {
+    if (!canChangeCampeonato) return;
     if (_selectedCampeonato?.id == campeonato.id) return;
     _selectedCampeonato = campeonato;
+    _persistCampeonatoId(campeonato.id);
     notifyListeners();
   }
 
   void selectCampeonatoById(int id) {
+    if (!canChangeCampeonato) return;
     if (_selectedCampeonato?.id == id) return;
+
     final match = _campeonatos.cast<Campeonato?>().firstWhere(
           (c) => c?.id == id,
           orElse: () => null,
         );
+
     if (match != null) {
       _selectedCampeonato = match;
     } else {
@@ -75,6 +195,7 @@ class SessionManager extends ChangeNotifier {
         slug: 'campeonato-$id',
       );
     }
+    _persistCampeonatoId(id);
     notifyListeners();
   }
 
@@ -91,7 +212,6 @@ class SessionManager extends ChangeNotifier {
 
   void clearSession() {
     _currentUser = null;
-    _selectedCampeonato = null;
     notifyListeners();
   }
 }

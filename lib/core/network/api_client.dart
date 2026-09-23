@@ -22,6 +22,51 @@ class ApiClient {
 
   static const Duration timeout = Duration(seconds: 25);
 
+  bool _shouldAppendCampeonato(String path) {
+    final lowerPath = path.toLowerCase();
+
+    // Endpoints globales explícitamente excluidos
+    if (lowerPath.startsWith('/api/auth') ||
+        lowerPath.startsWith('/api/campeonatos')) {
+      return false;
+    }
+
+    // Endpoints que requieren contexto de campeonato
+    return lowerPath.startsWith('/api/equipos') ||
+        lowerPath.startsWith('/api/jugadores') ||
+        lowerPath.startsWith('/api/partidos') ||
+        lowerPath.startsWith('/api/jornadas') ||
+        lowerPath.startsWith('/api/posiciones') ||
+        lowerPath.startsWith('/api/estadisticas') ||
+        lowerPath.startsWith('/api/goles') ||
+        lowerPath.startsWith('/api/tarjetas') ||
+        lowerPath.startsWith('/api/goleadores') ||
+        lowerPath.startsWith('/api/torneo');
+  }
+
+  Uri _buildUri(String rawUrl) {
+    final uri = Uri.parse(rawUrl);
+
+    if (!_shouldAppendCampeonato(uri.path)) {
+      return uri;
+    }
+
+    final campeonatoId = SessionManager().selectedCampeonatoId;
+    if (campeonatoId <= 0) {
+      return uri;
+    }
+
+    // Si la URL ya contiene campeonatoId, no duplicarlo
+    if (uri.queryParameters.containsKey('campeonatoId')) {
+      return uri;
+    }
+
+    final queryParams = Map<String, String>.from(uri.queryParameters);
+    queryParams['campeonatoId'] = campeonatoId.toString();
+
+    return uri.replace(queryParameters: queryParams);
+  }
+
   Map<String, String> _buildHeaders({String? token, Map<String, String>? extraHeaders}) {
     final effectiveToken = (token != null && token.isNotEmpty)
         ? token
@@ -43,9 +88,10 @@ class ApiClient {
     Map<String, String>? headers,
   }) async {
     try {
+      final uri = _buildUri(url);
       final response = await _client
           .get(
-            Uri.parse(url),
+            uri,
             headers: _buildHeaders(token: token, extraHeaders: headers),
           )
           .timeout(timeout);
@@ -69,9 +115,10 @@ class ApiClient {
     Map<String, String>? headers,
   }) async {
     try {
+      final uri = _buildUri(url);
       final response = await _client
           .post(
-            Uri.parse(url),
+            uri,
             headers: _buildHeaders(token: token, extraHeaders: headers),
             body: body != null ? jsonEncode(body) : null,
           )
@@ -96,9 +143,10 @@ class ApiClient {
     Map<String, String>? headers,
   }) async {
     try {
+      final uri = _buildUri(url);
       final response = await _client
           .put(
-            Uri.parse(url),
+            uri,
             headers: _buildHeaders(token: token, extraHeaders: headers),
             body: body != null ? jsonEncode(body) : null,
           )
@@ -123,9 +171,10 @@ class ApiClient {
     Map<String, String>? headers,
   }) async {
     try {
+      final uri = _buildUri(url);
       final response = await _client
           .delete(
-            Uri.parse(url),
+            uri,
             headers: _buildHeaders(token: token, extraHeaders: headers),
             body: body != null ? jsonEncode(body) : null,
           )

@@ -47,14 +47,16 @@ class TorneoService {
     throw const AppException('No se pudo obtener el detalle del campeonato.');
   }
 
+  String _buildUrl(String endpoint, int? campeonatoId) {
+    if (campeonatoId == null) return endpoint;
+    final uri = Uri.parse(endpoint);
+    return uri.replace(queryParameters: {'campeonatoId': campeonatoId.toString()}).toString();
+  }
+
   /// Obtiene el resumen general del torneo activo
   Future<Map<String, dynamic>> getResumenTorneo({String? token, int? campeonatoId}) async {
-    final url = campeonatoId != null
-        ? '${ApiConstants.torneoResumen}?campeonatoId=$campeonatoId'
-        : ApiConstants.torneoResumen;
-
     final response = await _apiClient.get(
-      url,
+      _buildUrl(ApiConstants.torneoResumen, campeonatoId),
       token: token,
     );
 
@@ -66,12 +68,8 @@ class TorneoService {
   }
 
   Future<List<Posicion>> getPosiciones({String? token, int? campeonatoId}) async {
-    final url = campeonatoId != null
-        ? '${ApiConstants.posiciones}?campeonatoId=$campeonatoId'
-        : ApiConstants.posiciones;
-
     final response = await _apiClient.get(
-      url,
+      _buildUrl(ApiConstants.posiciones, campeonatoId),
       token: token,
     );
 
@@ -87,12 +85,8 @@ class TorneoService {
   }
 
   Future<List<Goleador>> getGoleadores({String? token, bool cargarFotos = true, int? campeonatoId}) async {
-    final url = campeonatoId != null
-        ? '${ApiConstants.goleadores}?campeonatoId=$campeonatoId'
-        : ApiConstants.goleadores;
-
     final response = await _apiClient.get(
-      url,
+      _buildUrl(ApiConstants.goleadores, campeonatoId),
       token: token,
     );
 
@@ -132,12 +126,8 @@ class TorneoService {
   }
 
   Future<EstadisticasTorneo> getEstadisticas({String? token, int? campeonatoId}) async {
-    final url = campeonatoId != null
-        ? '${ApiConstants.estadisticas}?campeonatoId=$campeonatoId'
-        : ApiConstants.estadisticas;
-
     final response = await _apiClient.get(
-      url,
+      _buildUrl(ApiConstants.estadisticas, campeonatoId),
       token: token,
     );
 

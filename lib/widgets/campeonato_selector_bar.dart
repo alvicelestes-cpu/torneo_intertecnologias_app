@@ -43,6 +43,8 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
   }
 
   void _abrirSelectorModal() {
+    if (!_sessionManager.canChangeCampeonato) return;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -102,7 +104,10 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
                 child: ListenableBuilder(
                   listenable: _sessionManager,
                   builder: (context, _) {
-                    final campeonatos = _sessionManager.campeonatos;
+                    final allList = _sessionManager.campeonatos;
+                    final activos = allList.where((c) => c.estaActivo).toList();
+                    final campeonatos = activos.isNotEmpty ? activos : allList;
+
                     if (campeonatos.isEmpty) {
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 32),
@@ -185,9 +190,10 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
       listenable: _sessionManager,
       builder: (context, _) {
         final nombreTorneo = _sessionManager.selectedCampeonatoNombre;
+        final canChange = _sessionManager.canChangeCampeonato;
 
         return InkWell(
-          onTap: _abrirSelectorModal,
+          onTap: canChange ? _abrirSelectorModal : null,
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -217,12 +223,14 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 4),
-                const Icon(
-                  Icons.arrow_drop_down,
-                  size: 20,
-                  color: AppColors.primary,
-                ),
+                if (canChange) ...[
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.arrow_drop_down,
+                    size: 20,
+                    color: AppColors.primary,
+                  ),
+                ],
               ],
             ),
           ),

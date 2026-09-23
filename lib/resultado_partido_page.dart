@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
+import 'core/session/session_manager.dart';
 import 'core/utils/ui_helpers.dart';
 import 'models/partido_detalle.dart';
 import 'services/partidos_service.dart';
@@ -214,7 +215,19 @@ class _ResultadoPartidoPageState extends State<ResultadoPartidoPage> {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        title: const Text('Registrar resultado'),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Registrar resultado'),
+            ListenableBuilder(
+              listenable: SessionManager(),
+              builder: (context, _) => Text(
+                SessionManager().selectedCampeonatoNombre,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              ),
+            ),
+          ],
+        ),
         centerTitle: true,
       ),
       body: Builder(

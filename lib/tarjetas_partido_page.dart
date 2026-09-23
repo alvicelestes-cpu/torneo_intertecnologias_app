@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
+import 'core/session/session_manager.dart';
 import 'core/utils/ui_helpers.dart';
 import 'models/jugador.dart';
 import 'models/partido_detalle.dart';
@@ -215,7 +216,19 @@ class _TarjetasPartidoPageState extends State<TarjetasPartidoPage> {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        title: const Text('Tarjetas del partido'),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Tarjetas del partido'),
+            ListenableBuilder(
+              listenable: SessionManager(),
+              builder: (context, _) => Text(
+                SessionManager().selectedCampeonatoNombre,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              ),
+            ),
+          ],
+        ),
         centerTitle: true,
       ),
       body: Builder(

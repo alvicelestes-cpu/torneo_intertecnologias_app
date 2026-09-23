@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
+import 'core/session/session_manager.dart';
 import 'core/utils/date_utils.dart';
 import 'core/utils/ui_helpers.dart';
 import 'models/jugador.dart';
@@ -202,7 +203,19 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        title: const Text('Editar jugador'),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Editar jugador'),
+            ListenableBuilder(
+              listenable: SessionManager(),
+              builder: (context, _) => Text(
+                SessionManager().selectedCampeonatoNombre,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              ),
+            ),
+          ],
+        ),
         centerTitle: true,
       ),
       body: Builder(

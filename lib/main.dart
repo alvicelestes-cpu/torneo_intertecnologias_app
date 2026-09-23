@@ -15,7 +15,9 @@ import 'partidos_page.dart';
 import 'posiciones_page.dart';
 import 'widgets/campeonato_selector_bar.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SessionManager().init();
   runApp(const TorneoApp());
 }
 
