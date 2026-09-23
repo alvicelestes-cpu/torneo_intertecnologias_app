@@ -72,43 +72,32 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
     }
   }
 
-  Color colorPosicion(int pos) {
-    switch (pos) {
-      case 1:
-        return Colors.amber.shade700;
-      case 2:
-        return Colors.blueGrey;
-      case 3:
-        return Colors.brown.shade400;
-      default:
-        return Colors.blueGrey.shade100;
+  Widget _construirPosicion(int pos) {
+    if (pos == 1) {
+      return const Text('🥇', style: TextStyle(fontSize: 24));
     }
-  }
-
-  Widget construirPosicion(int pos) {
-    final esPodio = pos <= 3;
+    if (pos == 2) {
+      return const Text('🥈', style: TextStyle(fontSize: 24));
+    }
+    if (pos == 3) {
+      return const Text('🥉', style: TextStyle(fontSize: 24));
+    }
     return Container(
-      width: 40,
-      height: 40,
+      width: 28,
+      height: 28,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: colorPosicion(pos),
-        shape: BoxShape.circle,
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(6),
       ),
-      child: esPodio
-          ? Icon(
-              pos == 1 ? Icons.emoji_events : Icons.workspace_premium,
-              color: Colors.white,
-              size: 22,
-            )
-          : Text(
-              pos.toString(),
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: Colors.black87,
-              ),
-            ),
+      child: Text(
+        pos.toString(),
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+          color: Color(0xFF475569),
+        ),
+      ),
     );
   }
 
@@ -171,14 +160,17 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
                     children: [
                       // Cabecera deportiva azul
                       Card(
-                        elevation: 3,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 2.5,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         clipBehavior: Clip.antiAlias,
                         child: Container(
                           decoration: const BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                Color(0xFF0B3C68),
+                                Color(0xFF0D233A),
                                 Color(0xFF1565C0),
                                 Color(0xFF1E88E5),
                               ],
@@ -186,19 +178,23 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
                               end: Alignment.bottomRight,
                             ),
                           ),
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.all(18),
                           child: Row(
                             children: [
                               Container(
-                                width: 50,
-                                height: 50,
+                                width: 48,
+                                height: 48,
                                 decoration: BoxDecoration(
                                   color: Colors.white.withAlpha(35),
-                                  borderRadius: BorderRadius.circular(14),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Icon(Icons.emoji_events, color: Colors.white, size: 28),
+                                child: const Icon(
+                                  Icons.emoji_events,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,24 +208,13 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    ListenableBuilder(
-                                      listenable: SessionManager(),
-                                      builder: (context, _) => Text(
-                                        SessionManager().selectedCampeonatoNombre,
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      '${goleadores.length} jugadores clasificados',
+                                      '${goleadores.length} futbolistas con gol',
                                       style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 12,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ],
@@ -239,9 +224,8 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
 
-                      // Lista de goleadores con podio
+                      // Lista compacta de goleadores
                       ...goleadores.map((goleador) {
                         final rank = goleador.posicion ?? (goleadores.indexOf(goleador) + 1);
                         final sigla = goleador.siglaEquipo;
@@ -249,95 +233,140 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
                             ? '${goleador.equipo} ($sigla)'
                             : goleador.equipo;
 
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Card(
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              side: rank == 1
-                                  ? BorderSide(color: Colors.amber.shade300, width: 1.5)
-                                  : BorderSide.none,
+                        final esPrimero = rank == 1;
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: esPrimero ? const Color(0xFFFFFBEB) : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: esPrimero
+                                  ? const Color(0xFFFDE68A)
+                                  : const Color(0xFFE2E8F0),
+                              width: esPrimero ? 1.5 : 1.0,
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(14),
-                              child: Row(
-                                children: [
-                                  construirPosicion(rank),
-                                  const SizedBox(width: 14),
-                                  PlayerAvatar(
-                                    photoUrl: goleador.fotoJugador,
-                                    playerName: goleador.nombreCompleto,
-                                    radius: 26,
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withAlpha(5),
+                                blurRadius: 3,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              // Posición (🥇 🥈 🥉 o número)
+                              SizedBox(
+                                width: 34,
+                                child: Center(
+                                  child: _construirPosicion(rank),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+
+                              // Foto compacta
+                              PlayerAvatar(
+                                photoUrl: goleador.fotoJugador,
+                                playerName: goleador.nombreCompleto,
+                                radius: 22,
+                              ),
+                              const SizedBox(width: 12),
+
+                              // Jugador + Equipo + Camiseta
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      goleador.nombreCompleto,
+                                      style: const TextStyle(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF0D233A),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Row(
                                       children: [
-                                        Text(
-                                          goleador.nombreCompleto,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          equipoTexto,
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.black54,
+                                        Expanded(
+                                          child: Text(
+                                            equipoTexto,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Color(0xFF64748B),
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                         if (goleador.numeroCamiseta != null) ...[
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'Camiseta: #${goleador.numeroCamiseta}',
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.black45,
-                                              fontWeight: FontWeight.w500,
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 1,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF1F5F9),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              '#${goleador.numeroCamiseta}',
+                                              style: const TextStyle(
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF475569),
+                                              ),
                                             ),
                                           ),
                                         ],
                                       ],
                                     ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFEAF2FB),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          goleador.goles.toString(),
-                                          style: const TextStyle(
-                                            fontSize: 22,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF1D4F7A),
-                                          ),
-                                        ),
-                                        const Text(
-                                          'GOLES',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.black54,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 12),
+
+                              // Marcador / Goles en pastilla azul oscuro
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0D233A),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      goleador.goles.toString(),
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const Text(
+                                      'GOLES',
+                                      style: TextStyle(
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white70,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       }),

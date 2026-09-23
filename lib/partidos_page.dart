@@ -3,18 +3,16 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
-import 'core/utils/date_utils.dart';
 import 'core/utils/text_utils.dart';
 import 'core/utils/ui_helpers.dart';
 import 'models/partido.dart';
+import 'partido_detalle_page.dart';
 import 'services/partidos_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
 import 'widgets/campeonato_selector_bar.dart';
-import 'widgets/status_chip.dart';
-
-import 'partido_detalle_page.dart';
+import 'widgets/public_jornada_accordion.dart';
 
 class PartidosPage extends StatefulWidget {
   final String? token;
@@ -74,6 +72,62 @@ class _PartidosPageState extends State<PartidosPage> {
     }
   }
 
+  Future<void> _abrirPartido(int partidoId) async {
+    if (partidoId <= 0) {
+      UiHelpers.showError(context, 'El partido no tiene un ID válido.');
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PartidoDetallePage(
+          partidoId: partidoId,
+          token: widget.token,
+        ),
+      ),
+    );
+
+    if (mounted) {
+      cargarPartidos();
+    }
+  }
+
+  /// Determina qué jornada abrir por defecto (actual con actividad o primera programada).
+  /// El orden visual SIEMPRE se mantiene 1, 2, 3, 4, 5...
+  int _determinarJornadaPorDefecto(
+    Map<int, List<Partido>> agrupados,
+    List<int> jornadasOrdenadas,
+  ) {
+    if (jornadasOrdenadas.isEmpty) return 1;
+
+    // 1. Jornada en curso / en juego
+    for (final j in jornadasOrdenadas) {
+      if (agrupados[j]!.any((p) {
+        final est = p.estado.toUpperCase();
+        return est.contains('CURSO') || est.contains('JUEGO');
+      })) {
+        return j;
+      }
+    }
+
+    // 2. Primera jornada con partidos programados (próxima a disputarse)
+    for (final j in jornadasOrdenadas) {
+      if (agrupados[j]!.any((p) => p.estado.toUpperCase() == 'PROGRAMADO')) {
+        return j;
+      }
+    }
+
+    // 3. Última jornada con actividad finalizada
+    int ultimaConActividad = jornadasOrdenadas.first;
+    for (final j in jornadasOrdenadas) {
+      if (agrupados[j]!.any((p) => p.estado.toUpperCase() == 'FINALIZADO')) {
+        ultimaConActividad = j;
+      }
+    }
+    return ultimaConActividad;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -122,126 +176,115 @@ class _PartidosPageState extends State<PartidosPage> {
               );
             }
 
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: partidos.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final partido = partidos[index];
-                final fase = TextUtils.formatFase(partido.fase);
-                final fechaHora = AppDateUtils.formatDateTime(partido.fechaHora);
-                final jornadaTexto = partido.jornada != null ? 'Jornada ${partido.jornada}' : '';
+            // Agrupar partidos por jornada
+            final Map<int, List<Partido>> partidosPorJornada = {};
+            for (final p in partidos) {
+              final numJornada = p.jornada ?? 1;
+              partidosPorJornada.putIfAbsent(numJornada, () => []).add(p);
+            }
 
-                return Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () async {
-                      if (partido.id <= 0) {
-                        UiHelpers.showError(context, 'El partido no tiene un ID válido.');
-                        return;
-                      }
+            // ORDEN ESTRICTAMENTE ASCENDENTE: Jornada 1, 2, 3, 4, 5...
+            final List<int> jornadasOrdenadas = partidosPorJornada.keys.toList()..sort();
 
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PartidoDetallePage(
-                            partidoId: partido.id,
-                            token: widget.token,
+            final int jornadaDefecto = _determinarJornadaPorDefecto(
+              partidosPorJornada,
+              jornadasOrdenadas,
+            );
+
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 880),
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    // Banner informativo
+                    Card(
+                      elevation: 2.5,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFF0D233A),
+                              Color(0xFF1565C0),
+                              Color(0xFF1E88E5),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
                         ),
-                      );
-
-                      if (mounted) {
-                        cargarPartidos();
-                      }
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                [fase, jornadaTexto].where((t) => t.isNotEmpty).join(' • '),
-                                style: const TextStyle(
-                                  color: Colors.black54,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                        padding: const EdgeInsets.all(18),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(35),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              StatusChip(status: partido.estado),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  partido.equipoLocalNombre,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                              child: const Icon(
+                                Icons.sports_soccer,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'CALENDARIO Y RESULTADOS',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.0,
+                                    ),
                                   ),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primaryLight,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  partido.marcador,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primary,
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${partidos.length} partidos en ${jornadasOrdenadas.length} jornadas',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                              Expanded(
-                                child: Text(
-                                  partido.equipoVisitanteNombre,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                              const SizedBox(width: 4),
-                              Text(
-                                fechaHora,
-                                style: const TextStyle(fontSize: 13, color: Colors.black54),
-                              ),
-                              if (partido.cancha != null && partido.cancha!.isNotEmpty) ...[
-                                const SizedBox(width: 14),
-                                const Icon(Icons.stadium_outlined, size: 16, color: Colors.grey),
-                                const SizedBox(width: 4),
-                                Text(
-                                  partido.cancha!,
-                                  style: const TextStyle(fontSize: 13, color: Colors.black54),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
+
+                    // LISTA DE JORNADAS EN ACORDEÓN (SIEMPRE 1, 2, 3...)
+                    ...jornadasOrdenadas.map((numeroJornada) {
+                      final listaPartidos = partidosPorJornada[numeroJornada]!;
+                      final primerPartido = listaPartidos.first;
+                      final fase = primerPartido.fase != null
+                          ? TextUtils.formatFase(primerPartido.fase)
+                          : 'PRIMERA FASE';
+
+                      return PublicJornadaAccordion(
+                        numeroJornada: numeroJornada,
+                        fase: fase,
+                        cantidadPartidos: listaPartidos.length,
+                        partidos: listaPartidos,
+                        initiallyExpanded: numeroJornada == jornadaDefecto,
+                        onPartidoTap: (partido) => _abrirPartido(partido.id),
+                      );
+                    }),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
             );
           },
         ),

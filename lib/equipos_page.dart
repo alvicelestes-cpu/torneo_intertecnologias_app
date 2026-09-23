@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 
 import 'core/constants/app_colors.dart';
@@ -14,7 +12,7 @@ import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
 import 'widgets/campeonato_selector_bar.dart';
-import 'widgets/team_logo_avatar.dart';
+import 'widgets/public_team_card.dart';
 
 import 'jugadores_equipo_page.dart';
 
@@ -81,6 +79,11 @@ class _EquiposPageState extends State<EquiposPage> {
         return e.copyWith(cantidadJugadores: total);
       }).toList();
 
+      // ORDEN CONSISTENTE: ALFABÉTICO
+      equiposActualizados.sort(
+        (a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()),
+      );
+
       if (mounted) {
         setState(() {
           equipos = equiposActualizados;
@@ -123,184 +126,6 @@ class _EquiposPageState extends State<EquiposPage> {
           equipoId: equipo.id,
           equipoNombre: equipo.nombre,
           token: widget.token,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEquipoCard(Equipo equipo) {
-    final teamColor = equipo.color;
-    const maxPlantilla = 20; // Cupo referencial estándar de torneo
-    final cant = equipo.cantidadJugadores;
-    final porcentaje = min(1.0, cant / maxPlantilla);
-
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: teamColor.withAlpha(50),
-          width: 1.2,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _abrirPlantilla(equipo),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Barra superior con color representativo
-            Container(
-              height: 6,
-              color: teamColor,
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: teamColor.withAlpha(120),
-                            width: 2,
-                          ),
-                        ),
-                        child: TeamLogoAvatar(
-                          logoUrl: equipo.logo,
-                          teamName: equipo.nombre,
-                          sigla: equipo.sigla,
-                          size: 56,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              equipo.nombre,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            if (equipo.sigla.isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: teamColor.withAlpha(25),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: teamColor.withAlpha(80),
-                                  ),
-                                ),
-                                child: Text(
-                                  equipo.sigla,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: teamColor,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.chevron_right,
-                        color: Colors.grey.shade400,
-                        size: 26,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(height: 1),
-                  const SizedBox(height: 12),
-
-                  // Sección de Plantilla con indicador visual
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.groups,
-                            size: 18,
-                            color: teamColor,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '$cant ${cant == 1 ? 'jugador' : 'jugadores'}',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        '$cant / $maxPlantilla inscritos',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Barra de progreso de plantilla
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: porcentaje,
-                      minHeight: 7,
-                      backgroundColor: Colors.grey.shade200,
-                      valueColor: AlwaysStoppedAnimation<Color>(teamColor),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Botón de acción deportiva
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      style: TextButton.styleFrom(
-                        foregroundColor: teamColor,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                      ),
-                      onPressed: () => _abrirPlantilla(equipo),
-                      icon: const Icon(Icons.people_outline, size: 18),
-                      label: const Text(
-                        'Ver jugadores',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -356,14 +181,123 @@ class _EquiposPageState extends State<EquiposPage> {
 
             return Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 800),
-                child: ListView.separated(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: ListView(
                   padding: const EdgeInsets.all(16),
-                  itemCount: equipos.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 14),
-                  itemBuilder: (context, index) {
-                    return _buildEquipoCard(equipos[index]);
-                  },
+                  children: [
+                    // Cabecera deportiva azul
+                    Card(
+                      elevation: 2.5,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFF0D233A),
+                              Color(0xFF1565C0),
+                              Color(0xFF1E88E5),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(18),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(35),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.groups,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'CLUBES PARTICIPANTES',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 11,
+                                      letterSpacing: 1.1,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${equipos.length} equipos en contienda',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Grid responsive de tarjetas de equipo (4 en desktop, 2 en tablet, 1 en móvil)
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final width = constraints.maxWidth;
+                        final int crossAxisCount = width >= 1050
+                            ? 4
+                            : (width >= 620 ? 2 : 1);
+
+                        if (crossAxisCount == 1) {
+                          return Column(
+                            children: equipos
+                                .map(
+                                  (equipo) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: PublicTeamCard(
+                                      equipo: equipo,
+                                      onTap: () => _abrirPlantilla(equipo),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          );
+                        }
+
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
+                            mainAxisExtent: 232,
+                          ),
+                          itemCount: equipos.length,
+                          itemBuilder: (context, index) {
+                            final equipo = equipos[index];
+                            return PublicTeamCard(
+                              equipo: equipo,
+                              onTap: () => _abrirPlantilla(equipo),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                 ),
               ),
             );

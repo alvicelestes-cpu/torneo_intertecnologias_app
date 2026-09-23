@@ -69,20 +69,7 @@ class _PosicionesPageState extends State<PosicionesPage> {
     }
   }
 
-  Color colorPosicion(int pos) {
-    switch (pos) {
-      case 1:
-        return Colors.amber.shade700;
-      case 2:
-        return Colors.blueGrey;
-      case 3:
-        return Colors.brown.shade400;
-      default:
-        return Colors.blueGrey.shade100;
-    }
-  }
-
-  Widget encabezado(String texto, {double ancho = 50, TextAlign alineacion = TextAlign.center}) {
+  Widget _encabezado(String texto, {double ancho = 50, TextAlign alineacion = TextAlign.center}) {
     return SizedBox(
       width: ancho,
       child: Text(
@@ -90,100 +77,135 @@ class _PosicionesPageState extends State<PosicionesPage> {
         textAlign: alineacion,
         style: const TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w900,
           color: Colors.white,
-          letterSpacing: 0.5,
+          letterSpacing: 0.6,
         ),
       ),
     );
   }
 
-  Widget dato(String texto, {double ancho = 50, bool negrita = false, TextAlign alineacion = TextAlign.center, Color? color}) {
+  Widget _dato(
+    String texto, {
+    double ancho = 50,
+    bool negrita = false,
+    TextAlign alineacion = TextAlign.center,
+    Color? color,
+  }) {
     return SizedBox(
       width: ancho,
       child: Text(
         texto,
         textAlign: alineacion,
         style: TextStyle(
-          fontSize: 14,
-          fontWeight: negrita ? FontWeight.bold : FontWeight.normal,
-          color: color ?? Colors.black87,
+          fontSize: 13.5,
+          fontWeight: negrita ? FontWeight.bold : FontWeight.w500,
+          color: color ?? const Color(0xFF1E293B),
         ),
       ),
     );
   }
 
-  Widget construirEncabezado() {
+  Widget _construirPodio(int pos) {
+    if (pos == 1) {
+      return const Text('🥇', style: TextStyle(fontSize: 20));
+    }
+    if (pos == 2) {
+      return const Text('🥈', style: TextStyle(fontSize: 20));
+    }
+    if (pos == 3) {
+      return const Text('🥉', style: TextStyle(fontSize: 20));
+    }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+      width: 26,
+      height: 26,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: const Color(0xFF1D4F7A),
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        '$pos',
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF475569),
+        ),
+      ),
+    );
+  }
+
+  Widget _construirEncabezadoTabla() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF0D233A),
+            Color(0xFF1565C0),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
-          encabezado('POS', ancho: 45),
-          encabezado('EQUIPO', ancho: 190, alineacion: TextAlign.left),
-          encabezado('PJ'),
-          encabezado('PG'),
-          encabezado('PE'),
-          encabezado('PP'),
-          encabezado('GF'),
-          encabezado('GC'),
-          encabezado('DG'),
-          encabezado('PTS', ancho: 60),
+          _encabezado('POS', ancho: 45),
+          _encabezado('EQUIPO', ancho: 200, alineacion: TextAlign.left),
+          _encabezado('PJ'),
+          _encabezado('PG'),
+          _encabezado('PE'),
+          _encabezado('PP'),
+          _encabezado('GF'),
+          _encabezado('GC'),
+          _encabezado('DG'),
+          _encabezado('PTS', ancho: 60),
         ],
       ),
     );
   }
 
-  Widget construirFila(Posicion pos) {
-    final esPodio = pos.posicion <= 3;
+  Widget _construirFila(Posicion pos, int index) {
     final esPrimero = pos.posicion == 1;
 
     return Container(
       margin: const EdgeInsets.only(top: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: esPrimero ? const Color(0xFFFFFDE7) : Colors.white,
+        color: esPrimero
+            ? const Color(0xFFFFFBEB)
+            : (index.isEven ? Colors.white : const Color(0xFFFBFDFF)),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: esPrimero ? Colors.amber.shade200 : Colors.black12,
+          color: esPrimero ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0),
+          width: esPrimero ? 1.5 : 1.0,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(5),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Row(
         children: [
           SizedBox(
             width: 45,
             child: Center(
-              child: Container(
-                width: 30,
-                height: 30,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: colorPosicion(pos.posicion),
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  pos.posicion.toString(),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: esPodio ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ),
+              child: _construirPodio(pos.posicion),
             ),
           ),
           SizedBox(
-            width: 190,
+            width: 200,
             child: Row(
               children: [
                 TeamLogoAvatar(
                   logoUrl: pos.logo,
                   teamName: pos.equipo,
                   sigla: pos.sigla,
-                  size: 34,
+                  size: 32,
                   borderRadius: 8,
                 ),
                 const SizedBox(width: 10),
@@ -196,12 +218,20 @@ class _PosicionesPageState extends State<PosicionesPage> {
                         pos.equipo,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13.5,
+                          color: Color(0xFF0D233A),
+                        ),
                       ),
                       if (pos.sigla.isNotEmpty)
                         Text(
                           pos.sigla,
-                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B),
+                          ),
                         ),
                     ],
                   ),
@@ -209,18 +239,39 @@ class _PosicionesPageState extends State<PosicionesPage> {
               ],
             ),
           ),
-          dato(pos.pj.toString()),
-          dato(pos.pg.toString()),
-          dato(pos.pe.toString()),
-          dato(pos.pp.toString()),
-          dato(pos.gf.toString()),
-          dato(pos.gc.toString()),
-          dato(pos.diferenciaGolTexto),
-          dato(
-            pos.pts.toString(),
-            ancho: 60,
+          _dato(pos.pj.toString()),
+          _dato(pos.pg.toString()),
+          _dato(pos.pe.toString()),
+          _dato(pos.pp.toString()),
+          _dato(pos.gf.toString()),
+          _dato(pos.gc.toString()),
+          _dato(
+            pos.diferenciaGolTexto,
             negrita: true,
-            color: const Color(0xFF1D4F7A),
+            color: pos.dg > 0
+                ? const Color(0xFF16A34A)
+                : (pos.dg < 0 ? const Color(0xFFDC2626) : null),
+          ),
+          // PTS DESTACADO EN PASTILLA AZUL OSCURO
+          SizedBox(
+            width: 60,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D233A),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  pos.pts.toString(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -270,7 +321,7 @@ class _PosicionesPageState extends State<PosicionesPage> {
 
             if (posiciones.isEmpty) {
               return const AppEmptyView(
-                message: 'No hay datos de posiciones registrados.',
+                message: 'No hay posiciones registradas en este campeonato.',
                 icon: Icons.leaderboard_outlined,
               );
             }
@@ -280,20 +331,23 @@ class _PosicionesPageState extends State<PosicionesPage> {
               padding: const EdgeInsets.all(16),
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 900),
+                  constraints: const BoxConstraints(maxWidth: 980),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Cabecera deportiva azul
                       Card(
-                        elevation: 3,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 2.5,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         clipBehavior: Clip.antiAlias,
                         child: Container(
                           decoration: const BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                Color(0xFF0B3C68),
+                                Color(0xFF0D233A),
                                 Color(0xFF1565C0),
                                 Color(0xFF1E88E5),
                               ],
@@ -301,25 +355,29 @@ class _PosicionesPageState extends State<PosicionesPage> {
                               end: Alignment.bottomRight,
                             ),
                           ),
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.all(18),
                           child: Row(
                             children: [
                               Container(
-                                width: 50,
-                                height: 50,
+                                width: 48,
+                                height: 48,
                                 decoration: BoxDecoration(
                                   color: Colors.white.withAlpha(35),
-                                  borderRadius: BorderRadius.circular(14),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Icon(Icons.leaderboard, color: Colors.white, size: 28),
+                                child: const Icon(
+                                  Icons.leaderboard,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'TABLA OFICIAL DE CLASIFICACIÓN',
+                                      'CLASIFICACIÓN EN TIEMPO REAL',
                                       style: TextStyle(
                                         color: Colors.white70,
                                         fontSize: 11,
@@ -327,16 +385,13 @@ class _PosicionesPageState extends State<PosicionesPage> {
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    ListenableBuilder(
-                                      listenable: SessionManager(),
-                                      builder: (context, _) => Text(
-                                        SessionManager().selectedCampeonatoNombre,
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${posiciones.length} equipos en competencia',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ],
@@ -346,27 +401,35 @@ class _PosicionesPageState extends State<PosicionesPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
+
+                      // Tabla responsive con scroll horizontal si es necesario
                       Card(
                         elevation: 2,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
+                          side: const BorderSide(color: Color(0xFFE2E8F0)),
                         ),
+                        color: Colors.white,
                         child: Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(12),
                           child: SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                construirEncabezado(),
-                                const SizedBox(height: 6),
-                                ...posiciones.map(construirFila),
-                              ],
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minWidth: 700),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _construirEncabezadoTabla(),
+                                  ...posiciones.asMap().entries.map(
+                                        (e) => _construirFila(e.value, e.key),
+                                      ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),

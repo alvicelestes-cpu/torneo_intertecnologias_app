@@ -3,15 +3,13 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
-import 'core/utils/date_utils.dart';
-import 'core/utils/text_utils.dart';
 import 'models/jornada.dart';
 import 'models/partido.dart';
 import 'services/jornadas_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
-import 'widgets/status_chip.dart';
+import 'widgets/public_partido_row.dart';
 
 import 'partido_detalle_page.dart';
 
@@ -114,101 +112,13 @@ class _JornadaDetallePageState extends State<JornadaDetallePage> {
     }
   }
 
-  Widget construirTarjetaPartido(Partido partido) {
-    final fase = TextUtils.formatFase(partido.fase);
-    final fechaHora = AppDateUtils.formatDateTime(partido.fechaHora);
-
+  Widget construirTarjetaPartido(int index, Partido partido) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Card(
-        elevation: 2,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        child: InkWell(
-          onTap: partido.id > 0 ? () => abrirPartido(partido.id) : null,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      fase,
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    StatusChip(status: partido.estado),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        partido.equipoLocalNombre,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        partido.marcador,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        partido.equipoVisitanteNombre,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      fechaHora,
-                      style: const TextStyle(fontSize: 13, color: Colors.black54),
-                    ),
-                    if (partido.cancha != null && partido.cancha!.isNotEmpty) ...[
-                      const SizedBox(width: 14),
-                      const Icon(Icons.stadium_outlined, size: 16, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Text(
-                        partido.cancha!,
-                        style: const TextStyle(fontSize: 13, color: Colors.black54),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: PublicPartidoRow(
+        index: index,
+        partido: partido,
+        onTap: partido.id > 0 ? () => abrirPartido(partido.id) : null,
       ),
     );
   }
@@ -372,7 +282,9 @@ class _JornadaDetallePageState extends State<JornadaDetallePage> {
                     icon: Icons.sports_soccer_outlined,
                   )
                 else
-                  ...j.partidos.map(construirTarjetaPartido),
+                  ...j.partidos.asMap().entries.map(
+                        (entry) => construirTarjetaPartido(entry.key + 1, entry.value),
+                      ),
               ],
             );
           },

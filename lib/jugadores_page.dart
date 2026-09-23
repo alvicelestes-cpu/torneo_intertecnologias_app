@@ -3,16 +3,18 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
-import 'core/utils/date_utils.dart';
+import 'models/equipo.dart';
 import 'models/goleador.dart';
 import 'models/jugador.dart';
+import 'services/equipos_service.dart';
 import 'services/jugadores_service.dart';
 import 'services/torneo_service.dart';
+import 'core/utils/player_sort_utils.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
 import 'widgets/campeonato_selector_bar.dart';
-import 'widgets/player_avatar.dart';
+import 'widgets/public_age_group_section.dart';
 
 import 'jugador_detalle_page.dart';
 
@@ -30,11 +32,13 @@ class JugadoresPage extends StatefulWidget {
 
 class _JugadoresPageState extends State<JugadoresPage> {
   final JugadoresService _jugadoresService = JugadoresService();
+  final EquiposService _equiposService = EquiposService();
   final TorneoService _torneoService = TorneoService();
 
   bool cargando = true;
   String? error;
   List<Jugador> jugadores = [];
+  Map<int, Equipo> equiposMap = {};
 
   @override
   void initState() {
@@ -69,10 +73,18 @@ class _JugadoresPageState extends State<JugadoresPage> {
               cargarFotos: false,
             )
             .catchError((_) => <Goleador>[]),
+        _equiposService.getEquipos(token: widget.token).catchError((_) => <Equipo>[]),
       ]);
 
       final listaJugadores = resultados[0] as List<Jugador>;
       final listaGoleadores = resultados[1] as List<Goleador>;
+      final listaEquipos = resultados[2] as List<Equipo>;
+
+      final mapEquipos = <int, Equipo>{};
+      for (final e in listaEquipos) {
+        mapEquipos[e.id] = e;
+      }
+      equiposMap = mapEquipos;
 
       // Mapear goles por jugador
       final golesMap = <int, int>{};
@@ -82,7 +94,19 @@ class _JugadoresPageState extends State<JugadoresPage> {
 
       final iniciales = listaJugadores.map((j) {
         final totalGoles = golesMap[j.id] ?? j.goles;
-        return j.copyWith(goles: totalGoles);
+        final eq = mapEquipos[j.equipoId];
+        return j.copyWith(
+          goles: totalGoles,
+          equipoNombre: j.equipoNombre?.trim().isNotEmpty == true
+              ? j.equipoNombre
+              : eq?.nombre,
+          equipoSigla: j.equipoSigla?.trim().isNotEmpty == true
+              ? j.equipoSigla
+              : eq?.sigla,
+          equipoColor: j.equipoColor?.trim().isNotEmpty == true
+              ? j.equipoColor
+              : eq?.colorPrincipal,
+        );
       }).toList();
 
       if (mounted) {
@@ -159,324 +183,6 @@ class _JugadoresPageState extends State<JugadoresPage> {
     }
   }
 
-  Widget _buildJugadorCarnet(Jugador jugador) {
-    final equipoNombre = jugador.equipoNombre?.trim().isNotEmpty == true
-        ? jugador.equipoNombre!
-        : 'Sin equipo';
-
-    final fechaNac = AppDateUtils.formatDate(
-      jugador.fechaNacimiento,
-      defaultText: 'Sin registrar',
-    );
-
-    final edadTexto = jugador.edad != null ? '${jugador.edad} años' : 'Sin registrar';
-
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.blueGrey.shade100, width: 1),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _abrirFicha(jugador),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Cabecera: Foto + Nombre + Equipo
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(20),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: PlayerAvatar(
-                      photoUrl: jugador.fotoJugador,
-                      playerName: jugador.nombreCompleto,
-                      radius: 34,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          jugador.nombreCompleto.isEmpty
-                              ? 'Jugador sin nombre'
-                              : jugador.nombreCompleto,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.shield_outlined,
-                              size: 15,
-                              color: AppColors.primary,
-                            ),
-                            const SizedBox(width: 5),
-                            Expanded(
-                              child: Text(
-                                equipoNombre,
-                                style: const TextStyle(
-                                  color: Colors.black54,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            if (jugador.numeroCamiseta != null) ...[
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withAlpha(20),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '#${jugador.numeroCamiseta}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primary,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                            ],
-                            if (jugador.posicion != null &&
-                                jugador.posicion!.trim().isNotEmpty) ...[
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  jugador.posicion!,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              const Divider(height: 1),
-              const SizedBox(height: 10),
-
-              // Datos biográficos: Nacimiento y Edad
-              Row(
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.cake_outlined,
-                          size: 16,
-                          color: Colors.blueGrey,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Nac: $fechaNac',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.black87,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.calendar_today_outlined,
-                          size: 16,
-                          color: Colors.blueGrey,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Edad: $edadTexto',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Ficha deportiva: Goles, Amarillas y Rojas
-              Row(
-                children: [
-                  // Goles
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8F5E9),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFA5D6A7)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.sports_soccer,
-                            size: 16,
-                            color: Color(0xFF2E7D32),
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            '${jugador.goles} ${jugador.goles == 1 ? 'gol' : 'goles'}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: Color(0xFF2E7D32),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Amarillas
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF8E1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFFFE082)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.crop_portrait,
-                            size: 16,
-                            color: Color(0xFFF57F17),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${jugador.amarillas}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: Color(0xFFF57F17),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Rojas
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEBEE),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFFFCDD2)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.crop_portrait,
-                            size: 16,
-                            color: Color(0xFFC62828),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${jugador.rojas}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: Color(0xFFC62828),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Botón de acción: Ver ficha
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.tonalIcon(
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  onPressed: () => _abrirFicha(jugador),
-                  icon: const Icon(Icons.badge_outlined, size: 16),
-                  label: const Text(
-                    'Ver ficha',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -525,16 +231,97 @@ class _JugadoresPageState extends State<JugadoresPage> {
               );
             }
 
+            final grupos = groupJugadoresPorEdad(jugadores);
+
             return Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 800),
-                child: ListView.separated(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
-                  itemCount: jugadores.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 14),
-                  itemBuilder: (context, index) {
-                    return _buildJugadorCarnet(jugadores[index]);
-                  },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Cabecera deportiva azul
+                      Card(
+                        elevation: 2.5,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Color(0xFF0D233A),
+                                Color(0xFF1565C0),
+                                Color(0xFF1E88E5),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          padding: const EdgeInsets.all(18),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withAlpha(35),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.badge,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'CARNETS OFICIALES',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        letterSpacing: 1.1,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${jugadores.length} futbolistas inscritos',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // SECCIONES VISUALES DE CARNETS POR GRUPO DE EDAD
+                      ...kAgeGroupsOrder.map((group) {
+                        final list = grupos[group] ?? [];
+                        if (list.isEmpty) return const SizedBox.shrink();
+                        return PublicAgeGroupSection.fromGroup(
+                          group: group,
+                          jugadores: list,
+                          onVerFicha: _abrirFicha,
+                        );
+                      }),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
                 ),
               ),
             );

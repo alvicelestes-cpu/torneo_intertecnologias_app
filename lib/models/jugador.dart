@@ -5,6 +5,8 @@ class Jugador {
   final int id;
   final int equipoId;
   final String? equipoNombre;
+  final String? equipoSigla;
+  final String? equipoColor;
   final String nombres;
   final String apellidos;
   final int? numeroCamiseta;
@@ -22,6 +24,8 @@ class Jugador {
     required this.id,
     required this.equipoId,
     this.equipoNombre,
+    this.equipoSigla,
+    this.equipoColor,
     required this.nombres,
     required this.apellidos,
     this.numeroCamiseta,
@@ -41,6 +45,12 @@ class Jugador {
       id: TextUtils.toInt(json['id']),
       equipoId: TextUtils.toInt(json['equipoId'] ?? json['equipo_id']),
       equipoNombre: json['equipoNombre']?.toString() ?? json['equipo']?.toString(),
+      equipoSigla: json['equipoSigla']?.toString().trim() ??
+          json['siglaEquipo']?.toString().trim() ??
+          json['sigla']?.toString().trim(),
+      equipoColor: json['equipoColor']?.toString().trim() ??
+          json['colorPrincipal']?.toString().trim() ??
+          json['color']?.toString().trim(),
       nombres: json['nombres']?.toString().trim() ?? '',
       apellidos: json['apellidos']?.toString().trim() ?? '',
       numeroCamiseta: json['numeroCamiseta'] != null
@@ -63,6 +73,8 @@ class Jugador {
       'id': id,
       'equipoId': equipoId,
       if (equipoNombre != null) 'equipoNombre': equipoNombre,
+      if (equipoSigla != null) 'equipoSigla': equipoSigla,
+      if (equipoColor != null) 'equipoColor': equipoColor,
       'nombres': nombres,
       'apellidos': apellidos,
       'numeroCamiseta': numeroCamiseta,
@@ -82,6 +94,8 @@ class Jugador {
     int? id,
     int? equipoId,
     String? equipoNombre,
+    String? equipoSigla,
+    String? equipoColor,
     String? nombres,
     String? apellidos,
     int? numeroCamiseta,
@@ -99,6 +113,8 @@ class Jugador {
       id: id ?? this.id,
       equipoId: equipoId ?? this.equipoId,
       equipoNombre: equipoNombre ?? this.equipoNombre,
+      equipoSigla: equipoSigla ?? this.equipoSigla,
+      equipoColor: equipoColor ?? this.equipoColor,
       nombres: nombres ?? this.nombres,
       apellidos: apellidos ?? this.apellidos,
       numeroCamiseta: numeroCamiseta ?? this.numeroCamiseta,
