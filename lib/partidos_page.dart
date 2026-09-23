@@ -177,6 +177,7 @@ class _PartidosPageState extends State<PartidosPage> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     // Banner informativo con icono de calendario azul
+                    // Cabecera: Banner azul con silueta de estadio, icono de calendario y título
                     Card(
                       elevation: 2.5,
                       margin: const EdgeInsets.only(bottom: 16),
@@ -186,6 +187,14 @@ class _PartidosPageState extends State<PartidosPage> {
                       clipBehavior: Clip.antiAlias,
                       child: Container(
                         decoration: const BoxDecoration(
+                          image: DecorationImage(
+                            image: AssetImage('assets/images/banner_blue.jpg'),
+                            fit: BoxFit.cover,
+                            colorFilter: ColorFilter.mode(
+                              Color(0xB30A192F),
+                              BlendMode.srcOver,
+                            ),
+                          ),
                           gradient: LinearGradient(
                             colors: [
                               Color(0xFF0D233A),
@@ -196,43 +205,50 @@ class _PartidosPageState extends State<PartidosPage> {
                             end: Alignment.bottomRight,
                           ),
                         ),
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(20),
                         child: Row(
                           children: [
                             Container(
-                              width: 48,
-                              height: 48,
+                              width: 52,
+                              height: 52,
                               decoration: BoxDecoration(
-                                color: Colors.white.withAlpha(35),
-                                borderRadius: BorderRadius.circular(12),
+                                color: Colors.white.withAlpha(30),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: Colors.white24, width: 1.2),
                               ),
                               child: const Icon(
                                 Icons.calendar_month,
                                 color: Colors.white,
-                                size: 28,
+                                size: 30,
                               ),
                             ),
-                            const SizedBox(width: 14),
+                            const SizedBox(width: 16),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   const Text(
-                                    'CALENDARIO Y RESULTADOS',
+                                    'Partidos por jornada',
                                     style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 1.0,
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${partidos.length} partidos en ${jornadasOrdenadas.length} jornadas',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w900,
+                                  const SizedBox(height: 4),
+                                  ListenableBuilder(
+                                    listenable: SessionManager(),
+                                    builder: (context, _) => Text(
+                                      SessionManager().selectedCampeonatoNombre,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],

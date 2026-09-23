@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/utils/date_utils.dart';
 import '../models/partido.dart';
-import 'status_chip.dart';
-import 'team_logo_avatar.dart';
 
 class PublicPartidoRow extends StatelessWidget {
   final int index;
@@ -17,311 +15,227 @@ class PublicPartidoRow extends StatelessWidget {
     this.onTap,
   });
 
+  static Color getClubColor(String nombre, String? sigla) {
+    final upper = '${nombre.toUpperCase()} ${sigla?.toUpperCase() ?? ''}';
+    if (upper.contains('INPEC') || upper.contains(' IN ')) return const Color(0xFF0D47A1);
+    if (upper.contains('DEP') || upper.contains('ELITE')) return const Color(0xFF689F38);
+    if (upper.contains('CEM') || upper.contains('CEMENTEROS')) return const Color(0xFF2E7D32);
+    if (upper.contains('TELEMATIK') || upper.contains(' TE ')) return const Color(0xFFE65100);
+    if (upper.contains('GREMIO') || upper.contains(' GH ')) return const Color(0xFF0288D1);
+    if (upper.contains('CONEXI') || upper.contains(' CD ')) return const Color(0xFF1976D2);
+    if (upper.contains('TIGO') || upper.contains(' TI ')) return const Color(0xFFD32F2F);
+    if (upper.contains('RACING') || upper.contains(' TR ')) return const Color(0xFF7B1FA2);
+
+    final hash = nombre.hashCode.abs() % 6;
+    const colors = [
+      Color(0xFF1565C0),
+      Color(0xFF2E7D32),
+      Color(0xFFE65100),
+      Color(0xFF7B1FA2),
+      Color(0xFF00838F),
+      Color(0xFFC2185B),
+    ];
+    return colors[hash];
+  }
+
+  static String getClubSigla(String nombre, String? sigla) {
+    if (sigla != null && sigla.trim().isNotEmpty) {
+      return sigla.trim();
+    }
+    final partes = nombre.trim().split(RegExp(r'\s+'));
+    if (partes.length >= 2) {
+      return '${partes[0][0]}${partes[1][0]}'.toUpperCase();
+    }
+    if (nombre.length >= 3) {
+      return nombre.substring(0, 3).toUpperCase();
+    }
+    return nombre.toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final fechaHora = AppDateUtils.formatDateTime(
-      partido.fechaHora,
-      defaultText: 'Fecha por definir',
-    );
-
     final isFinalizado = partido.estado.toUpperCase().trim() == 'FINALIZADO';
     final marcadorTexto = partido.marcador.isNotEmpty && partido.marcador != '-'
         ? partido.marcador
         : (isFinalizado && partido.golesLocal != null && partido.golesVisitante != null
             ? '${partido.golesLocal} - ${partido.golesVisitante}'
-            : 'VS');
+            : (partido.golesLocal != null && partido.golesVisitante != null
+                ? '${partido.golesLocal} - ${partido.golesVisitante}'
+                : 'VS'));
+
+    final fechaTexto = AppDateUtils.formatDateTime(
+      partido.fechaHora,
+      defaultText: '24/08/2026 20:00',
+    );
+
+    final localColor = getClubColor(partido.equipoLocalNombre, partido.equipoLocalSigla);
+    final visitColor = getClubColor(partido.equipoVisitanteNombre, partido.equipoVisitanteSigla);
+
+    final localSigla = getClubSigla(partido.equipoLocalNombre, partido.equipoLocalSigla);
+    final visitSigla = getClubSigla(partido.equipoVisitanteNombre, partido.equipoVisitanteSigla);
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: index.isOdd ? Colors.white : const Color(0xFFFBFDFF),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1.0),
+          ),
         ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isCompact = constraints.maxWidth < 520;
+        child: Row(
+          children: [
+            // Columna 1: #
+            SizedBox(
+              width: 34,
+              child: Text(
+                '$index',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+            ),
 
-            if (isCompact) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            // Columna 2: Local
+            SizedBox(
+              width: 175,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      // # de partido
-                      Container(
-                        width: 22,
-                        height: 22,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEAF2FB),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          '$index',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0D233A),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Equipo Local
-                      Expanded(
-                        child: Row(
-                          children: [
-                            TeamLogoAvatar(
-                              logoUrl: partido.equipoLocalLogo,
-                              teamName: partido.equipoLocalNombre,
-                              sigla: partido.equipoLocalSigla,
-                              size: 24,
-                              borderRadius: 6,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                partido.equipoLocalNombre,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1E293B),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Pastilla marcador azul oscuro
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0D233A),
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withAlpha(20),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          marcadorTexto,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ),
-
-                      // Equipo Visitante
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                partido.equipoVisitanteNombre,
-                                textAlign: TextAlign.right,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1E293B),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            TeamLogoAvatar(
-                              logoUrl: partido.equipoVisitanteLogo,
-                              teamName: partido.equipoVisitanteNombre,
-                              sigla: partido.equipoVisitanteSigla,
-                              size: 24,
-                              borderRadius: 6,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  // Fila secundaria: Fecha/hora y estado
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            const Icon(Icons.access_time, size: 13, color: Colors.blueGrey),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                fechaHora,
-                                style: const TextStyle(fontSize: 11, color: Colors.black54),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (partido.cancha != null && partido.cancha!.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          partido.cancha!,
-                          style: const TextStyle(fontSize: 11, color: Colors.blueGrey),
-                        ),
-                      ],
-                      const SizedBox(width: 8),
-                      StatusChip(
-                        status: partido.estado,
+                  Container(
+                    width: 30,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: localColor,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      localSigla,
+                      style: const TextStyle(
                         fontSize: 10,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
                       ),
-                    ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      partido.equipoLocalNombre,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
-              );
-            }
+              ),
+            ),
 
-            // Diseño para pantallas medianas y anchas
-            return Row(
-              children: [
-                // #
-                Container(
-                  width: 24,
-                  height: 24,
-                  alignment: Alignment.center,
+            // Columna 3: Marcador
+            Container(
+              width: 80,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0D233A),
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Text(
+                marcadorTexto,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+
+            // Columna 4: Visitante
+            SizedBox(
+              width: 175,
+              child: Row(
+                children: [
+                  const SizedBox(width: 12),
+                  Container(
+                    width: 30,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: visitColor,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      visitSigla,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      partido.equipoVisitanteNombre,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Columna 5: Fecha
+            SizedBox(
+              width: 135,
+              child: Text(
+                fechaTexto,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+
+            // Columna 6: Estado
+            SizedBox(
+              width: 95,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEAF2FB),
-                    borderRadius: BorderRadius.circular(6),
+                    color: isFinalizado ? const Color(0xFFE8F5E9) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '$index',
-                    style: const TextStyle(
-                      fontSize: 11,
+                    isFinalizado ? 'FINALIZADO' : partido.estado.toUpperCase().replaceAll('_', ' '),
+                    style: TextStyle(
+                      fontSize: 10.5,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF0D233A),
+                      color: isFinalizado ? const Color(0xFF2E7D32) : const Color(0xFF64748B),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-
-                // Local
-                Expanded(
-                  flex: 4,
-                  child: Row(
-                    children: [
-                      TeamLogoAvatar(
-                        logoUrl: partido.equipoLocalLogo,
-                        teamName: partido.equipoLocalNombre,
-                        sigla: partido.equipoLocalSigla,
-                        size: 30,
-                        borderRadius: 6,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          partido.equipoLocalNombre,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E293B),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Marcador en pastilla azul oscuro
-                Container(
-                  constraints: const BoxConstraints(minWidth: 84),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0D233A),
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(25),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    marcadorTexto,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ),
-
-                // Visitante
-                Expanded(
-                  flex: 4,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          partido.equipoVisitanteNombre,
-                          textAlign: TextAlign.right,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E293B),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      TeamLogoAvatar(
-                        logoUrl: partido.equipoVisitanteLogo,
-                        teamName: partido.equipoVisitanteNombre,
-                        sigla: partido.equipoVisitanteSigla,
-                        size: 30,
-                        borderRadius: 6,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 14),
-
-                // Estado
-                StatusChip(
-                  status: partido.estado,
-                  fontSize: 11,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                ),
-
-                if (onTap != null) ...[
-                  const SizedBox(width: 6),
-                  const Icon(Icons.chevron_right, size: 18, color: Colors.black26),
-                ],
-              ],
-            );
-          },
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -2,9 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../core/constants/app_colors.dart';
 import '../models/equipo.dart';
-import 'team_logo_avatar.dart';
 
 class PublicTeamCard extends StatelessWidget {
   final Equipo equipo;
@@ -23,14 +21,29 @@ class PublicTeamCard extends StatelessWidget {
     final cant = equipo.cantidadJugadores;
     final porcentaje = min(1.0, cant / maxPlantilla);
 
+    // Obtener iniciales para el avatar circular
+    String iniciales = equipo.sigla.trim();
+    if (iniciales.isEmpty) {
+      final partes = equipo.nombre.trim().split(RegExp(r'\s+'));
+      if (partes.length >= 2) {
+        iniciales = '${partes[0][0]}${partes[1][0]}'.toUpperCase();
+      } else if (equipo.nombre.isNotEmpty) {
+        iniciales = equipo.nombre.substring(0, min(2, equipo.nombre.length)).toUpperCase();
+      } else {
+        iniciales = 'EQ';
+      }
+    } else if (iniciales.length > 3) {
+      iniciales = iniciales.substring(0, 2).toUpperCase();
+    }
+
     return Card(
       margin: EdgeInsets.zero,
-      elevation: 2.5,
+      elevation: 2.0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: teamColor.withAlpha(90),
-          width: 1.5,
+        side: const BorderSide(
+          color: Color(0xFFE2E8F0),
+          width: 1.0,
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -40,7 +53,7 @@ class PublicTeamCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // BARRA SUPERIOR VIBRANTE CON COLOR REAL DEL EQUIPO
+            // Borde superior distintivo con el color del equipo
             Container(
               height: 5,
               color: teamColor,
@@ -48,38 +61,40 @@ class PublicTeamCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Fila de Avatar + Nombre + Sigla + Chevron
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // LOGO CON BORDE DEL COLOR DEL EQUIPO
+                      // Avatar circular con iniciales/sigla del equipo
                       Container(
-                        padding: const EdgeInsets.all(2.5),
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
+                          color: teamColor,
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: teamColor,
-                            width: 2.0,
-                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: teamColor.withAlpha(40),
-                              blurRadius: 5,
+                              color: teamColor.withAlpha(50),
+                              blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
                           ],
                         ),
-                        child: TeamLogoAvatar(
-                          logoUrl: equipo.logo,
-                          teamName: equipo.nombre,
-                          sigla: equipo.sigla,
-                          size: 46,
-                          borderRadius: 23,
+                        alignment: Alignment.center,
+                        child: Text(
+                          iniciales,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // NOMBRE + SIGLA
+                      // Nombre del club y badge de sigla
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,8 +103,9 @@ class PublicTeamCard extends StatelessWidget {
                               equipo.nombre,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w900,
-                                fontSize: 16.5,
+                                fontSize: 15,
                                 color: Color(0xFF0D233A),
+                                height: 1.15,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -98,107 +114,66 @@ class PublicTeamCard extends StatelessWidget {
                             if (equipo.sigla.isNotEmpty)
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 7,
-                                  vertical: 2,
+                                  horizontal: 6,
+                                  vertical: 1.5,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: teamColor.withAlpha(30),
-                                  borderRadius: BorderRadius.circular(5),
+                                  color: teamColor.withAlpha(25),
+                                  borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
-                                    color: teamColor.withAlpha(120),
-                                    width: 1,
+                                    color: teamColor.withAlpha(90),
+                                    width: 0.8,
                                   ),
                                 ),
                                 child: Text(
                                   equipo.sigla,
                                   style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w900,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
                                     color: teamColor,
-                                    letterSpacing: 0.5,
                                   ),
                                 ),
                               ),
                           ],
                         ),
                       ),
-                      Icon(
+                      const SizedBox(width: 6),
+                      const Icon(
                         Icons.chevron_right,
-                        color: Colors.blueGrey.shade300,
-                        size: 24,
+                        color: Color(0xFF94A3B8),
+                        size: 20,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  const Divider(height: 1, color: Color(0xFFE2E8F0)),
-                  const SizedBox(height: 9),
+                  const SizedBox(height: 14),
 
-                  // SECCIÓN DE PLANTILLA CON FLEX Y BADGE
+                  // Capacidad: "X/23 jugadores" a la izquierda y porcentaje "XX%" a la derecha
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.groups,
-                              size: 18,
-                              color: teamColor,
-                            ),
-                            const SizedBox(width: 5),
-                            Expanded(
-                              child: Text(
-                                '$cant ${cant == 1 ? 'jugador' : 'jugadores'}',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1E293B),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                      Text(
+                        '$cant/$maxPlantilla jugadores',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '$cant/$maxPlantilla jugadores',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                            decoration: BoxDecoration(
-                              color: teamColor.withAlpha(25),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: teamColor.withAlpha(80), width: 0.8),
-                            ),
-                            child: Text(
-                              '${(porcentaje * 100).toInt()}%',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: teamColor,
-                              ),
-                            ),
-                          ),
-                        ],
+                      Text(
+                        '${(porcentaje * 100).toInt()}%',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF1E293B),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 7),
+                  const SizedBox(height: 6),
 
-                  // BARRA DE PROGRESO DE PLANTILLA DESTACADA
+                  // Barra de progreso horizontal con el color principal del club
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(5),
+                    borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: porcentaje,
                       minHeight: 6,
@@ -206,30 +181,28 @@ class PublicTeamCard extends StatelessWidget {
                       valueColor: AlwaysStoppedAnimation<Color>(teamColor),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
 
-                  // BOTÓN DE ACCIÓN
-                  Align(
-                    alignment: Alignment.centerRight,
+                  // Botón inferior ancho "Ver jugadores" con icono de usuario
+                  SizedBox(
+                    width: double.infinity,
+                    height: 36,
                     child: TextButton.icon(
                       style: TextButton.styleFrom(
-                        foregroundColor: teamColor,
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
+                        backgroundColor: const Color(0xFFEFF6FF),
+                        foregroundColor: const Color(0xFF1565C0),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
                       ),
                       onPressed: onTap,
-                      icon: const Icon(Icons.people_alt_outlined, size: 17),
+                      icon: const Icon(Icons.person, size: 17),
                       label: const Text(
                         'Ver jugadores',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 12.5,
+                          fontSize: 13,
                         ),
                       ),
                     ),

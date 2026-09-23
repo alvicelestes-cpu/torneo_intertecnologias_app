@@ -77,80 +77,6 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
     }
   }
 
-  Widget _buildMetricCard({
-    required IconData icon,
-    required String label,
-    required int value,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      elevation: 2.5,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.2),
-      ),
-      color: Colors.white,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: color.withAlpha(25),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: color.withAlpha(80), width: 1.2),
-                ),
-                child: Icon(icon, color: color, size: 22),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _cargandoResumen
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(
-                              '$value',
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF0D233A),
-                              ),
-                            ),
-                      const SizedBox(height: 2),
-                      Text(
-                        label,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF64748B),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Drawer _buildDrawer(BuildContext context) {
     return Drawer(
@@ -375,9 +301,10 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
     final modulos = <Map<String, dynamic>>[
       {
         'titulo': 'Equipos',
-        'subtitulo': 'Clubes y plantillas oficiales',
+        'subtitulo': 'Conoce los clubes y sus plantillas',
         'icono': Icons.groups,
         'color': const Color(0xFF2E7D32),
+        'bgPastilla': const Color(0xFFE8F5E9),
         'onTap': () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const EquiposPage()),
@@ -385,9 +312,10 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
       },
       {
         'titulo': 'Partidos',
-        'subtitulo': 'Calendario y resultados oficiales',
+        'subtitulo': 'Calendario y resultados',
         'icono': Icons.sports_soccer,
-        'color': const Color(0xFFE65100),
+        'color': const Color(0xFF2E7D32),
+        'bgPastilla': const Color(0xFFE8F5E9),
         'onTap': () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const PartidosPage()),
@@ -395,9 +323,10 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
       },
       {
         'titulo': 'Jornadas',
-        'subtitulo': 'Partidos agrupados por jornada',
+        'subtitulo': 'Partidos por jornada',
         'icono': Icons.calendar_month,
         'color': const Color(0xFF7B1FA2),
+        'bgPastilla': const Color(0xFFF3E5F5),
         'onTap': () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const JornadasPage()),
@@ -405,9 +334,10 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
       },
       {
         'titulo': 'Posiciones',
-        'subtitulo': 'Tabla de posiciones en vivo',
-        'icono': Icons.leaderboard,
-        'color': const Color(0xFF1565C0),
+        'subtitulo': 'Tabla en tiempo real',
+        'icono': Icons.sports_soccer,
+        'color': const Color(0xFFFFA000),
+        'bgPastilla': const Color(0xFFFFF8E1),
         'onTap': () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const PosicionesPage()),
@@ -415,9 +345,10 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
       },
       {
         'titulo': 'Goleadores',
-        'subtitulo': 'Clasificación de máximos artilleros',
+        'subtitulo': 'Máximos artilleros',
         'icono': Icons.emoji_events,
-        'color': const Color(0xFFF57C00),
+        'color': const Color(0xFFE65100),
+        'bgPastilla': const Color(0xFFFFF3E0),
         'onTap': () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const GoleadoresPage()),
@@ -425,19 +356,21 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
       },
       {
         'titulo': 'Estadísticas',
-        'subtitulo': 'Valla menos vencida y Fair Play',
+        'subtitulo': 'Datos y rendimiento',
         'icono': Icons.bar_chart,
         'color': const Color(0xFF8E24AA),
+        'bgPastilla': const Color(0xFFEDE7F6),
         'onTap': () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const EstadisticasPage()),
         ),
       },
       {
-        'titulo': 'Jugadores (Carnets)',
-        'subtitulo': 'Carnets oficiales ordenados por edad',
-        'icono': Icons.badge_outlined,
-        'color': const Color(0xFF0277BD),
+        'titulo': 'Jugadores',
+        'subtitulo': 'Carnets deportivos',
+        'icono': Icons.person,
+        'color': const Color(0xFF546E7A),
+        'bgPastilla': const Color(0xFFECEFF1),
         'onTap': () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const JugadoresPage()),
@@ -445,9 +378,10 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
       },
       {
         'titulo': 'Acerca del Torneo',
-        'subtitulo': 'Reglamento, sedes e información oficial',
-        'icono': Icons.info_outline,
-        'color': const Color(0xFF37474F),
+        'subtitulo': 'Información general',
+        'icono': Icons.info,
+        'color': const Color(0xFF0288D1),
+        'bgPastilla': const Color(0xFFE1F5FE),
         'onTap': () => _mostrarAcercaDelTorneo(context),
       },
     ];
@@ -466,75 +400,39 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
           ),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 960),
+              constraints: const BoxConstraints(maxWidth: 1040),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ENCABEZADO AZUL CON GRAN PRESENCIA
-                  const PublicHeaderBanner(),
-                  const SizedBox(height: 16),
-
-                  // 4 MÉTRICAS CON VIDA Y CONTRASTE (Verde, Azul, Morado, Naranja)
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final isMobile = constraints.maxWidth < 600;
-                      return GridView.count(
-                        crossAxisCount: isMobile ? 2 : 4,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: isMobile ? 1.6 : 1.9,
-                        children: [
-                          _buildMetricCard(
-                            icon: Icons.groups,
-                            label: 'EQUIPOS',
-                            value: _totalEquipos,
-                            color: const Color(0xFF2E7D32), // Verde
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const EquiposPage()),
-                              );
-                            },
-                          ),
-                          _buildMetricCard(
-                            icon: Icons.person,
-                            label: 'JUGADORES',
-                            value: _totalJugadores,
-                            color: const Color(0xFF1565C0), // Azul
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const JugadoresPage()),
-                              );
-                            },
-                          ),
-                          _buildMetricCard(
-                            icon: Icons.calendar_month,
-                            label: 'JORNADAS',
-                            value: _totalJornadas,
-                            color: const Color(0xFF7B1FA2), // Morado
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const JornadasPage()),
-                              );
-                            },
-                          ),
-                          _buildMetricCard(
-                            icon: Icons.sports_soccer,
-                            label: 'PARTIDOS',
-                            value: _totalPartidos,
-                            color: const Color(0xFFE65100), // Naranja
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const PartidosPage()),
-                              );
-                            },
-                          ),
-                        ],
+                  // HEADER BANNER CON FONDO DE ESTADIO, BALÓN Y MÉTRICAS TRANSLÚCIDAS
+                  PublicHeaderBanner(
+                    totalEquipos: _totalEquipos,
+                    totalJugadores: _totalJugadores,
+                    totalJornadas: _totalJornadas,
+                    totalPartidos: _totalPartidos,
+                    cargando: _cargandoResumen,
+                    onEquiposTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const EquiposPage()),
+                      );
+                    },
+                    onJugadoresTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const JugadoresPage()),
+                      );
+                    },
+                    onJornadasTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const JornadasPage()),
+                      );
+                    },
+                    onPartidosTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const PartidosPage()),
                       );
                     },
                   ),
@@ -542,7 +440,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
 
                   // SELECTOR DE CAMPEONATO ACTIVO (FILTRADO PARA PÚBLICO)
                   Card(
-                    elevation: 2,
+                    elevation: 1.5,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                       side: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -572,7 +470,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // TÍTULO DE SECCIONES
+                  // TÍTULO DE SECCIÓN
                   const Text(
                     'Explora el Torneo',
                     style: TextStyle(
@@ -583,16 +481,16 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // GRID DE MÓDULOS CON CONTRASTE Y VIDA
+                  // GRID DE MÓDULOS CON PASTILLAS CIRCULARES DE COLORES
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: modulos.length,
                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 320,
-                      mainAxisExtent: 180,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
+                      maxCrossAxisExtent: 280,
+                      mainAxisExtent: 168,
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 14,
                     ),
                     itemBuilder: (context, index) {
                       final modulo = modulos[index];
@@ -600,10 +498,11 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                       final subtitulo = modulo['subtitulo'] as String;
                       final icono = modulo['icono'] as IconData;
                       final color = modulo['color'] as Color;
+                      final bgPastilla = modulo['bgPastilla'] as Color;
                       final onTap = modulo['onTap'] as VoidCallback;
 
                       return Card(
-                        elevation: 2,
+                        elevation: 1.5,
                         clipBehavior: Clip.antiAlias,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -616,40 +515,53 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                             padding: const EdgeInsets.all(16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    CircleAvatar(
-                                      radius: 20,
-                                      backgroundColor: color.withAlpha(25),
+                                    Container(
+                                      width: 42,
+                                      height: 42,
+                                      decoration: BoxDecoration(
+                                        color: bgPastilla,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      alignment: Alignment.center,
                                       child: Icon(icono, color: color, size: 22),
                                     ),
                                     const Icon(
-                                      Icons.arrow_forward_ios,
-                                      size: 14,
-                                      color: Colors.black38,
+                                      Icons.chevron_right,
+                                      size: 20,
+                                      color: Color(0xFF94A3B8),
                                     ),
                                   ],
                                 ),
-                                const Spacer(),
-                                Text(
-                                  titulo,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0D233A),
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  subtitulo,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      titulo,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF0D233A),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      subtitulo,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -679,38 +591,177 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
 }
 
 class PublicHeaderBanner extends StatelessWidget {
-  const PublicHeaderBanner({super.key});
+  final int totalEquipos;
+  final int totalJugadores;
+  final int totalJornadas;
+  final int totalPartidos;
+  final bool cargando;
+  final VoidCallback? onEquiposTap;
+  final VoidCallback? onJugadoresTap;
+  final VoidCallback? onJornadasTap;
+  final VoidCallback? onPartidosTap;
+
+  const PublicHeaderBanner({
+    super.key,
+    this.totalEquipos = 8,
+    this.totalJugadores = 110,
+    this.totalJornadas = 7,
+    this.totalPartidos = 28,
+    this.cargando = false,
+    this.onEquiposTap,
+    this.onJugadoresTap,
+    this.onJornadasTap,
+    this.onPartidosTap,
+  });
+
+  Widget _buildMetricCard({
+    required IconData icon,
+    required String label,
+    required int value,
+    required Color color,
+    required VoidCallback? onTap,
+    required bool isSmall,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmall ? 8 : 12,
+            vertical: isSmall ? 6 : 8,
+          ),
+          decoration: BoxDecoration(
+            color: color.withAlpha(210),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.white.withAlpha(50),
+              width: 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(50),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: isSmall ? 30 : 36,
+                height: isSmall ? 30 : 36,
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(35),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                  size: isSmall ? 18 : 20,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    cargando
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            '$value',
+                            style: TextStyle(
+                              fontSize: isSmall ? 17 : 20,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              height: 1.1,
+                            ),
+                          ),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: isSmall ? 9.0 : 10.0,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white.withAlpha(220),
+                        letterSpacing: 0.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final cardWidth = constraints.maxWidth;
-        final isVerySmall = cardWidth < 380;
-        final isMobile = cardWidth < 600;
+        final isVerySmall = cardWidth < 420;
+        final isMobile = cardWidth < 680;
 
         final double titleFontSize = isVerySmall
             ? 18.0
             : (isMobile
-                ? 20.0
-                : (cardWidth < 800 ? 23.0 : 26.0));
-        final double letterSpacing =
-            isVerySmall ? 0.4 : (isMobile ? 0.6 : 0.8);
-
-        final double iconBoxSize =
-            isVerySmall ? 44.0 : (isMobile ? 50.0 : 58.0);
-        final double iconSize =
-            isVerySmall ? 26.0 : (isMobile ? 30.0 : 36.0);
-        final double iconSpacing =
-            isVerySmall ? 10.0 : (isMobile ? 12.0 : 16.0);
+                ? 21.0
+                : (cardWidth < 800 ? 24.0 : 27.0));
 
         final EdgeInsets cardPadding = EdgeInsets.all(
-          isVerySmall ? 14.0 : (isMobile ? 18.0 : 24.0),
+          isVerySmall ? 14.0 : (isMobile ? 18.0 : 22.0),
         );
 
-        final double spaceTitleToSubtitle = isVerySmall ? 8.0 : 10.0;
-        final double spaceSubtitleToDivider = isVerySmall ? 16.0 : 20.0;
-        final double spaceDividerToFooter = isVerySmall ? 12.0 : 14.0;
+        final metricEquipos = _buildMetricCard(
+          icon: Icons.groups,
+          label: 'EQUIPOS',
+          value: totalEquipos,
+          color: const Color(0xFF00695C),
+          onTap: onEquiposTap,
+          isSmall: isVerySmall,
+        );
+
+        final metricJugadores = _buildMetricCard(
+          icon: Icons.person,
+          label: 'JUGADORES',
+          value: totalJugadores,
+          color: const Color(0xFF1565C0),
+          onTap: onJugadoresTap,
+          isSmall: isVerySmall,
+        );
+
+        final metricJornadas = _buildMetricCard(
+          icon: Icons.calendar_month,
+          label: 'JORNADAS',
+          value: totalJornadas,
+          color: const Color(0xFF6A1B9A),
+          onTap: onJornadasTap,
+          isSmall: isVerySmall,
+        );
+
+        final metricPartidos = _buildMetricCard(
+          icon: Icons.sports_soccer,
+          label: 'PARTIDOS',
+          value: totalPartidos,
+          color: const Color(0xFFE65100),
+          onTap: onPartidosTap,
+          isSmall: isVerySmall,
+        );
 
         return Card(
           elevation: 3,
@@ -732,134 +783,181 @@ class PublicHeaderBanner extends StatelessWidget {
             ),
             child: Stack(
               children: [
-                Positioned(
-                  right: -25,
-                  bottom: -35,
-                  child: IgnorePointer(
-                    child: Opacity(
-                      opacity: 0.10,
-                      child: Icon(
-                        Icons.sports_soccer,
-                        size: isVerySmall ? 110 : 160,
-                        color: Colors.white,
+                // Foto de fondo del estadio iluminado con balón a la derecha
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/banner_home.jpg',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                  ),
+                ),
+
+                // Gradiente oscuro superpuesto para garantizar alto contraste
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.black.withAlpha(160),
+                          Colors.black.withAlpha(70),
+                          Colors.black.withAlpha(130),
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
                       ),
                     ),
                   ),
                 ),
+
+                // Contenido del Banner
                 Padding(
                   padding: cardPadding,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: iconBoxSize,
-                      height: iconBoxSize,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(35),
-                        borderRadius: BorderRadius.circular(
-                          isVerySmall ? 12 : 16,
-                        ),
-                        border: Border.all(
-                          color: Colors.white30,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.sports_soccer,
-                        size: iconSize,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(width: iconSpacing),
-                    Expanded(
-                      child: Column(
+                      // Cabecera: Logotipo escudo con balón a la izquierda + Textos
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Logotipo con escudo de balón a la izquierda
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
+                            width: isVerySmall ? 44.0 : 54.0,
+                            height: isVerySmall ? 44.0 : 54.0,
                             decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(30),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'PORTAL DEL TORNEO',
-                              style: TextStyle(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withAlpha(45),
+                              border: Border.all(
                                 color: Colors.white,
-                                fontSize: 10.5,
-                                letterSpacing: 1.2,
-                                fontWeight: FontWeight.bold,
+                                width: 2.0,
                               ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withAlpha(70),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'TORNEO INTERTECNOLOGÍAS',
-                            style: TextStyle(
-                              fontSize: titleFontSize,
-                              fontWeight: FontWeight.w900,
+                            child: Icon(
+                              Icons.sports_soccer,
+                              size: isVerySmall ? 26.0 : 32.0,
                               color: Colors.white,
-                              letterSpacing: letterSpacing,
-                              height: 1.15,
                             ),
-                            softWrap: true,
-                            overflow: TextOverflow.visible,
-                            maxLines: 2,
                           ),
-                          SizedBox(height: spaceTitleToSubtitle),
-                          ListenableBuilder(
-                            listenable: SessionManager(),
-                            builder: (context, _) => Text(
-                              SessionManager().selectedCampeonatoNombre,
-                              style: TextStyle(
-                                fontSize: isVerySmall
-                                    ? 13.0
-                                    : (isMobile ? 14.0 : 15.0),
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white.withAlpha(235),
-                                letterSpacing: 0.3,
-                              ),
-                              softWrap: true,
-                              overflow: TextOverflow.visible,
-                              maxLines: 2,
+                          const SizedBox(width: 14),
+
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Badge PORTAL DEL TORNEO
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 2.5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withAlpha(35),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'PORTAL DEL TORNEO',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      letterSpacing: 1.2,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+
+                                // Título: TORNEO INTERTECNOLOGÍAS
+                                Text(
+                                  'TORNEO INTERTECNOLOGÍAS',
+                                  style: TextStyle(
+                                    fontSize: titleFontSize,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: 0.8,
+                                    height: 1.15,
+                                  ),
+                                  softWrap: true,
+                                  overflow: TextOverflow.visible,
+                                  maxLines: 2,
+                                ),
+                                const SizedBox(height: 4),
+
+                                // Subtítulo
+                                ListenableBuilder(
+                                  listenable: SessionManager(),
+                                  builder: (context, _) => Text(
+                                    SessionManager().selectedCampeonatoNombre,
+                                    style: TextStyle(
+                                      fontSize: isVerySmall ? 13.0 : 15.0,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white.withAlpha(235),
+                                    ),
+                                    softWrap: true,
+                                    overflow: TextOverflow.visible,
+                                    maxLines: 2,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+
+                                // Lema
+                                Text(
+                                  'Pasión, tecnología y deporte en un solo torneo',
+                                  style: TextStyle(
+                                    color: Colors.white.withAlpha(210),
+                                    fontSize: isVerySmall ? 11.5 : 13.0,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: spaceSubtitleToDivider),
-                const Divider(color: Colors.white24, height: 1),
-                SizedBox(height: spaceDividerToFooter),
-                Row(
-                  children: [
-                    const Icon(Icons.public, color: Colors.white70, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Consulta pública oficial de equipos, jugadores, partidos, posiciones y estadísticas.',
-                        style: TextStyle(
-                          color: Colors.white.withAlpha(220),
-                          fontSize: isVerySmall ? 12 : 13,
+                      SizedBox(height: isMobile ? 18.0 : 24.0),
+
+                      // Fila de 4 tarjetas de métricas sobre fondo traslúcido/oscuro dentro del banner
+                      if (isMobile)
+                        GridView.count(
+                          crossAxisCount: 2,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                          childAspectRatio: isVerySmall ? 2.3 : 2.7,
+                          children: [
+                            metricEquipos,
+                            metricJugadores,
+                            metricJornadas,
+                            metricPartidos,
+                          ],
+                        )
+                      else
+                        Row(
+                          children: [
+                            Expanded(child: metricEquipos),
+                            const SizedBox(width: 10),
+                            Expanded(child: metricJugadores),
+                            const SizedBox(width: 10),
+                            Expanded(child: metricJornadas),
+                            const SizedBox(width: 10),
+                            Expanded(child: metricPartidos),
+                          ],
                         ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    ),
-  );
+        );
       },
     );
   }
 }
+

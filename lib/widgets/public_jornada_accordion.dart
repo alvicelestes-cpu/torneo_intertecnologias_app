@@ -57,7 +57,7 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
         }
       }
     }
-    return 'Por definir';
+    return '24/08/2026';
   }
 
   @override
@@ -68,209 +68,274 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
         : widget.partidos.length;
 
     return Card(
-      elevation: 2.5,
-      margin: const EdgeInsets.only(bottom: 14),
+      elevation: 1.5,
+      margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // CABECERA DEPORTIVA AZUL DEGRADADA
+          // Cabecera interactiva del acordeón
           InkWell(
             onTap: () {
               setState(() {
                 _expanded = !_expanded;
               });
             },
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF0D233A),
-                    Color(0xFF1565C0),
-                    Color(0xFF1E88E5),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: _expanded ? null : Colors.white,
+                gradient: _expanded
+                    ? const LinearGradient(
+                        colors: [
+                          Color(0xFF0072CE),
+                          Color(0xFF0D6EFD),
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      )
+                    : null,
               ),
-              child: Stack(
+              child: Row(
                 children: [
-                  const Positioned(
-                    right: 48,
-                    top: -12,
-                    bottom: -12,
-                    child: IgnorePointer(
-                      child: Opacity(
-                        opacity: 0.12,
-                        child: Icon(Icons.sports_soccer, size: 84, color: Colors.white),
-                      ),
+                  // Icono de calendario en badge
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: _expanded
+                          ? Colors.white.withAlpha(45)
+                          : const Color(0xFFEAF2FD),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.calendar_month,
+                      color: _expanded ? Colors.white : const Color(0xFF1976D2),
+                      size: 24,
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                  const SizedBox(width: 14),
+
+                  // Título, fase y fecha
+                  Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                  // FASE + JORNADA UNIFICADA ("PRIMERA FASE - Jornada X")
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                        Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withAlpha(35),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: Colors.white24, width: 1),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text('⚽ ', style: TextStyle(fontSize: 10)),
-                                  Text(
-                                    widget.fase.toUpperCase(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.8,
-                                    ),
-                                  ),
-                                ],
+                            Text(
+                              widget.fase.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: _expanded ? Colors.white70 : const Color(0xFF64748B),
+                                letterSpacing: 0.6,
                               ),
                             ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8),
-                              child: Text(
-                                '-',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                            Flexible(
-                              child: Text(
-                                'Jornada ${widget.numeroJornada}',
-                                style: const TextStyle(
-                                  fontSize: 19,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                            const SizedBox(width: 8),
+                            Text(
+                              'Jornada ${widget.numeroJornada}',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: _expanded ? Colors.white : const Color(0xFF0D233A),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      AnimatedRotation(
-                        duration: const Duration(milliseconds: 250),
-                        turns: _expanded ? 0.5 : 0.0,
-                        child: const Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  // FECHA Y CANTIDAD DE PARTIDOS
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.calendar_today, size: 13, color: Colors.white70),
-                          const SizedBox(width: 5),
-                          Text(
-                            fechaJornada,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white,
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            if (_expanded) ...[
+                              const Icon(
+                                Icons.calendar_today,
+                                size: 12,
+                                color: Colors.white70,
+                              ),
+                              const SizedBox(width: 4),
+                            ],
+                            Text(
+                              fechaJornada,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: _expanded ? Colors.white.withAlpha(230) : const Color(0xFF64748B),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(40),
-                          borderRadius: BorderRadius.circular(12),
+                          ],
                         ),
-                        child: Text(
-                          '$cantPartidos ${cantPartidos == 1 ? 'partido' : 'partidos'}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Badge de cantidad de partidos
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: _expanded
+                          ? Colors.white.withAlpha(35)
+                          : const Color(0xFFEAF2FD),
+                      borderRadius: BorderRadius.circular(16),
+                      border: _expanded
+                          ? Border.all(color: Colors.white30, width: 0.8)
+                          : null,
+                    ),
+                    child: Text(
+                      '$cantPartidos ${cantPartidos == 1 ? 'partido' : 'partidos'}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: _expanded ? Colors.white : const Color(0xFF1976D2),
                       ),
-                    ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
+                  // Flecha arriba/abajo
+                  Icon(
+                    _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: _expanded ? Colors.white : const Color(0xFF1976D2),
+                    size: 24,
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-    ),
+          ),
 
-          // CONTENIDO EXPANDIBLE: LISTA DE PARTIDOS
-          AnimatedCrossFade(
-            duration: const Duration(milliseconds: 250),
-            crossFadeState: _expanded
-                ? CrossFadeState.showFirst
-                : CrossFadeState.showSecond,
-            firstChild: Container(
+          // Tabla de partidos expandible
+          if (_expanded)
+            Container(
               color: Colors.white,
-              padding: const EdgeInsets.all(12),
               child: widget.partidos.isEmpty
                   ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 18),
+                      padding: EdgeInsets.symmetric(vertical: 24),
                       child: Center(
                         child: Text(
                           'No hay partidos registrados en esta jornada.',
                           style: TextStyle(
-                            color: Colors.black54,
+                            color: Color(0xFF64748B),
                             fontWeight: FontWeight.w500,
                             fontSize: 13,
                           ),
                         ),
                       ),
                     )
-                  : ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: widget.partidos.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final partido = widget.partidos[index];
-                        return PublicPartidoRow(
-                          index: index + 1,
-                          partido: partido,
-                          onTap: widget.onPartidoTap != null
-                              ? () => widget.onPartidoTap!(partido)
-                              : null,
-                        );
-                      },
+                    : SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(
+                        width: 730,
+                        child: Column(
+                          children: [
+                            // Cabecera de la tabla de partidos
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF8FAFC),
+                                border: Border(
+                                  bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
+                                ),
+                              ),
+                              child: const Row(
+                                children: [
+                                  SizedBox(
+                                    width: 34,
+                                    child: Text(
+                                      '#',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 175,
+                                    child: Text(
+                                      'Local',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 80,
+                                    child: Text(
+                                      'Marcador',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 175,
+                                    child: Padding(
+                                      padding: EdgeInsets.only(left: 12),
+                                      child: Text(
+                                        'Visitante',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 135,
+                                    child: Text(
+                                      'Fecha',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 95,
+                                    child: Text(
+                                      'Estado',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Filas de partidos
+                            ...List.generate(widget.partidos.length, (index) {
+                              final partido = widget.partidos[index];
+                              return PublicPartidoRow(
+                                index: index + 1,
+                                partido: partido,
+                                onTap: widget.onPartidoTap != null
+                                    ? () => widget.onPartidoTap!(partido)
+                                    : null,
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
                     ),
             ),
-            secondChild: const SizedBox.shrink(),
-          ),
         ],
       ),
     );
