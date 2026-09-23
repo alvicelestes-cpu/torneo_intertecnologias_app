@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
+import 'core/session/session_manager.dart';
 import 'models/goleador.dart';
 import 'services/torneo_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
+import 'widgets/campeonato_selector_bar.dart';
 import 'widgets/player_avatar.dart';
 
 class GoleadoresPage extends StatefulWidget {
@@ -31,7 +33,18 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
   @override
   void initState() {
     super.initState();
+    SessionManager().addListener(_onSessionChanged);
     cargarGoleadores();
+  }
+
+  @override
+  void dispose() {
+    SessionManager().removeListener(_onSessionChanged);
+    super.dispose();
+  }
+
+  void _onSessionChanged() {
+    if (mounted) cargarGoleadores();
   }
 
   Future<void> cargarGoleadores() async {
@@ -77,8 +90,26 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        title: const Text('Tabla de goleadores'),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Tabla de goleadores'),
+            ListenableBuilder(
+              listenable: SessionManager(),
+              builder: (context, _) => Text(
+                SessionManager().selectedCampeonatoNombre,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              ),
+            ),
+          ],
+        ),
         centerTitle: true,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: CampeonatoSelectorBar(),
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: cargarGoleadores,

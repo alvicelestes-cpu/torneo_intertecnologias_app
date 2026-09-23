@@ -1,6 +1,14 @@
 class AppDateUtils {
   AppDateUtils._();
 
+  static DateTime? tryParse(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    final str = value.toString().trim();
+    if (str.isEmpty) return null;
+    return DateTime.tryParse(str);
+  }
+
   static String formatDateTime(dynamic fechaHora, {String defaultText = 'Fecha por definir'}) {
     if (fechaHora == null) return defaultText;
 

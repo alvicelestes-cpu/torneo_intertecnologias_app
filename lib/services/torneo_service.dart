@@ -1,6 +1,7 @@
 import '../core/constants/api_constants.dart';
 import '../core/errors/app_exception.dart';
 import '../core/network/api_client.dart';
+import '../models/campeonato.dart';
 import '../models/estadisticas.dart';
 import '../models/goleador.dart';
 import '../models/posicion.dart';
@@ -14,9 +15,63 @@ class TorneoService {
       : _apiClient = apiClient ?? ApiClient(),
         _jugadoresService = jugadoresService ?? JugadoresService(apiClient: apiClient);
 
-  Future<List<Posicion>> getPosiciones({String? token}) async {
+  /// Obtiene la lista de todos los campeonatos activos (multitorneo)
+  Future<List<Campeonato>> getCampeonatos({String? token}) async {
     final response = await _apiClient.get(
-      ApiConstants.posiciones,
+      ApiConstants.campeonatos,
+      token: token,
+    );
+
+    if (response is List) {
+      return response
+          .map((item) => Campeonato.fromJson(
+                item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item),
+              ))
+          .toList();
+    }
+
+    throw const AppException('La respuesta de campeonatos no tiene el formato esperado.');
+  }
+
+  /// Obtiene el detalle de un campeonato específico
+  Future<Campeonato> getCampeonatoById(int id, {String? token}) async {
+    final response = await _apiClient.get(
+      ApiConstants.campeonatoDetalle(id),
+      token: token,
+    );
+
+    if (response is Map<String, dynamic>) {
+      return Campeonato.fromJson(response);
+    }
+
+    throw const AppException('No se pudo obtener el detalle del campeonato.');
+  }
+
+  /// Obtiene el resumen general del torneo activo
+  Future<Map<String, dynamic>> getResumenTorneo({String? token, int? campeonatoId}) async {
+    final url = campeonatoId != null
+        ? '${ApiConstants.torneoResumen}?campeonatoId=$campeonatoId'
+        : ApiConstants.torneoResumen;
+
+    final response = await _apiClient.get(
+      url,
+      token: token,
+    );
+
+    if (response is Map<String, dynamic>) {
+      return response;
+    }
+
+    throw const AppException('La respuesta del resumen de torneo no tiene el formato esperado.');
+  }
+
+  Future<List<Posicion>> getPosiciones({String? token, int? campeonatoId}) async {
+    final url = campeonatoId != null
+        ? '${ApiConstants.posiciones}?campeonatoId=$campeonatoId'
+        : ApiConstants.posiciones;
+
+    final response = await _apiClient.get(
+      url,
       token: token,
     );
 
@@ -31,9 +86,13 @@ class TorneoService {
     throw const AppException('La respuesta de posiciones no tiene el formato esperado.');
   }
 
-  Future<List<Goleador>> getGoleadores({String? token, bool cargarFotos = true}) async {
+  Future<List<Goleador>> getGoleadores({String? token, bool cargarFotos = true, int? campeonatoId}) async {
+    final url = campeonatoId != null
+        ? '${ApiConstants.goleadores}?campeonatoId=$campeonatoId'
+        : ApiConstants.goleadores;
+
     final response = await _apiClient.get(
-      ApiConstants.goleadores,
+      url,
       token: token,
     );
 
@@ -72,9 +131,13 @@ class TorneoService {
     return resultados;
   }
 
-  Future<EstadisticasTorneo> getEstadisticas({String? token}) async {
+  Future<EstadisticasTorneo> getEstadisticas({String? token, int? campeonatoId}) async {
+    final url = campeonatoId != null
+        ? '${ApiConstants.estadisticas}?campeonatoId=$campeonatoId'
+        : ApiConstants.estadisticas;
+
     final response = await _apiClient.get(
-      ApiConstants.estadisticas,
+      url,
       token: token,
     );
 

@@ -13,6 +13,7 @@ import 'jornadas_page.dart';
 import 'jugadores_page.dart';
 import 'partidos_page.dart';
 import 'posiciones_page.dart';
+import 'widgets/campeonato_selector_bar.dart';
 
 void main() {
   runApp(const TorneoApp());
@@ -374,7 +375,24 @@ class InicioPage extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                const Row(
+                  children: [
+                    Text(
+                      'Torneo activo:',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: CampeonatoSelectorBar(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
                 const Text(
                   'Panel principal',
                   style: TextStyle(

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
+import 'core/session/session_manager.dart';
 import 'models/estadisticas.dart';
 import 'services/torneo_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
+import 'widgets/campeonato_selector_bar.dart';
 import 'widgets/player_avatar.dart';
 
 class EstadisticasPage extends StatefulWidget {
@@ -31,7 +33,18 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
   @override
   void initState() {
     super.initState();
+    SessionManager().addListener(_onSessionChanged);
     cargarEstadisticas();
+  }
+
+  @override
+  void dispose() {
+    SessionManager().removeListener(_onSessionChanged);
+    super.dispose();
+  }
+
+  void _onSessionChanged() {
+    if (mounted) cargarEstadisticas();
   }
 
   Future<void> cargarEstadisticas() async {
@@ -218,8 +231,26 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        title: const Text('Estadísticas'),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Estadísticas'),
+            ListenableBuilder(
+              listenable: SessionManager(),
+              builder: (context, _) => Text(
+                SessionManager().selectedCampeonatoNombre,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              ),
+            ),
+          ],
+        ),
         centerTitle: true,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: CampeonatoSelectorBar(),
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: cargarEstadisticas,

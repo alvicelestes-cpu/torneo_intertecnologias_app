@@ -4,6 +4,14 @@ class ApiConstants {
   static const String baseUrl =
       'https://torneointertecnologias-production-7ae9.up.railway.app';
 
+  // Campeonatos (Multitorneo)
+  static const String campeonatos = '$baseUrl/api/campeonatos';
+  static String campeonatoDetalle(int campeonatoId) =>
+      '$baseUrl/api/campeonatos/$campeonatoId';
+
+  // Torneo Resumen
+  static const String torneoResumen = '$baseUrl/api/torneo';
+
   // Auth
   static const String login = '$baseUrl/api/auth/login';
 
@@ -49,14 +57,17 @@ class ApiConstants {
   static const String goleadores = '$baseUrl/api/goleadores';
   static const String estadisticas = '$baseUrl/api/estadisticas';
 
-  // Headers por defecto
-  static Map<String, String> defaultHeaders({String? token}) {
+  // Headers por defecto con soporte multitorneo
+  static Map<String, String> defaultHeaders({String? token, int? campeonatoId}) {
     final headers = <String, String>{
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     };
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
+    }
+    if (campeonatoId != null && campeonatoId > 0) {
+      headers['X-Campeonato-Id'] = campeonatoId.toString();
     }
     return headers;
   }

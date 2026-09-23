@@ -27,7 +27,10 @@ class ApiClient {
         ? token
         : SessionManager().token;
 
-    final headers = ApiConstants.defaultHeaders(token: effectiveToken);
+    final headers = ApiConstants.defaultHeaders(
+      token: effectiveToken,
+      campeonatoId: SessionManager().selectedCampeonatoId,
+    );
     if (extraHeaders != null) {
       headers.addAll(extraHeaders);
     }

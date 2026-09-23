@@ -5,9 +5,14 @@ class AppColors {
 
   static const Color primary = Color(0xFF1D4F7A);
   static const Color primaryLight = Color(0xFFEAF2FB);
+  static const Color primaryDark = Color(0xFF0F2A42);
   static const Color headerBackground = Color(0xFFE8EEF7);
   static const Color scaffoldBackground = Color(0xFFF4F7FB);
   static const Color cardBorder = Color(0xFFE2E8F0);
+
+  // Textos
+  static const Color textPrimary = Color(0xFF1E293B);
+  static const Color textSecondary = Color(0xFF64748B);
 
   // Estados de partidos / jornadas
   static const Color statusProgramado = Color(0xFF1976D2);

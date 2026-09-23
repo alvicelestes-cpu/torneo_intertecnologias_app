@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
+import 'core/session/session_manager.dart';
 import 'core/utils/ui_helpers.dart';
 import 'models/equipo.dart';
 import 'services/equipos_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
+import 'widgets/campeonato_selector_bar.dart';
 import 'widgets/team_logo_avatar.dart';
 
 import 'jugadores_equipo_page.dart';
@@ -34,7 +36,18 @@ class _EquiposPageState extends State<EquiposPage> {
   @override
   void initState() {
     super.initState();
+    SessionManager().addListener(_onSessionChanged);
     cargarEquipos();
+  }
+
+  @override
+  void dispose() {
+    SessionManager().removeListener(_onSessionChanged);
+    super.dispose();
+  }
+
+  void _onSessionChanged() {
+    if (mounted) cargarEquipos();
   }
 
   Future<void> cargarEquipos() async {
@@ -76,8 +89,26 @@ class _EquiposPageState extends State<EquiposPage> {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        title: const Text('Equipos'),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Equipos'),
+            ListenableBuilder(
+              listenable: SessionManager(),
+              builder: (context, _) => Text(
+                SessionManager().selectedCampeonatoNombre,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              ),
+            ),
+          ],
+        ),
         centerTitle: true,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: CampeonatoSelectorBar(),
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: cargarEquipos,
