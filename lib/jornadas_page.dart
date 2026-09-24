@@ -7,9 +7,11 @@ import 'core/utils/fixture_utils.dart';
 import 'core/utils/ui_helpers.dart';
 import 'models/jornada.dart';
 import 'models/partido.dart';
+import 'models/posicion.dart';
 import 'partido_detalle_page.dart';
 import 'services/jornadas_service.dart';
 import 'services/partidos_service.dart';
+import 'services/torneo_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
@@ -31,12 +33,15 @@ class JornadasPage extends StatefulWidget {
 class _JornadasPageState extends State<JornadasPage> {
   final JornadasService _jornadasService = JornadasService();
   final PartidosService _partidosService = PartidosService();
+  final TorneoService _torneoService = TorneoService();
 
   bool cargando = true;
   String? error;
   int cantidadJornadas = 0;
   List<Jornada> jornadas = [];
   List<FixtureSection> seccionesFixture = [];
+  List<Posicion> posiciones = [];
+  String faseSeleccionada = 'TODAS';
 
   @override
   void initState() {
@@ -65,14 +70,17 @@ class _JornadasPageState extends State<JornadasPage> {
       final resultados = await Future.wait([
         _jornadasService.getJornadas(token: widget.token),
         _partidosService.getPartidos(token: widget.token).catchError((_) => <Partido>[]),
+        _torneoService.getPosiciones(token: widget.token).catchError((_) => <Posicion>[]),
       ]);
 
       final resJornadas = resultados[0] as JornadasResponse;
       final listaPartidos = resultados[1] as List<Partido>;
+      final listaPosiciones = resultados[2] as List<Posicion>;
 
       final sections = FixtureUtils.buildTournamentSections(
         partidos: listaPartidos,
         jornadas: resJornadas.jornadas,
+        posiciones: listaPosiciones,
       );
 
       // Ordenar jornadas ascendente
@@ -84,6 +92,7 @@ class _JornadasPageState extends State<JornadasPage> {
           cantidadJornadas = resJornadas.cantidadJornadas;
           jornadas = sortedJornadas;
           seccionesFixture = sections;
+          posiciones = listaPosiciones;
         });
       }
     } on AppException catch (e) {
@@ -119,6 +128,67 @@ class _JornadasPageState extends State<JornadasPage> {
     }
   }
 
+  Widget _construirSelectorFases() {
+    final fases = [
+      {'id': 'TODAS', 'nombre': 'Todas las Fases'},
+      {'id': TournamentPhase.primeraFase, 'nombre': '1. Primera Fase'},
+      {'id': TournamentPhase.segundaRonda, 'nombre': '2. Cuadrangulares'},
+      {'id': TournamentPhase.terceraRonda, 'nombre': '3. Cuartos'},
+      {'id': TournamentPhase.cuartaRonda, 'nombre': '4. Semifinales'},
+      {'id': TournamentPhase.quintaRonda, 'nombre': '5. Gran Final'},
+    ];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      height: 38,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: fases.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final f = fases[index];
+          final activa = faseSeleccionada == f['id'];
+
+          return InkWell(
+            onTap: () => setState(() => faseSeleccionada = f['id']!),
+            borderRadius: BorderRadius.circular(20),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: activa ? const Color(0xFF0D233A) : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: activa ? const Color(0xFF0D233A) : const Color(0xFFCBD5E1),
+                  width: 1.2,
+                ),
+                boxShadow: activa
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(15),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Center(
+                child: Text(
+                  f['nombre']!,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: activa ? FontWeight.w800 : FontWeight.w600,
+                    color: activa ? Colors.white : const Color(0xFF334155),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -146,16 +216,20 @@ class _JornadasPageState extends State<JornadasPage> {
               );
             }
 
+            final seccionesVisibles = faseSeleccionada == 'TODAS'
+                ? seccionesFixture
+                : seccionesFixture.where((s) => s.fase == faseSeleccionada).toList();
+
             // Determinar qué fase/jornada expandir por defecto
             String seccionInicialId = 'jornada_1';
-            for (final s in seccionesFixture) {
+            for (final s in seccionesVisibles) {
               if (s.partidos.any((p) => p.esEnCurso)) {
                 seccionInicialId = s.id;
                 break;
               }
             }
             if (seccionInicialId == 'jornada_1') {
-              for (final s in seccionesFixture) {
+              for (final s in seccionesVisibles) {
                 if (s.partidos.any((p) => p.esProgramado && p.id > 0)) {
                   seccionInicialId = s.id;
                   break;
@@ -251,12 +325,16 @@ class _JornadasPageState extends State<JornadasPage> {
                       ),
                     ),
 
-                    // LISTA DE FASES Y JORNADAS EN ACORDEÓN (PRIMERA FASE, SEGUNDA RONDA, SEMIFINAL, FINAL)
-                    ...seccionesFixture.map((seccion) {
+                    // Selector de Pestañas para las 5 Fases
+                    _construirSelectorFases(),
+
+                    // LISTA DE FASES Y JORNADAS EN ACORDEÓN (5 FASES)
+                    ...seccionesVisibles.map((seccion) {
                       return PublicJornadaAccordion(
                         numeroJornada: seccion.numeroJornada,
                         fase: seccion.fase,
                         tituloPersonalizado: seccion.titulo,
+                        subtitulo: seccion.subtitulo,
                         cantidadPartidos: seccion.cantidadPartidos,
                         partidos: seccion.partidos,
                         esPendiente: seccion.esPendiente,

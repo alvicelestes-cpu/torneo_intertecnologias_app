@@ -8,6 +8,7 @@ class PublicJornadaAccordion extends StatefulWidget {
   final int numeroJornada;
   final String fase;
   final String? tituloPersonalizado;
+  final String? subtitulo;
   final String? fecha;
   final int cantidadPartidos;
   final List<Partido> partidos;
@@ -21,6 +22,7 @@ class PublicJornadaAccordion extends StatefulWidget {
     required this.numeroJornada,
     this.fase = 'PRIMERA FASE',
     this.tituloPersonalizado,
+    this.subtitulo,
     this.fecha,
     required this.cantidadPartidos,
     required this.partidos,
@@ -76,6 +78,60 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
     return '24/08/2026';
   }
 
+  LinearGradient _getExpandedGradient() {
+    final faseUpper = widget.fase.toUpperCase();
+    if (faseUpper.contains('SEGUNDA') || faseUpper.contains('CUADRANGULAR')) {
+      return const LinearGradient(
+        colors: [Color(0xFF2E1065), Color(0xFF4C1D95), Color(0xFF6D28D9)],
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+      );
+    }
+    if (faseUpper.contains('TERCERA') || faseUpper.contains('CUARTO')) {
+      return const LinearGradient(
+        colors: [Color(0xFF7C2D12), Color(0xFFC2410C), Color(0xFFEA580C)],
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+      );
+    }
+    if (faseUpper.contains('CUARTA') || faseUpper.contains('SEMI')) {
+      return const LinearGradient(
+        colors: [Color(0xFF064E3B), Color(0xFF047857), Color(0xFF059669)],
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+      );
+    }
+    if (faseUpper.contains('QUINTA') || faseUpper.contains('FINAL')) {
+      return const LinearGradient(
+        colors: [Color(0xFF78350F), Color(0xFFB45309), Color(0xFFD97706)],
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+      );
+    }
+    return const LinearGradient(
+      colors: [Color(0xFF0072CE), Color(0xFF0D6EFD)],
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+    );
+  }
+
+  IconData _getPhaseIcon() {
+    final faseUpper = widget.fase.toUpperCase();
+    if (faseUpper.contains('QUINTA') || faseUpper.contains('FINAL')) {
+      return Icons.emoji_events;
+    }
+    if (faseUpper.contains('CUARTA') ||
+        faseUpper.contains('TERCERA') ||
+        faseUpper.contains('CUARTO') ||
+        faseUpper.contains('SEMI')) {
+      return Icons.account_tree;
+    }
+    if (faseUpper.contains('SEGUNDA') || faseUpper.contains('CUADRANGULAR')) {
+      return Icons.groups;
+    }
+    return Icons.calendar_month;
+  }
+
   @override
   Widget build(BuildContext context) {
     final fechaJornada = _obtenerFechaJornada();
@@ -106,20 +162,11 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: _expanded ? null : Colors.white,
-                gradient: _expanded
-                    ? const LinearGradient(
-                        colors: [
-                          Color(0xFF0072CE),
-                          Color(0xFF0D6EFD),
-                        ],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      )
-                    : null,
+                gradient: _expanded ? _getExpandedGradient() : null,
               ),
               child: Row(
                 children: [
-                  // Icono de calendario en badge
+                  // Icono en badge adaptativo
                   Container(
                     width: 40,
                     height: 40,
@@ -131,7 +178,7 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                     ),
                     alignment: Alignment.center,
                     child: Icon(
-                      Icons.calendar_month,
+                      _getPhaseIcon(),
                       color: _expanded ? Colors.white : const Color(0xFF1976D2),
                       size: 22,
                     ),
@@ -166,6 +213,19 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        if (widget.subtitulo != null && widget.subtitulo!.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.subtitulo!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: _expanded ? Colors.white.withAlpha(220) : const Color(0xFF475569),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                         const SizedBox(height: 2),
                         Row(
                           mainAxisSize: MainAxisSize.min,

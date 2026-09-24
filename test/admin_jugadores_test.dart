@@ -17,6 +17,7 @@ import 'package:torneo_intertecnologias_app/models/auth_user.dart';
 import 'package:torneo_intertecnologias_app/models/equipo.dart';
 import 'package:torneo_intertecnologias_app/models/jugador.dart';
 import 'package:torneo_intertecnologias_app/models/partido.dart';
+import 'package:torneo_intertecnologias_app/models/posicion.dart';
 import 'package:torneo_intertecnologias_app/services/jugadores_service.dart';
 import 'package:torneo_intertecnologias_app/widgets/public_team_card.dart';
 
@@ -281,62 +282,154 @@ void main() {
   });
 
   group('Fixture y Fases Posteriores (FixtureUtils)', () {
-    test('Construye las 4 fases del torneo incluso sin partidos jugados', () {
+    test('Construye las 5 fases reglamentarias del torneo incluso sin partidos jugados', () {
       final sections = FixtureUtils.buildTournamentSections(partidos: []);
 
-      // 7 Jornadas de Primera Fase + Segunda Ronda + Semifinal + Gran Final = 10 secciones
-      expect(sections.length, equals(10));
+      // 7 Jornadas de Primera Fase + Cuadrangular Grupo A + Cuadrangular Grupo B + Cuartos de Final + Semifinal + Gran Final = 12 secciones
+      expect(sections.length, equals(12));
 
-      // Primera Fase: Jornadas 1 a 7
+      // 1. Primera Fase: Jornadas 1 a 7
       for (int j = 1; j <= 7; j++) {
         final sec = sections.firstWhere((s) => s.id == 'jornada_$j');
         expect(sec.numeroJornada, equals(j));
-        expect(sec.fase, equals('PRIMERA FASE'));
+        expect(sec.fase, equals(TournamentPhase.primeraFase));
         expect(sec.titulo, equals('Jornada $j'));
       }
 
-      // Segunda Ronda (Eliminatoria)
-      final segundaRonda = sections.firstWhere((s) => s.id == 'segunda_ronda');
-      expect(segundaRonda.fase, equals('SEGUNDA RONDA'));
-      expect(segundaRonda.esPendiente, isTrue);
-      expect(segundaRonda.mensajePendiente, contains('Jornada 7'));
-      expect(segundaRonda.partidos.length, equals(4));
-      expect(segundaRonda.partidos.every((p) => p.id == 0 && p.estado == 'POR DEFINIR'), isTrue);
+      // 2. Segunda Ronda: Cuadrangulares Grupo A y Grupo B
+      final grupoA = sections.firstWhere((s) => s.id == 'cuadrangular_grupo_a');
+      expect(grupoA.fase, equals(TournamentPhase.segundaRonda));
+      expect(grupoA.titulo, contains('Grupo A'));
+      expect(grupoA.subtitulo, contains('1°, 3°, 5° y 7°'));
+      expect(grupoA.subtitulo, contains('Punto Invisible'));
+      expect(grupoA.esPendiente, isTrue);
+      expect(grupoA.mensajePendiente, contains('Punto Invisible'));
+      expect(grupoA.partidos.length, equals(6));
 
-      // Semifinal
+      final grupoB = sections.firstWhere((s) => s.id == 'cuadrangular_grupo_b');
+      expect(grupoB.fase, equals(TournamentPhase.segundaRonda));
+      expect(grupoB.titulo, contains('Grupo B'));
+      expect(grupoB.subtitulo, contains('2°, 4°, 6° y 8°'));
+      expect(grupoB.subtitulo, contains('Punto Invisible'));
+      expect(grupoB.esPendiente, isTrue);
+      expect(grupoB.mensajePendiente, contains('Punto Invisible'));
+      expect(grupoB.partidos.length, equals(6));
+
+      // 3. Tercera Ronda: Cuartos de Final (4 llaves)
+      final cuartos = sections.firstWhere((s) => s.id == 'cuartos_de_final');
+      expect(cuartos.fase, equals(TournamentPhase.terceraRonda));
+      expect(cuartos.titulo, contains('Cuartos de Final'));
+      expect(cuartos.esPendiente, isTrue);
+      expect(cuartos.partidos.length, equals(4));
+      expect(cuartos.partidos[0].equipoLocalNombre, contains('1° Grupo A'));
+      expect(cuartos.partidos[0].equipoVisitanteNombre, contains('4° Grupo B'));
+      expect(cuartos.partidos[1].equipoLocalNombre, contains('2° Grupo A'));
+      expect(cuartos.partidos[1].equipoVisitanteNombre, contains('3° Grupo B'));
+      expect(cuartos.partidos[2].equipoLocalNombre, contains('1° Grupo B'));
+      expect(cuartos.partidos[2].equipoVisitanteNombre, contains('4° Grupo A'));
+      expect(cuartos.partidos[3].equipoLocalNombre, contains('2° Grupo B'));
+      expect(cuartos.partidos[3].equipoVisitanteNombre, contains('3° Grupo A'));
+
+      // 4. Cuarta Ronda: Semifinal (2 llaves)
       final semifinal = sections.firstWhere((s) => s.id == 'semifinal');
-      expect(semifinal.fase, equals('SEMIFINAL'));
+      expect(semifinal.fase, equals(TournamentPhase.cuartaRonda));
+      expect(semifinal.titulo, contains('Semifinales'));
       expect(semifinal.esPendiente, isTrue);
-      expect(semifinal.mensajePendiente, contains('Segunda Ronda'));
       expect(semifinal.partidos.length, equals(2));
-      expect(semifinal.partidos.every((p) => p.id == 0 && p.estado == 'POR DEFINIR'), isTrue);
+      expect(semifinal.partidos[0].equipoLocalNombre, contains('Ganador Llave 1'));
+      expect(semifinal.partidos[0].equipoVisitanteNombre, contains('Ganador Llave 4'));
+      expect(semifinal.partidos[1].equipoLocalNombre, contains('Ganador Llave 3'));
+      expect(semifinal.partidos[1].equipoVisitanteNombre, contains('Ganador Llave 2'));
 
-      // Gran Final y Tercer Puesto
+      // 5. Quinta Ronda: Gran Final y Tercer Puesto
       final granFinal = sections.firstWhere((s) => s.id == 'gran_final');
-      expect(granFinal.fase, equals('GRAN FINAL'));
+      expect(granFinal.fase, equals(TournamentPhase.quintaRonda));
+      expect(granFinal.titulo, contains('Gran Final'));
       expect(granFinal.esPendiente, isTrue);
-      expect(granFinal.mensajePendiente, contains('Finalistas'));
       expect(granFinal.partidos.length, equals(2));
-      expect(granFinal.partidos.every((p) => p.id == 0 && p.estado == 'POR DEFINIR'), isTrue);
+      expect(granFinal.partidos[0].equipoLocalNombre, contains('Ganador Semifinal 1'));
+      expect(granFinal.partidos[1].equipoLocalNombre, contains('Perdedor Semifinal 1'));
     });
 
-    test('Carga automáticamente partidos reales de fase eliminatoria cuando el backend los provee', () {
+    test('Siembra equipos reales en Cuadrangulares cuando se provee la tabla de posiciones', () {
+      Posicion crearPos({
+        required int pos,
+        required int equipoId,
+        required String nombre,
+        required String sigla,
+        required int pts,
+      }) {
+        return Posicion(
+          posicion: pos,
+          equipoId: equipoId,
+          equipo: nombre,
+          sigla: sigla,
+          pj: 5,
+          pg: 3,
+          pe: 1,
+          pp: 1,
+          gf: 10,
+          gc: 5,
+          dg: 5,
+          pts: pts,
+        );
+      }
+
+      final mockPosiciones = [
+        crearPos(pos: 1, equipoId: 1, nombre: 'DEP ELITE', sigla: 'ELI', pts: 15),
+        crearPos(pos: 2, equipoId: 2, nombre: 'CEMENTEROS', sigla: 'CEM', pts: 12),
+        crearPos(pos: 3, equipoId: 3, nombre: 'CONEXIÓN DIGITAL', sigla: 'CDI', pts: 10),
+        crearPos(pos: 4, equipoId: 4, nombre: 'TIENDA RACING FC', sigla: 'TRF', pts: 9),
+        crearPos(pos: 5, equipoId: 5, nombre: 'TELEMATIK', sigla: 'TEL', pts: 7),
+        crearPos(pos: 6, equipoId: 6, nombre: 'GREMIO HFC', sigla: 'GRE', pts: 6),
+        crearPos(pos: 7, equipoId: 7, nombre: 'INPEC', sigla: 'INP', pts: 4),
+        crearPos(pos: 8, equipoId: 8, nombre: 'TIGO CITY', sigla: 'TIG', pts: 1),
+      ];
+
+      final sections = FixtureUtils.buildTournamentSections(
+        partidos: [],
+        posiciones: mockPosiciones,
+      );
+
+      final grupoA = sections.firstWhere((s) => s.id == 'cuadrangular_grupo_a');
+      final nombresEquiposA = grupoA.partidos
+          .expand((p) => [p.equipoLocalNombre, p.equipoVisitanteNombre])
+          .toSet();
+      expect(nombresEquiposA.any((n) => n.contains('DEP ELITE')), isTrue);
+      expect(nombresEquiposA.any((n) => n.contains('CONEXIÓN DIGITAL')), isTrue);
+      expect(nombresEquiposA.any((n) => n.contains('TELEMATIK')), isTrue);
+      expect(nombresEquiposA.any((n) => n.contains('INPEC')), isTrue);
+      expect(nombresEquiposA.any((n) => n.contains('CEMENTEROS')), isFalse);
+
+      final grupoB = sections.firstWhere((s) => s.id == 'cuadrangular_grupo_b');
+      final nombresEquiposB = grupoB.partidos
+          .expand((p) => [p.equipoLocalNombre, p.equipoVisitanteNombre])
+          .toSet();
+      expect(nombresEquiposB.any((n) => n.contains('CEMENTEROS')), isTrue);
+      expect(nombresEquiposB.any((n) => n.contains('TIENDA RACING FC')), isTrue);
+      expect(nombresEquiposB.any((n) => n.contains('GREMIO HFC')), isTrue);
+      expect(nombresEquiposB.any((n) => n.contains('TIGO CITY')), isTrue);
+      expect(nombresEquiposB.any((n) => n.contains('DEP ELITE')), isFalse);
+    });
+
+    test('Carga automáticamente partidos reales de cuadrangular cuando el backend los provee', () {
       const matchEliminatoria = Partido(
         id: 162,
         jornada: 8,
         fase: 'SEGUNDA_RONDA',
+        llave: 'GRUPO A',
         equipoLocalNombre: 'INPEC FC',
         equipoVisitanteNombre: 'DEP ELITE',
         estado: 'PROGRAMADO',
       );
 
       final sections = FixtureUtils.buildTournamentSections(partidos: [matchEliminatoria]);
-      final segundaRonda = sections.firstWhere((s) => s.id == 'segunda_ronda');
+      final grupoA = sections.firstWhere((s) => s.id == 'cuadrangular_grupo_a' || s.id == 'segunda_ronda');
 
-      expect(segundaRonda.esPendiente, isFalse);
-      expect(segundaRonda.partidos.length, equals(1));
-      expect(segundaRonda.partidos.first.id, equals(162));
-      expect(segundaRonda.partidos.first.equipoLocalNombre, equals('INPEC FC'));
+      expect(grupoA.esPendiente, isFalse);
+      expect(grupoA.partidos.length, equals(1));
+      expect(grupoA.partidos.first.id, equals(162));
+      expect(grupoA.partidos.first.equipoLocalNombre, equals('INPEC FC'));
     });
   });
 
