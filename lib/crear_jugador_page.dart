@@ -13,6 +13,7 @@ import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
 
 class CrearJugadorPage extends StatefulWidget {
+  static const int kMaxJugadoresPorEquipo = 14;
   final int? equipoIdInicial;
   final String? equipoNombreInicial;
   final String? token;
@@ -54,7 +55,7 @@ class _CrearJugadorPageState extends State<CrearJugadorPage> {
   Uint8List? _nuevaFotoBytes;
   String? _nuevaFotoBase64;
 
-  static const int kMaxJugadoresPorEquipo = 23;
+  static const int kMaxJugadoresPorEquipo = CrearJugadorPage.kMaxJugadoresPorEquipo;
 
   @override
   void initState() {
@@ -460,7 +461,7 @@ class _CrearJugadorPageState extends State<CrearJugadorPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Alerta si el equipo seleccionado ya tiene 23 inscritos
+                      // Alerta si el equipo seleccionado ya tiene 14 inscritos
                       if (equipoLleno)
                         Container(
                           margin: const EdgeInsets.only(bottom: 16),
@@ -524,7 +525,7 @@ class _CrearJugadorPageState extends State<CrearJugadorPage> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    lleno ? 'LLENO (23/23)' : '$cant/23',
+                                    lleno ? 'LLENO (14/14)' : '$cant/14',
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
@@ -544,7 +545,7 @@ class _CrearJugadorPageState extends State<CrearJugadorPage> {
                         validator: (v) {
                           if (v == null) return 'Seleccione el equipo de destino.';
                           if (_equipoEstaLleno(v)) {
-                            return 'El equipo ya tiene 23 jugadores inscritos.';
+                            return 'El equipo ya tiene 14 jugadores inscritos.';
                           }
                           return null;
                         },
@@ -688,7 +689,9 @@ class _CrearJugadorPageState extends State<CrearJugadorPage> {
                                 )
                               : const Icon(Icons.person_add),
                           label: Text(
-                            guardando ? 'INSCRIBIENDO...' : 'INSCRIBIR JUGADOR',
+                            guardando
+                                ? 'INSCRIBIENDO...'
+                                : (equipoLleno ? 'LLENO (14/14)' : 'INSCRIBIR JUGADOR'),
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),

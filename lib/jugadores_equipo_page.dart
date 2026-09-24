@@ -169,10 +169,10 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
   }
 
   Future<void> _abrirInscripcion() async {
-    if (jugadores.length >= 23) {
+    if (jugadores.length >= 14) {
       UiHelpers.showError(
         context,
-        'Este equipo ya ha alcanzado el límite reglamentario máximo de 23 jugadores inscritos.',
+        'Este equipo ya ha alcanzado el límite reglamentario máximo de 14 jugadores inscritos.',
       );
       return;
     }
@@ -383,7 +383,7 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          '${jugadores.length}/23',
+                                          '${jugadores.length}/14',
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 16,
@@ -409,10 +409,10 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                                   alignment: Alignment.centerRight,
                                   child: FilledButton.icon(
                                     style: FilledButton.styleFrom(
-                                      backgroundColor: jugadores.length >= 23
+                                      backgroundColor: jugadores.length >= 14
                                           ? Colors.white24
                                           : Colors.white,
-                                      foregroundColor: jugadores.length >= 23
+                                      foregroundColor: jugadores.length >= 14
                                           ? Colors.white60
                                           : const Color(0xFF0D233A),
                                       elevation: 2,
@@ -423,8 +423,8 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                                     onPressed: _abrirInscripcion,
                                     icon: const Icon(Icons.person_add, size: 18),
                                     label: Text(
-                                      jugadores.length >= 23
-                                          ? 'Plantel Completo (23/23)'
+                                      jugadores.length >= 14
+                                          ? 'Plantel Completo (14/14)'
                                           : '+ Inscribir Jugador',
                                       style: const TextStyle(fontWeight: FontWeight.bold),
                                     ),
@@ -458,11 +458,11 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
       floatingActionButton: _esAdmin
           ? FloatingActionButton.extended(
               backgroundColor:
-                  (jugadores.length >= 23) ? Colors.blueGrey : AppColors.primary,
+                  (jugadores.length >= 14) ? Colors.blueGrey : AppColors.primary,
               onPressed: _abrirInscripcion,
               icon: const Icon(Icons.person_add, color: Colors.white),
               label: Text(
-                jugadores.length >= 23 ? 'Plantel Completo (23/23)' : 'Inscribir Jugador',
+                jugadores.length >= 14 ? 'Plantel Completo (14/14)' : 'Inscribir Jugador',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.white,

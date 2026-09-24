@@ -7,20 +7,26 @@ import 'public_partido_row.dart';
 class PublicJornadaAccordion extends StatefulWidget {
   final int numeroJornada;
   final String fase;
+  final String? tituloPersonalizado;
   final String? fecha;
   final int cantidadPartidos;
   final List<Partido> partidos;
   final bool initiallyExpanded;
+  final bool esPendiente;
+  final String? mensajePendiente;
   final void Function(Partido partido)? onPartidoTap;
 
   const PublicJornadaAccordion({
     super.key,
     required this.numeroJornada,
     this.fase = 'PRIMERA FASE',
+    this.tituloPersonalizado,
     this.fecha,
     required this.cantidadPartidos,
     required this.partidos,
     this.initiallyExpanded = false,
+    this.esPendiente = false,
+    this.mensajePendiente,
     this.onPartidoTap,
   });
 
@@ -53,6 +59,9 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
   }
 
   String _obtenerFechaJornada() {
+    if (widget.esPendiente) {
+      return 'Por definir (Al concluir fase previa)';
+    }
     if (widget.fecha != null && widget.fecha!.isNotEmpty) {
       return widget.fecha!;
     }
@@ -148,7 +157,7 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                         ),
                         const SizedBox(height: 1),
                         Text(
-                          'Jornada ${widget.numeroJornada}',
+                          widget.tituloPersonalizado ?? 'Jornada ${widget.numeroJornada}',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w900,
@@ -201,7 +210,9 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                           : null,
                     ),
                     child: Text(
-                      '$cantPartidos ${cantPartidos == 1 ? 'partido' : 'partidos'}',
+                      widget.esPendiente
+                          ? (cantPartidos > 0 ? '$cantPartidos por definir' : 'Pendiente')
+                          : '$cantPartidos ${cantPartidos == 1 ? 'partido' : 'partidos'}',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -226,13 +237,44 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
           if (_expanded)
             Container(
               color: Colors.white,
-              child: widget.partidos.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (widget.mensajePendiente != null && widget.mensajePendiente!.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEFF6FF),
+                        border: Border(
+                          bottom: BorderSide(color: Color(0xFFBFDBFE), width: 1.0),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline, size: 16, color: Color(0xFF1D4ED8)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              widget.mensajePendiente!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1E40AF),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (widget.partidos.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
                       child: Center(
                         child: Text(
-                          'No hay partidos registrados en esta jornada.',
-                          style: TextStyle(
+                          widget.esPendiente
+                              ? 'Enfrentamientos pendientes de definición por clasificación.'
+                              : 'No hay partidos registrados en esta jornada.',
+                          style: const TextStyle(
                             color: Color(0xFF64748B),
                             fontWeight: FontWeight.w500,
                             fontSize: 13,
@@ -240,7 +282,8 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                         ),
                       ),
                     )
-                  : LayoutBuilder(
+                  else
+                    LayoutBuilder(
                       builder: (context, constraints) {
                         final isNarrow = constraints.maxWidth < 730;
                         return Column(
@@ -388,6 +431,8 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                         );
                       },
                     ),
+                ],
+              ),
             ),
         ],
       ),

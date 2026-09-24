@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/equipo.dart';
 
 class PublicTeamCard extends StatelessWidget {
+  static const int maxPlantilla = 14;
   final Equipo equipo;
   final VoidCallback? onTap;
 
@@ -17,7 +18,7 @@ class PublicTeamCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final teamColor = equipo.color;
-    const maxPlantilla = 23;
+    const maxPlantilla = PublicTeamCard.maxPlantilla;
     final cant = equipo.cantidadJugadores;
     final porcentaje = min(1.0, cant / maxPlantilla);
 
@@ -147,7 +148,7 @@ class PublicTeamCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
 
-                  // Capacidad: "X/23 jugadores" a la izquierda y porcentaje "XX%" a la derecha
+                  // Capacidad: "$cant/14 jugadores" a la izquierda y porcentaje "XX%" a la derecha
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

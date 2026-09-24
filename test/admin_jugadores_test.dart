@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,12 +8,17 @@ import 'package:http/testing.dart';
 
 import 'package:torneo_intertecnologias_app/core/network/api_client.dart';
 import 'package:torneo_intertecnologias_app/core/session/session_manager.dart';
+import 'package:torneo_intertecnologias_app/core/utils/fixture_utils.dart';
 import 'package:torneo_intertecnologias_app/core/utils/image_utils.dart';
 import 'package:torneo_intertecnologias_app/core/utils/mobile_image_picker.dart';
+import 'package:torneo_intertecnologias_app/crear_jugador_page.dart';
 import 'package:torneo_intertecnologias_app/main.dart';
 import 'package:torneo_intertecnologias_app/models/auth_user.dart';
+import 'package:torneo_intertecnologias_app/models/equipo.dart';
 import 'package:torneo_intertecnologias_app/models/jugador.dart';
+import 'package:torneo_intertecnologias_app/models/partido.dart';
 import 'package:torneo_intertecnologias_app/services/jugadores_service.dart';
+import 'package:torneo_intertecnologias_app/widgets/public_team_card.dart';
 
 void main() {
   group('Jugador Model - Corrección Visual de Equipo y Mapa', () {
@@ -226,6 +232,129 @@ void main() {
 
       expect(find.byType(LoginPage), findsOneWidget);
       expect(find.text('INICIAR SESIÓN'), findsOneWidget);
+    });
+  });
+
+  group('Ajuste Reglamentario - Cupo Máximo 14 Jugadores', () {
+    test('Límite reglamentario kMaxJugadoresPorEquipo y maxPlantilla es 14', () {
+      expect(CrearJugadorPage.kMaxJugadoresPorEquipo, equals(14));
+      expect(PublicTeamCard.maxPlantilla, equals(14));
+    });
+
+    testWidgets('PublicTeamCard muestra etiqueta "14/14 jugadores"', (WidgetTester tester) async {
+      const equipoLleno = Equipo(
+        id: 1,
+        nombre: 'INPEC FC',
+        sigla: 'INP',
+        cantidadJugadores: 14,
+      );
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: PublicTeamCard(equipo: equipoLleno),
+          ),
+        ),
+      );
+
+      expect(find.text('14/14 jugadores'), findsOneWidget);
+    });
+
+    testWidgets('PublicTeamCard muestra etiqueta "12/14 jugadores" para equipo incompleto', (WidgetTester tester) async {
+      const equipoIncompleto = Equipo(
+        id: 2,
+        nombre: 'TIENDA RACING FC',
+        sigla: 'TRF',
+        cantidadJugadores: 12,
+      );
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: PublicTeamCard(equipo: equipoIncompleto),
+          ),
+        ),
+      );
+
+      expect(find.text('12/14 jugadores'), findsOneWidget);
+    });
+  });
+
+  group('Fixture y Fases Posteriores (FixtureUtils)', () {
+    test('Construye las 4 fases del torneo incluso sin partidos jugados', () {
+      final sections = FixtureUtils.buildTournamentSections(partidos: []);
+
+      // 7 Jornadas de Primera Fase + Segunda Ronda + Semifinal + Gran Final = 10 secciones
+      expect(sections.length, equals(10));
+
+      // Primera Fase: Jornadas 1 a 7
+      for (int j = 1; j <= 7; j++) {
+        final sec = sections.firstWhere((s) => s.id == 'jornada_$j');
+        expect(sec.numeroJornada, equals(j));
+        expect(sec.fase, equals('PRIMERA FASE'));
+        expect(sec.titulo, equals('Jornada $j'));
+      }
+
+      // Segunda Ronda (Eliminatoria)
+      final segundaRonda = sections.firstWhere((s) => s.id == 'segunda_ronda');
+      expect(segundaRonda.fase, equals('SEGUNDA RONDA'));
+      expect(segundaRonda.esPendiente, isTrue);
+      expect(segundaRonda.mensajePendiente, contains('Jornada 7'));
+      expect(segundaRonda.partidos.length, equals(4));
+      expect(segundaRonda.partidos.every((p) => p.id == 0 && p.estado == 'POR DEFINIR'), isTrue);
+
+      // Semifinal
+      final semifinal = sections.firstWhere((s) => s.id == 'semifinal');
+      expect(semifinal.fase, equals('SEMIFINAL'));
+      expect(semifinal.esPendiente, isTrue);
+      expect(semifinal.mensajePendiente, contains('Segunda Ronda'));
+      expect(semifinal.partidos.length, equals(2));
+      expect(semifinal.partidos.every((p) => p.id == 0 && p.estado == 'POR DEFINIR'), isTrue);
+
+      // Gran Final y Tercer Puesto
+      final granFinal = sections.firstWhere((s) => s.id == 'gran_final');
+      expect(granFinal.fase, equals('GRAN FINAL'));
+      expect(granFinal.esPendiente, isTrue);
+      expect(granFinal.mensajePendiente, contains('Finalistas'));
+      expect(granFinal.partidos.length, equals(2));
+      expect(granFinal.partidos.every((p) => p.id == 0 && p.estado == 'POR DEFINIR'), isTrue);
+    });
+
+    test('Carga automáticamente partidos reales de fase eliminatoria cuando el backend los provee', () {
+      const matchEliminatoria = Partido(
+        id: 162,
+        jornada: 8,
+        fase: 'SEGUNDA_RONDA',
+        equipoLocalNombre: 'INPEC FC',
+        equipoVisitanteNombre: 'DEP ELITE',
+        estado: 'PROGRAMADO',
+      );
+
+      final sections = FixtureUtils.buildTournamentSections(partidos: [matchEliminatoria]);
+      final segundaRonda = sections.firstWhere((s) => s.id == 'segunda_ronda');
+
+      expect(segundaRonda.esPendiente, isFalse);
+      expect(segundaRonda.partidos.length, equals(1));
+      expect(segundaRonda.partidos.first.id, equals(162));
+      expect(segundaRonda.partidos.first.equipoLocalNombre, equals('INPEC FC'));
+    });
+  });
+
+  group('Desactivación Prompt de Instalación PWA (web/index.html)', () {
+    test('web/index.html cancela beforeinstallprompt y desvincula manifest', () {
+      final indexHtmlFile = File('web/index.html');
+      expect(indexHtmlFile.existsSync(), isTrue);
+
+      final content = indexHtmlFile.readAsStringSync();
+
+      // Debe capturar beforeinstallprompt y prevenir la instalación
+      expect(content.contains("window.addEventListener('beforeinstallprompt'"), isTrue);
+      expect(content.contains("e.preventDefault()"), isTrue);
+
+      // La etiqueta manifest debe estar comentada o ausente de etiquetas link activas
+      final manifestCommented = content.contains('<!-- <link rel="manifest"') ||
+          !content.contains('<link rel="manifest"');
+      expect(manifestCommented, isTrue, reason: 'manifest.json debe estar desvinculado o comentado');
     });
   });
 }

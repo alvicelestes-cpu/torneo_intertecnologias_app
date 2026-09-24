@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
-import 'core/utils/text_utils.dart';
+import 'core/utils/fixture_utils.dart';
 import 'core/utils/ui_helpers.dart';
 import 'models/partido.dart';
 import 'partido_detalle_page.dart';
@@ -32,6 +32,7 @@ class _PartidosPageState extends State<PartidosPage> {
   bool cargando = true;
   String? error;
   List<Partido> partidos = [];
+  List<FixtureSection> seccionesFixture = [];
 
   @override
   void initState() {
@@ -58,9 +59,13 @@ class _PartidosPageState extends State<PartidosPage> {
 
     try {
       final list = await _partidosService.getPartidos(token: widget.token);
+      final sections = FixtureUtils.buildTournamentSections(
+        partidos: list,
+      );
       if (mounted) {
         setState(() {
           partidos = list;
+          seccionesFixture = sections;
         });
       }
     } on AppException catch (e) {
@@ -74,7 +79,10 @@ class _PartidosPageState extends State<PartidosPage> {
 
   Future<void> _abrirPartido(int partidoId) async {
     if (partidoId <= 0) {
-      UiHelpers.showError(context, 'El partido no tiene un ID válido.');
+      UiHelpers.showInfo(
+        context,
+        'Este enfrentamiento se encuentra pendiente de definición por clasificados.',
+      );
       return;
     }
 
@@ -91,41 +99,6 @@ class _PartidosPageState extends State<PartidosPage> {
     if (mounted) {
       cargarPartidos();
     }
-  }
-
-  /// Determina qué jornada abrir por defecto (actual con actividad o primera programada).
-  /// El orden visual SIEMPRE se mantiene 1, 2, 3, 4, 5...
-  int _determinarJornadaPorDefecto(
-    Map<int, List<Partido>> agrupados,
-    List<int> jornadasOrdenadas,
-  ) {
-    if (jornadasOrdenadas.isEmpty) return 1;
-
-    // 1. Jornada en curso / en juego
-    for (final j in jornadasOrdenadas) {
-      if (agrupados[j]!.any((p) {
-        final est = p.estado.toUpperCase();
-        return est.contains('CURSO') || est.contains('JUEGO');
-      })) {
-        return j;
-      }
-    }
-
-    // 2. Primera jornada con partidos programados (próxima a disputarse)
-    for (final j in jornadasOrdenadas) {
-      if (agrupados[j]!.any((p) => p.estado.toUpperCase() == 'PROGRAMADO')) {
-        return j;
-      }
-    }
-
-    // 3. Última jornada con actividad finalizada
-    int ultimaConActividad = jornadasOrdenadas.first;
-    for (final j in jornadasOrdenadas) {
-      if (agrupados[j]!.any((p) => p.estado.toUpperCase() == 'FINALIZADO')) {
-        ultimaConActividad = j;
-      }
-    }
-    return ultimaConActividad;
   }
 
   @override
@@ -148,27 +121,29 @@ class _PartidosPageState extends State<PartidosPage> {
               );
             }
 
-            if (partidos.isEmpty) {
+            if (seccionesFixture.isEmpty) {
               return const AppEmptyView(
                 message: 'No hay partidos registrados.',
                 icon: Icons.sports_soccer_outlined,
               );
             }
 
-            // Agrupar partidos por jornada
-            final Map<int, List<Partido>> partidosPorJornada = {};
-            for (final p in partidos) {
-              final numJornada = p.jornada ?? 1;
-              partidosPorJornada.putIfAbsent(numJornada, () => []).add(p);
+            // Determinar qué fase/jornada expandir por defecto
+            String seccionInicialId = 'jornada_1';
+            for (final s in seccionesFixture) {
+              if (s.partidos.any((p) => p.esEnCurso)) {
+                seccionInicialId = s.id;
+                break;
+              }
             }
-
-            // ORDEN ESTRICTAMENTE ASCENDENTE: Jornada 1, 2, 3, 4, 5...
-            final List<int> jornadasOrdenadas = partidosPorJornada.keys.toList()..sort();
-
-            final int jornadaDefecto = _determinarJornadaPorDefecto(
-              partidosPorJornada,
-              jornadasOrdenadas,
-            );
+            if (seccionInicialId == 'jornada_1') {
+              for (final s in seccionesFixture) {
+                if (s.partidos.any((p) => p.esProgramado && p.id > 0)) {
+                  seccionInicialId = s.id;
+                  break;
+                }
+              }
+            }
 
             final isMobile = MediaQuery.of(context).size.width < 600;
 
@@ -229,65 +204,62 @@ class _PartidosPageState extends State<PartidosPage> {
                             const SizedBox(width: 14),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'Partidos por jornada',
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Partidos por jornada',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: isMobile ? 19 : 22,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                ListenableBuilder(
+                                  listenable: SessionManager(),
+                                  builder: (context, _) => Text(
+                                    SessionManager().selectedCampeonatoNombre,
                                     style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: isMobile ? 19 : 22,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 0.5,
+                                      color: Colors.white70,
+                                      fontSize: isMobile ? 13 : 14,
+                                      fontWeight: FontWeight.w500,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(height: 4),
-                                  ListenableBuilder(
-                                    listenable: SessionManager(),
-                                    builder: (context, _) => Text(
-                                      SessionManager().selectedCampeonatoNombre,
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: isMobile ? 13 : 14,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
+                  ),
 
-                    // LISTA DE JORNADAS EN ACORDEÓN (SIEMPRE 1, 2, 3...)
-                    ...jornadasOrdenadas.map((numeroJornada) {
-                      final listaPartidos = partidosPorJornada[numeroJornada]!;
-                      final primerPartido = listaPartidos.first;
-                      final fase = primerPartido.fase != null
-                          ? TextUtils.formatFase(primerPartido.fase)
-                          : 'PRIMERA FASE';
-
-                      return PublicJornadaAccordion(
-                        numeroJornada: numeroJornada,
-                        fase: fase,
-                        cantidadPartidos: listaPartidos.length,
-                        partidos: listaPartidos,
-                        initiallyExpanded: numeroJornada == jornadaDefecto,
-                        onPartidoTap: (partido) => _abrirPartido(partido.id),
-                      );
-                    }),
-                    const SizedBox(height: 20),
-                  ],
-                ),
+                  // LISTA DE FASES Y JORNADAS EN ACORDEÓN (PRIMERA FASE, SEGUNDA RONDA, SEMIFINAL, FINAL)
+                  ...seccionesFixture.map((seccion) {
+                    return PublicJornadaAccordion(
+                      numeroJornada: seccion.numeroJornada,
+                      fase: seccion.fase,
+                      tituloPersonalizado: seccion.titulo,
+                      cantidadPartidos: seccion.cantidadPartidos,
+                      partidos: seccion.partidos,
+                      esPendiente: seccion.esPendiente,
+                      mensajePendiente: seccion.mensajePendiente,
+                      initiallyExpanded: seccion.id == seccionInicialId,
+                      onPartidoTap: (partido) => _abrirPartido(partido.id),
+                    );
+                  }),
+                  const SizedBox(height: 20),
+                ],
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
-    );
-  }
+    ),
+  );
+}
 }

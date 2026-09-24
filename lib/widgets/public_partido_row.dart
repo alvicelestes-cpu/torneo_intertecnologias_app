@@ -55,6 +55,7 @@ class PublicPartidoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isFinalizado = partido.estado.toUpperCase().trim() == 'FINALIZADO';
+    final esPorDefinir = partido.estado.toUpperCase().contains('DEFINIR') || partido.id <= 0;
     final marcadorTexto = partido.marcador.isNotEmpty && partido.marcador != '-'
         ? partido.marcador
         : (isFinalizado && partido.golesLocal != null && partido.golesVisitante != null
@@ -63,10 +64,12 @@ class PublicPartidoRow extends StatelessWidget {
                 ? '${partido.golesLocal} - ${partido.golesVisitante}'
                 : 'VS'));
 
-    final fechaTexto = AppDateUtils.formatDateTime(
-      partido.fechaHora,
-      defaultText: '24/08/2026 20:00',
-    );
+    final fechaTexto = esPorDefinir
+        ? 'Por definir'
+        : AppDateUtils.formatDateTime(
+            partido.fechaHora,
+            defaultText: 'Por programar',
+          );
 
     final localColor = getClubColor(partido.equipoLocalNombre, partido.equipoLocalSigla);
     final visitColor = getClubColor(partido.equipoVisitanteNombre, partido.equipoVisitanteSigla);
@@ -221,15 +224,23 @@ class PublicPartidoRow extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
                   decoration: BoxDecoration(
-                    color: isFinalizado ? const Color(0xFFE8F5E9) : const Color(0xFFF1F5F9),
+                    color: isFinalizado
+                        ? const Color(0xFFE8F5E9)
+                        : (esPorDefinir ? const Color(0xFFFEF3C7) : const Color(0xFFF1F5F9)),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    isFinalizado ? 'FINALIZADO' : partido.estado.toUpperCase().replaceAll('_', ' '),
+                    isFinalizado
+                        ? 'FINALIZADO'
+                        : (esPorDefinir
+                            ? 'POR DEFINIR'
+                            : partido.estado.toUpperCase().replaceAll('_', ' ')),
                     style: TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.bold,
-                      color: isFinalizado ? const Color(0xFF2E7D32) : const Color(0xFF64748B),
+                      color: isFinalizado
+                          ? const Color(0xFF2E7D32)
+                          : (esPorDefinir ? const Color(0xFFB45309) : const Color(0xFF64748B)),
                     ),
                   ),
                 ),

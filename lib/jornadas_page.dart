@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
+import 'core/utils/fixture_utils.dart';
 import 'core/utils/ui_helpers.dart';
 import 'models/jornada.dart';
 import 'models/partido.dart';
@@ -35,7 +36,7 @@ class _JornadasPageState extends State<JornadasPage> {
   String? error;
   int cantidadJornadas = 0;
   List<Jornada> jornadas = [];
-  Map<int, List<Partido>> partidosPorJornada = {};
+  List<FixtureSection> seccionesFixture = [];
 
   @override
   void initState() {
@@ -69,11 +70,10 @@ class _JornadasPageState extends State<JornadasPage> {
       final resJornadas = resultados[0] as JornadasResponse;
       final listaPartidos = resultados[1] as List<Partido>;
 
-      final map = <int, List<Partido>>{};
-      for (final p in listaPartidos) {
-        final j = p.jornada ?? 1;
-        map.putIfAbsent(j, () => []).add(p);
-      }
+      final sections = FixtureUtils.buildTournamentSections(
+        partidos: listaPartidos,
+        jornadas: resJornadas.jornadas,
+      );
 
       // Ordenar jornadas ascendente
       final sortedJornadas = List<Jornada>.from(resJornadas.jornadas)
@@ -83,7 +83,7 @@ class _JornadasPageState extends State<JornadasPage> {
         setState(() {
           cantidadJornadas = resJornadas.cantidadJornadas;
           jornadas = sortedJornadas;
-          partidosPorJornada = map;
+          seccionesFixture = sections;
         });
       }
     } on AppException catch (e) {
@@ -97,7 +97,10 @@ class _JornadasPageState extends State<JornadasPage> {
 
   Future<void> _abrirPartido(int partidoId) async {
     if (partidoId <= 0) {
-      UiHelpers.showError(context, 'El partido no tiene un ID válido.');
+      UiHelpers.showInfo(
+        context,
+        'Este enfrentamiento se encuentra pendiente de definición por clasificados.',
+      );
       return;
     }
 
@@ -136,19 +139,29 @@ class _JornadasPageState extends State<JornadasPage> {
               );
             }
 
-            if (jornadas.isEmpty && partidosPorJornada.isEmpty) {
+            if (seccionesFixture.isEmpty) {
               return const AppEmptyView(
                 message: 'No hay jornadas registradas.',
                 icon: Icons.calendar_month_outlined,
               );
             }
 
-            // Identificar todos los números de jornada existentes de manera ascendente
-            final Set<int> todosLosNumeros = {
-              ...jornadas.map((j) => j.numero),
-              ...partidosPorJornada.keys,
-            };
-            final List<int> numerosAscendentes = todosLosNumeros.toList()..sort();
+            // Determinar qué fase/jornada expandir por defecto
+            String seccionInicialId = 'jornada_1';
+            for (final s in seccionesFixture) {
+              if (s.partidos.any((p) => p.esEnCurso)) {
+                seccionInicialId = s.id;
+                break;
+              }
+            }
+            if (seccionInicialId == 'jornada_1') {
+              for (final s in seccionesFixture) {
+                if (s.partidos.any((p) => p.esProgramado && p.id > 0)) {
+                  seccionInicialId = s.id;
+                  break;
+                }
+              }
+            }
 
             return Center(
               child: ConstrainedBox(
@@ -156,7 +169,6 @@ class _JornadasPageState extends State<JornadasPage> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    // Cabecera azul deportiva
                     // Cabecera: Banner azul con silueta de estadio, icono de calendario y título
                     Card(
                       elevation: 2.5,
@@ -239,21 +251,17 @@ class _JornadasPageState extends State<JornadasPage> {
                       ),
                     ),
 
-                    // LISTA DE JORNADAS EN ACORDEÓN / TARJETAS DEPORTIVAS
-                    ...numerosAscendentes.map((numJornada) {
-                      final matches = partidosPorJornada[numJornada] ?? [];
-                      final jMatch = jornadas.where((j) => j.numero == numJornada).firstOrNull;
-
-                      final cant = matches.isNotEmpty
-                          ? matches.length
-                          : (jMatch?.cantidadPartidos ?? 0);
-
+                    // LISTA DE FASES Y JORNADAS EN ACORDEÓN (PRIMERA FASE, SEGUNDA RONDA, SEMIFINAL, FINAL)
+                    ...seccionesFixture.map((seccion) {
                       return PublicJornadaAccordion(
-                        numeroJornada: numJornada,
-                        fase: 'PRIMERA FASE',
-                        cantidadPartidos: cant,
-                        partidos: matches,
-                        initiallyExpanded: numJornada == 1,
+                        numeroJornada: seccion.numeroJornada,
+                        fase: seccion.fase,
+                        tituloPersonalizado: seccion.titulo,
+                        cantidadPartidos: seccion.cantidadPartidos,
+                        partidos: seccion.partidos,
+                        esPendiente: seccion.esPendiente,
+                        mensajePendiente: seccion.mensajePendiente,
+                        initiallyExpanded: seccion.id == seccionInicialId,
                         onPartidoTap: (partido) => _abrirPartido(partido.id),
                       );
                     }),
