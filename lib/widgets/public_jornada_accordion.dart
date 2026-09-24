@@ -30,11 +30,18 @@ class PublicJornadaAccordion extends StatefulWidget {
 
 class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
   late bool _expanded;
+  final ScrollController _tableScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _expanded = widget.initiallyExpanded;
+  }
+
+  @override
+  void dispose() {
+    _tableScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -87,7 +94,7 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: _expanded ? null : Colors.white,
                 gradient: _expanded
@@ -105,8 +112,8 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                 children: [
                   // Icono de calendario en badge
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
                       color: _expanded
                           ? Colors.white.withAlpha(45)
@@ -117,55 +124,61 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                     child: Icon(
                       Icons.calendar_month,
                       color: _expanded ? Colors.white : const Color(0xFF1976D2),
-                      size: 24,
+                      size: 22,
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
 
-                  // Título, fase y fecha
+                  // Título, fase y fecha (dispuesto verticalmente para no desbordar en móvil)
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              widget.fase.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: _expanded ? Colors.white70 : const Color(0xFF64748B),
-                                letterSpacing: 0.6,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Jornada ${widget.numeroJornada}',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: _expanded ? Colors.white : const Color(0xFF0D233A),
-                              ),
-                            ),
-                          ],
+                        Text(
+                          widget.fase.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: _expanded ? Colors.white70 : const Color(0xFF64748B),
+                            letterSpacing: 0.6,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 1),
+                        Text(
+                          'Jornada ${widget.numeroJornada}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: _expanded ? Colors.white : const Color(0xFF0D233A),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             if (_expanded) ...[
                               const Icon(
                                 Icons.calendar_today,
-                                size: 12,
+                                size: 11,
                                 color: Colors.white70,
                               ),
                               const SizedBox(width: 4),
                             ],
-                            Text(
-                              fechaJornada,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: _expanded ? Colors.white.withAlpha(230) : const Color(0xFF64748B),
+                            Flexible(
+                              child: Text(
+                                fechaJornada,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: _expanded ? Colors.white.withAlpha(230) : const Color(0xFF64748B),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -173,10 +186,11 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
 
                   // Badge de cantidad de partidos
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
                       color: _expanded
                           ? Colors.white.withAlpha(35)
@@ -189,26 +203,26 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                     child: Text(
                       '$cantPartidos ${cantPartidos == 1 ? 'partido' : 'partidos'}',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: _expanded ? Colors.white : const Color(0xFF1976D2),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 6),
 
                   // Flecha arriba/abajo
                   Icon(
                     _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                     color: _expanded ? Colors.white : const Color(0xFF1976D2),
-                    size: 24,
+                    size: 22,
                   ),
                 ],
               ),
             ),
           ),
 
-          // Tabla de partidos expandible
+          // Tabla de partidos expandible con scroll horizontal fluido y aviso en móvil
           if (_expanded)
             Container(
               color: Colors.white,
@@ -226,114 +240,153 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                         ),
                       ),
                     )
-                    : SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SizedBox(
-                        width: 730,
-                        child: Column(
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isNarrow = constraints.maxWidth < 730;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // Cabecera de la tabla de partidos
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFF8FAFC),
-                                border: Border(
-                                  bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
+                            if (isNarrow)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                color: const Color(0xFFF1F5F9),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Icon(Icons.swap_horiz, size: 14, color: Color(0xFF64748B)),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        'Desliza para ver la tabla completa',
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          color: Color(0xFF64748B),
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              child: const Row(
-                                children: [
-                                  SizedBox(
-                                    width: 34,
-                                    child: Text(
-                                      '#',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF64748B),
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    width: 175,
-                                    child: Text(
-                                      'Local',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF64748B),
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    width: 80,
-                                    child: Text(
-                                      'Marcador',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF64748B),
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    width: 175,
-                                    child: Padding(
-                                      padding: EdgeInsets.only(left: 12),
-                                      child: Text(
-                                        'Visitante',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF64748B),
+                            Scrollbar(
+                              controller: _tableScrollController,
+                              thumbVisibility: isNarrow,
+                              child: SingleChildScrollView(
+                                controller: _tableScrollController,
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                child: SizedBox(
+                                  width: 730,
+                                  child: Column(
+                                    children: [
+                                      // Cabecera de la tabla de partidos
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFF8FAFC),
+                                          border: Border(
+                                            bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
+                                          ),
+                                        ),
+                                        child: const Row(
+                                          children: [
+                                            SizedBox(
+                                              width: 34,
+                                              child: Text(
+                                                '#',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF64748B),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: 175,
+                                              child: Text(
+                                                'Local',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF64748B),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: 80,
+                                              child: Text(
+                                                'Marcador',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF64748B),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: 175,
+                                              child: Padding(
+                                                padding: EdgeInsets.only(left: 12),
+                                                child: Text(
+                                                  'Visitante',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF64748B),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: 135,
+                                              child: Text(
+                                                'Fecha',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF64748B),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: 95,
+                                              child: Text(
+                                                'Estado',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF64748B),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ),
+
+                                      // Filas de partidos
+                                      ...List.generate(widget.partidos.length, (index) {
+                                        final partido = widget.partidos[index];
+                                        return PublicPartidoRow(
+                                          index: index + 1,
+                                          partido: partido,
+                                          onTap: widget.onPartidoTap != null
+                                              ? () => widget.onPartidoTap!(partido)
+                                              : null,
+                                        );
+                                      }),
+                                    ],
                                   ),
-                                  SizedBox(
-                                    width: 135,
-                                    child: Text(
-                                      'Fecha',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF64748B),
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    width: 95,
-                                    child: Text(
-                                      'Estado',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF64748B),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
-
-                            // Filas de partidos
-                            ...List.generate(widget.partidos.length, (index) {
-                              final partido = widget.partidos[index];
-                              return PublicPartidoRow(
-                                index: index + 1,
-                                partido: partido,
-                                onTap: widget.onPartidoTap != null
-                                    ? () => widget.onPartidoTap!(partido)
-                                    : null,
-                              );
-                            }),
                           ],
-                        ),
-                      ),
+                        );
+                      },
                     ),
             ),
         ],

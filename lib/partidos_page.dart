@@ -170,13 +170,17 @@ class _PartidosPageState extends State<PartidosPage> {
               jornadasOrdenadas,
             );
 
+            final isMobile = MediaQuery.of(context).size.width < 600;
+
             return Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 880),
                 child: ListView(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 12 : 16,
+                    vertical: 16,
+                  ),
                   children: [
-                    // Banner informativo con icono de calendario azul
                     // Cabecera: Banner azul con silueta de estadio, icono de calendario y título
                     Card(
                       elevation: 2.5,
@@ -205,34 +209,34 @@ class _PartidosPageState extends State<PartidosPage> {
                             end: Alignment.bottomRight,
                           ),
                         ),
-                        padding: const EdgeInsets.all(20),
+                        padding: EdgeInsets.all(isMobile ? 16 : 20),
                         child: Row(
                           children: [
                             Container(
-                              width: 52,
-                              height: 52,
+                              width: isMobile ? 44 : 52,
+                              height: isMobile ? 44 : 52,
                               decoration: BoxDecoration(
                                 color: Colors.white.withAlpha(30),
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(color: Colors.white24, width: 1.2),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.calendar_month,
                                 color: Colors.white,
-                                size: 30,
+                                size: isMobile ? 26 : 30,
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 14),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Partidos por jornada',
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 22,
+                                      fontSize: isMobile ? 19 : 22,
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: 0.5,
                                     ),
@@ -242,9 +246,9 @@ class _PartidosPageState extends State<PartidosPage> {
                                     listenable: SessionManager(),
                                     builder: (context, _) => Text(
                                       SessionManager().selectedCampeonatoNombre,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: Colors.white70,
-                                        fontSize: 14,
+                                        fontSize: isMobile ? 13 : 14,
                                         fontWeight: FontWeight.w500,
                                       ),
                                       maxLines: 1,

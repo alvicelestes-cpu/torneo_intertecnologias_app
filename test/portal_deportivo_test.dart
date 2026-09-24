@@ -520,6 +520,84 @@ void main() {
     }
   });
 
+  group('Responsive Viewports - Acordeón de Partidos (PublicJornadaAccordion)', () {
+    const accordionViewports = [
+      Size(360, 640),
+      Size(390, 844),
+      Size(412, 915),
+      Size(768, 1024),
+      Size(1920, 1080),
+    ];
+
+    for (final size in accordionViewports) {
+      testWidgets(
+          'PublicJornadaAccordion renderiza expandido sin overflow en viewport ${size.width}x${size.height}',
+          (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        final partidos = [
+          const Partido(
+            id: 1,
+            equipoLocalId: 1,
+            equipoLocalNombre: 'INPEC FC',
+            equipoLocalSigla: 'INP',
+            equipoVisitanteId: 2,
+            equipoVisitanteNombre: 'TELEMATIK',
+            equipoVisitanteSigla: 'TEL',
+            golesLocal: 2,
+            golesVisitante: 1,
+            estado: 'FINALIZADO',
+            jornada: 1,
+            fase: 'PRIMERA FASE',
+          ),
+          const Partido(
+            id: 2,
+            equipoLocalId: 3,
+            equipoLocalNombre: 'DEP ELITE',
+            equipoLocalSigla: 'DEP',
+            equipoVisitanteId: 4,
+            equipoVisitanteNombre: 'CEMENTEROS',
+            equipoVisitanteSigla: 'CEM',
+            golesLocal: 0,
+            golesVisitante: 0,
+            estado: 'FINALIZADO',
+            jornada: 1,
+            fase: 'PRIMERA FASE',
+          ),
+        ];
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: ListView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: size.width < 600 ? 12 : 16,
+                  vertical: 16,
+                ),
+                children: [
+                  PublicJornadaAccordion(
+                    numeroJornada: 1,
+                    fase: 'PRIMERA FASE',
+                    cantidadPartidos: partidos.length,
+                    partidos: partidos,
+                    initiallyExpanded: true,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('Jornada 1'), findsOneWidget);
+        expect(find.text('PRIMERA FASE'), findsOneWidget);
+        expect(find.text('2 partidos'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  });
+
   group('Responsive Viewports - Tarjetas de Equipo (PublicTeamCard)', () {
     const teamViewports = [
       Size(360, 640),

@@ -158,11 +158,16 @@ class _EquiposPageState extends State<EquiposPage> {
               );
             }
 
+            final isMobile = MediaQuery.of(context).size.width < 600;
+
             return Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1200),
                 child: ListView(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 12 : 16,
+                    vertical: 16,
+                  ),
                   children: [
                     // Cabecera: Fondo azul degradado con imagen de estadio, icono dorado de trofeo y título
                     Card(
@@ -192,34 +197,34 @@ class _EquiposPageState extends State<EquiposPage> {
                             end: Alignment.bottomRight,
                           ),
                         ),
-                        padding: const EdgeInsets.all(20),
+                        padding: EdgeInsets.all(isMobile ? 16 : 20),
                         child: Row(
                           children: [
                             Container(
-                              width: 52,
-                              height: 52,
+                              width: isMobile ? 44 : 52,
+                              height: isMobile ? 44 : 52,
                               decoration: BoxDecoration(
                                 color: Colors.white.withAlpha(30),
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(color: Colors.white24, width: 1.2),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.emoji_events,
-                                color: Color(0xFFFFD700),
-                                size: 32,
+                                color: const Color(0xFFFFD700),
+                                size: isMobile ? 26 : 32,
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 14),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Equipos participantes',
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 22,
+                                      fontSize: isMobile ? 19 : 22,
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: 0.5,
                                     ),
@@ -229,9 +234,9 @@ class _EquiposPageState extends State<EquiposPage> {
                                     listenable: SessionManager(),
                                     builder: (context, _) => Text(
                                       SessionManager().selectedCampeonatoNombre,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: Colors.white70,
-                                        fontSize: 14,
+                                        fontSize: isMobile ? 13 : 14,
                                         fontWeight: FontWeight.w500,
                                       ),
                                       maxLines: 1,
@@ -246,7 +251,7 @@ class _EquiposPageState extends State<EquiposPage> {
                       ),
                     ),
 
-                    // Grid responsive de tarjetas de equipo (4 en desktop, 2 en tablet, 1 en móvil)
+                    // Grid responsive de tarjetas de equipo (4 en desktop, 2 en tablet, 1 en móvil a ancho completo)
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final width = constraints.maxWidth;
@@ -256,13 +261,17 @@ class _EquiposPageState extends State<EquiposPage> {
 
                         if (crossAxisCount == 1) {
                           return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: equipos
                                 .map(
                                   (equipo) => Padding(
                                     padding: const EdgeInsets.only(bottom: 12),
-                                    child: PublicTeamCard(
-                                      equipo: equipo,
-                                      onTap: () => _abrirPlantilla(equipo),
+                                    child: SizedBox(
+                                      width: double.infinity,
+                                      child: PublicTeamCard(
+                                        equipo: equipo,
+                                        onTap: () => _abrirPlantilla(equipo),
+                                      ),
                                     ),
                                   ),
                                 )

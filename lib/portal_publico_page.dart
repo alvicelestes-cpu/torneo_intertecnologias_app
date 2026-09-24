@@ -629,8 +629,8 @@ class PublicHeaderBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: EdgeInsets.symmetric(
-            horizontal: isSmall ? 8 : 12,
-            vertical: isSmall ? 6 : 8,
+            horizontal: isSmall ? 8 : 10,
+            vertical: isSmall ? 5 : 7,
           ),
           decoration: BoxDecoration(
             color: color.withAlpha(210),
@@ -648,11 +648,10 @@ class PublicHeaderBanner extends StatelessWidget {
             ],
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: isSmall ? 30 : 36,
-                height: isSmall ? 30 : 36,
+                width: isSmall ? 28 : 34,
+                height: isSmall ? 28 : 34,
                 decoration: BoxDecoration(
                   color: Colors.white.withAlpha(35),
                   borderRadius: BorderRadius.circular(8),
@@ -660,7 +659,7 @@ class PublicHeaderBanner extends StatelessWidget {
                 child: Icon(
                   icon,
                   color: Colors.white,
-                  size: isSmall ? 18 : 20,
+                  size: isSmall ? 16 : 19,
                 ),
               ),
               const SizedBox(width: 8),
@@ -682,7 +681,7 @@ class PublicHeaderBanner extends StatelessWidget {
                         : Text(
                             '$value',
                             style: TextStyle(
-                              fontSize: isSmall ? 17 : 20,
+                              fontSize: isSmall ? 16 : 19,
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
                               height: 1.1,
@@ -714,8 +713,8 @@ class PublicHeaderBanner extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final cardWidth = constraints.maxWidth;
-        final isVerySmall = cardWidth < 420;
-        final isMobile = cardWidth < 680;
+        final isVerySmall = cardWidth < 400;
+        final isMobile = cardWidth < 600;
 
         final double titleFontSize = isVerySmall
             ? 18.0
@@ -724,7 +723,7 @@ class PublicHeaderBanner extends StatelessWidget {
                 : (cardWidth < 800 ? 24.0 : 27.0));
 
         final EdgeInsets cardPadding = EdgeInsets.all(
-          isVerySmall ? 14.0 : (isMobile ? 18.0 : 22.0),
+          isVerySmall ? 12.0 : (isMobile ? 16.0 : 22.0),
         );
 
         final metricEquipos = _buildMetricCard(
@@ -815,46 +814,43 @@ class PublicHeaderBanner extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Cabecera: Logotipo escudo con balón a la izquierda + Textos
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Logotipo con escudo de balón a la izquierda
-                          Container(
-                            width: isVerySmall ? 44.0 : 54.0,
-                            height: isVerySmall ? 44.0 : 54.0,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withAlpha(45),
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 2.0,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(70),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.sports_soccer,
-                              size: isVerySmall ? 26.0 : 32.0,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                      // Cabecera: Adaptable verticalmente para móvil (< 600px) y horizontal para escritorio
+                      if (isMobile)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                // Badge PORTAL DEL TORNEO
+                                // Logotipo con escudo de balón a la izquierda
+                                Container(
+                                  width: isVerySmall ? 40.0 : 46.0,
+                                  height: isVerySmall ? 40.0 : 46.0,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withAlpha(45),
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 2.0,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withAlpha(70),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    Icons.sports_soccer,
+                                    size: isVerySmall ? 22.0 : 26.0,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 7,
-                                    vertical: 2.5,
+                                    horizontal: 8,
+                                    vertical: 3.5,
                                   ),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withAlpha(35),
@@ -870,66 +866,164 @@ class PublicHeaderBanner extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 5),
-
-                                // Título: TORNEO INTERTECNOLOGÍAS
-                                Text(
-                                  'TORNEO INTERTECNOLOGÍAS',
-                                  style: TextStyle(
-                                    fontSize: titleFontSize,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white,
-                                    letterSpacing: 0.8,
-                                    height: 1.15,
-                                  ),
-                                  softWrap: true,
-                                  overflow: TextOverflow.visible,
-                                  maxLines: 2,
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            // Título adaptado a todo el ancho sin compresión
+                            Text(
+                              'TORNEO INTERTECNOLOGÍAS',
+                              style: TextStyle(
+                                fontSize: titleFontSize,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: 0.6,
+                                height: 1.15,
+                              ),
+                              softWrap: true,
+                            ),
+                            const SizedBox(height: 4),
+                            ListenableBuilder(
+                              listenable: SessionManager(),
+                              builder: (context, _) => Text(
+                                SessionManager().selectedCampeonatoNombre,
+                                style: TextStyle(
+                                  fontSize: isVerySmall ? 13.0 : 14.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white.withAlpha(235),
                                 ),
-                                const SizedBox(height: 4),
+                                softWrap: true,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Pasión, tecnología y deporte en un solo torneo',
+                              style: TextStyle(
+                                color: Colors.white.withAlpha(210),
+                                fontSize: isVerySmall ? 11.0 : 12.5,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              softWrap: true,
+                            ),
+                          ],
+                        )
+                      else
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Logotipo con escudo de balón a la izquierda
+                            Container(
+                              width: 54.0,
+                              height: 54.0,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withAlpha(45),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2.0,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(70),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.sports_soccer,
+                                size: 32.0,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
 
-                                // Subtítulo
-                                ListenableBuilder(
-                                  listenable: SessionManager(),
-                                  builder: (context, _) => Text(
-                                    SessionManager().selectedCampeonatoNombre,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Badge PORTAL DEL TORNEO
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 7,
+                                      vertical: 2.5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withAlpha(35),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'PORTAL DEL TORNEO',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        letterSpacing: 1.2,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+
+                                  // Título: TORNEO INTERTECNOLOGÍAS
+                                  Text(
+                                    'TORNEO INTERTECNOLOGÍAS',
                                     style: TextStyle(
-                                      fontSize: isVerySmall ? 13.0 : 15.0,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white.withAlpha(235),
+                                      fontSize: titleFontSize,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: 0.8,
+                                      height: 1.15,
                                     ),
                                     softWrap: true,
                                     overflow: TextOverflow.visible,
                                     maxLines: 2,
                                   ),
-                                ),
-                                const SizedBox(height: 2),
+                                  const SizedBox(height: 4),
 
-                                // Lema
-                                Text(
-                                  'Pasión, tecnología y deporte en un solo torneo',
-                                  style: TextStyle(
-                                    color: Colors.white.withAlpha(210),
-                                    fontSize: isVerySmall ? 11.5 : 13.0,
-                                    fontStyle: FontStyle.italic,
+                                  // Subtítulo
+                                  ListenableBuilder(
+                                    listenable: SessionManager(),
+                                    builder: (context, _) => Text(
+                                      SessionManager().selectedCampeonatoNombre,
+                                      style: const TextStyle(
+                                        fontSize: 15.0,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white70,
+                                      ),
+                                      softWrap: true,
+                                      overflow: TextOverflow.visible,
+                                      maxLines: 2,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: isMobile ? 18.0 : 24.0),
+                                  const SizedBox(height: 2),
 
-                      // Fila de 4 tarjetas de métricas sobre fondo traslúcido/oscuro dentro del banner
+                                  // Lema
+                                  Text(
+                                    'Pasión, tecnología y deporte en un solo torneo',
+                                    style: TextStyle(
+                                      color: Colors.white.withAlpha(210),
+                                      fontSize: 13.0,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      SizedBox(height: isMobile ? 16.0 : 24.0),
+
+                      // Cuadrícula de 2x2 para móvil (< 600px) y fila horizontal de 4 para escritorio
                       if (isMobile)
-                        GridView.count(
-                          crossAxisCount: 2,
+                        GridView(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                          childAspectRatio: isVerySmall ? 2.3 : 2.7,
+                          padding: EdgeInsets.zero,
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 8,
+                            mainAxisExtent: isVerySmall ? 58 : 64,
+                          ),
                           children: [
                             metricEquipos,
                             metricJugadores,
