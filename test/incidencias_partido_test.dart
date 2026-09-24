@@ -124,6 +124,28 @@ void main() {
       expect(det.partido.goles.length, equals(1));
       expect(det.partido.tarjetas.length, equals(1));
     });
+
+    test('PartidoDetalle.fromJson maneja de forma defensiva campos goles y tarjetas nulos o ausentes', () {
+      final json = {
+        'partido': {
+          'id': 2,
+          'equipoLocalId': 5,
+          'equipoLocalNombre': 'DEP ELITE',
+          'equipoVisitanteId': 6,
+          'equipoVisitanteNombre': 'TIENDA RACING FC',
+          'golesLocal': 0,
+          'golesVisitante': 0,
+        },
+        'goles': null,
+        'tarjetas': null,
+      };
+
+      final det = PartidoDetalle.fromJson(json);
+      expect(det.goles, isEmpty);
+      expect(det.tarjetas, isEmpty);
+      expect(det.partido.goles, isEmpty);
+      expect(det.partido.tarjetas, isEmpty);
+    });
   });
 
   group('PartidoDetallePage - Visualización de Incidencias en UI', () {
@@ -207,7 +229,7 @@ void main() {
       await tester.pump();
 
       // Goles vacíos debe mostrar el mensaje correspondiente
-      expect(find.text('Sin goles registrados'), findsOneWidget);
+      expect(find.text('Sin goles detallados registrados'), findsOneWidget);
 
       // Verificar sección de tarjetas
       expect(find.text('Tarjetas y Sanciones Disciplinarias'), findsOneWidget);

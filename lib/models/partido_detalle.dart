@@ -34,11 +34,25 @@ class PartidoDetalle {
     final rawResumen = json['resumen'];
     final resumen = rawResumen is Map ? PartidoResumen.fromJson(Map<String, dynamic>.from(rawResumen)) : null;
 
+    final List<Gol> listaGoles = json['goles'] != null && json['goles'] is List
+        ? (json['goles'] as List)
+            .whereType<Map>()
+            .map((g) => Gol.fromJson(Map<String, dynamic>.from(g)))
+            .toList()
+        : parsedPartido.goles;
+
+    final List<Tarjeta> listaTarjetas = json['tarjetas'] != null && json['tarjetas'] is List
+        ? (json['tarjetas'] as List)
+            .whereType<Map>()
+            .map((t) => Tarjeta.fromJson(Map<String, dynamic>.from(t)))
+            .toList()
+        : parsedPartido.tarjetas;
+
     return PartidoDetalle(
-      partido: parsedPartido,
+      partido: parsedPartido.copyWith(goles: listaGoles, tarjetas: listaTarjetas),
       resumen: resumen,
-      goles: parsedPartido.goles,
-      tarjetas: parsedPartido.tarjetas,
+      goles: listaGoles,
+      tarjetas: listaTarjetas,
     );
   }
 }

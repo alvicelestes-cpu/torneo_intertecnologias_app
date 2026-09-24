@@ -370,7 +370,7 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                     Icon(Icons.sports_soccer_outlined, size: 18, color: Colors.black38),
                     SizedBox(width: 8),
                     Text(
-                      'Sin goles registrados',
+                      'Sin goles detallados registrados',
                       style: TextStyle(
                         color: Color(0xFF64748B),
                         fontSize: 13.5,
