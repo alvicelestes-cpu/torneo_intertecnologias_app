@@ -1,10 +1,16 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import 'package:torneo_intertecnologias_app/core/network/api_client.dart';
+import 'package:torneo_intertecnologias_app/core/session/session_manager.dart';
 import 'package:torneo_intertecnologias_app/core/utils/image_utils.dart';
+import 'package:torneo_intertecnologias_app/core/utils/mobile_image_picker.dart';
+import 'package:torneo_intertecnologias_app/main.dart';
+import 'package:torneo_intertecnologias_app/models/auth_user.dart';
 import 'package:torneo_intertecnologias_app/models/jugador.dart';
 import 'package:torneo_intertecnologias_app/services/jugadores_service.dart';
 
@@ -137,6 +143,89 @@ void main() {
       expect(nuevoJugador.apellidos, 'Perez');
       expect(nuevoJugador.numeroCamiseta, 10);
       expect(nuevoJugador.fotoJugador, '/uploads/jugadores/new.jpg');
+    });
+  });
+
+  group('Control de Acceso de Administrador - SessionManager', () {
+    final session = SessionManager();
+
+    setUp(() {
+      session.clearSession();
+    });
+
+    test('Usuario no autenticado / anónimo NO tiene acceso de administrador', () {
+      expect(session.isAuthenticated, isFalse);
+      expect(session.isAdmin, isFalse);
+      expect(session.isSuperAdmin, isFalse);
+      expect(session.hasAdminAccess, isFalse);
+    });
+
+    test('Usuario con rol regular (no admin) NO tiene acceso de administrador', () {
+      session.setSession(const AuthUser(
+        token: 'token-valido',
+        usuario: 'jugador1',
+        rol: 'JUGADOR',
+      ));
+
+      expect(session.isAuthenticated, isTrue);
+      expect(session.isAdmin, isFalse);
+      expect(session.isSuperAdmin, isFalse);
+      expect(session.hasAdminAccess, isFalse);
+    });
+
+    test('Usuario con rol ADMIN tiene acceso de administrador', () {
+      session.setSession(const AuthUser(
+        token: 'token-valido',
+        usuario: 'admin1',
+        rol: 'ADMIN',
+      ));
+
+      expect(session.isAuthenticated, isTrue);
+      expect(session.isAdmin, isTrue);
+      expect(session.hasAdminAccess, isTrue);
+    });
+
+    test('Usuario con rol SUPERADMIN tiene acceso de administrador', () {
+      session.setSession(const AuthUser(
+        token: 'token-valido',
+        usuario: 'superadmin1',
+        rol: 'SUPERADMIN',
+      ));
+
+      expect(session.isAuthenticated, isTrue);
+      expect(session.isSuperAdmin, isTrue);
+      expect(session.hasAdminAccess, isTrue);
+    });
+  });
+
+  group('MobileImagePicker - AppPickedImage', () {
+    test('Genera data URI Base64 válido con mimeType correcto', () {
+      final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);
+      final picked = AppPickedImage(
+        bytes: bytes,
+        mimeType: 'image/jpeg',
+        name: 'foto.jpg',
+      );
+
+      final dataUri = picked.dataUri;
+      expect(dataUri, startsWith('data:image/jpeg;base64,'));
+      expect(dataUri, contains(base64Encode(bytes)));
+    });
+  });
+
+  group('Protección de Rutas - /crear-jugador', () {
+    setUp(() {
+      SessionManager().clearSession();
+    });
+
+    testWidgets('Visitante anónimo es redirigido a LoginPage al intentar acceder a /crear-jugador', (WidgetTester tester) async {
+      await tester.pumpWidget(const TorneoApp());
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.pushNamed('/crear-jugador');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LoginPage), findsOneWidget);
+      expect(find.text('INICIAR SESIÓN'), findsOneWidget);
     });
   });
 }

@@ -31,6 +31,10 @@ class SessionManager extends ChangeNotifier {
       (_currentUser!.rol.trim().toUpperCase() == 'ADMIN' ||
        _currentUser!.rol.trim().toUpperCase() == 'ADMINISTRADOR');
 
+  /// Determina si el usuario tiene una sesión activa válida con permisos de administración
+  bool get hasAdminAccess =>
+      isAuthenticated && (isAdmin || isSuperAdmin);
+
   /// SUPERADMIN puede cambiar libremente de torneo; ADMIN está restringido a su propio torneo
   bool get canChangeCampeonato => _currentUser == null || isSuperAdmin;
 

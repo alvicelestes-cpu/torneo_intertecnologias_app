@@ -27,4 +27,20 @@ class UiHelpers {
   static void showError(BuildContext context, String message) {
     showSnackBar(context, message, isError: true);
   }
+
+  static void showInfo(
+    BuildContext context,
+    String message, {
+    Duration duration = const Duration(seconds: 2),
+  }) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.blueGrey.shade800,
+        duration: duration,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 }

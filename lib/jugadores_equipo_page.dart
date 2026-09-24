@@ -193,6 +193,12 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
     }
   }
 
+  bool get _esAdmin {
+    final session = SessionManager();
+    final tieneTokenValido = (widget.token != null && widget.token!.isNotEmpty) || session.token.isNotEmpty;
+    return tieneTokenValido && session.hasAdminAccess;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -224,22 +230,24 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                         message: 'No hay jugadores registrados en este equipo.',
                         icon: Icons.person_off_outlined,
                       ),
-                      const SizedBox(height: 16),
-                      FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                      if (_esAdmin) ...[
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: _abrirInscripcion,
+                          icon: const Icon(Icons.person_add),
+                          label: const Text(
+                            'Inscribir Jugador',
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
-                        onPressed: _abrirInscripcion,
-                        icon: const Icon(Icons.person_add),
-                        label: const Text(
-                          'Inscribir Jugador',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -395,32 +403,34 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 14),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: FilledButton.icon(
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: jugadores.length >= 23
-                                        ? Colors.white24
-                                        : Colors.white,
-                                    foregroundColor: jugadores.length >= 23
-                                        ? Colors.white60
-                                        : const Color(0xFF0D233A),
-                                    elevation: 2,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
+                              if (_esAdmin) ...[
+                                const SizedBox(height: 14),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: FilledButton.icon(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: jugadores.length >= 23
+                                          ? Colors.white24
+                                          : Colors.white,
+                                      foregroundColor: jugadores.length >= 23
+                                          ? Colors.white60
+                                          : const Color(0xFF0D233A),
+                                      elevation: 2,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    onPressed: _abrirInscripcion,
+                                    icon: const Icon(Icons.person_add, size: 18),
+                                    label: Text(
+                                      jugadores.length >= 23
+                                          ? 'Plantel Completo (23/23)'
+                                          : '+ Inscribir Jugador',
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
                                     ),
                                   ),
-                                  onPressed: _abrirInscripcion,
-                                  icon: const Icon(Icons.person_add, size: 18),
-                                  label: Text(
-                                    jugadores.length >= 23
-                                        ? 'Plantel Completo (23/23)'
-                                        : '+ Inscribir Jugador',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         ),
@@ -445,19 +455,21 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor:
-            (jugadores.length >= 23) ? Colors.blueGrey : AppColors.primary,
-        onPressed: _abrirInscripcion,
-        icon: const Icon(Icons.person_add, color: Colors.white),
-        label: Text(
-          jugadores.length >= 23 ? 'Plantel Completo (23/23)' : 'Inscribir Jugador',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-      ),
+      floatingActionButton: _esAdmin
+          ? FloatingActionButton.extended(
+              backgroundColor:
+                  (jugadores.length >= 23) ? Colors.blueGrey : AppColors.primary,
+              onPressed: _abrirInscripcion,
+              icon: const Icon(Icons.person_add, color: Colors.white),
+              label: Text(
+                jugadores.length >= 23 ? 'Plantel Completo (23/23)' : 'Inscribir Jugador',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            )
+          : null,
     );
   }
 }

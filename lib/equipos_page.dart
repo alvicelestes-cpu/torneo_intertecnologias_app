@@ -145,6 +145,12 @@ class _EquiposPageState extends State<EquiposPage> {
     }
   }
 
+  bool get _esAdmin {
+    final session = SessionManager();
+    final tieneTokenValido = (widget.token != null && widget.token!.isNotEmpty) || session.token.isNotEmpty;
+    return tieneTokenValido && session.hasAdminAccess;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -321,15 +327,17 @@ class _EquiposPageState extends State<EquiposPage> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.primary,
-        onPressed: _abrirInscripcion,
-        icon: const Icon(Icons.person_add, color: Colors.white),
-        label: const Text(
-          'Inscribir Jugador',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-      ),
+      floatingActionButton: _esAdmin
+          ? FloatingActionButton.extended(
+              backgroundColor: AppColors.primary,
+              onPressed: _abrirInscripcion,
+              icon: const Icon(Icons.person_add, color: Colors.white),
+              label: const Text(
+                'Inscribir Jugador',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+            )
+          : null,
     );
   }
 }

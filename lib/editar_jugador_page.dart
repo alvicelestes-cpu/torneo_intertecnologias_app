@@ -1,12 +1,11 @@
-import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
 import 'core/utils/date_utils.dart';
+import 'core/utils/mobile_image_picker.dart';
 import 'core/utils/ui_helpers.dart';
 import 'models/equipo.dart';
 import 'models/jugador.dart';
@@ -34,7 +33,6 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
   final _formKey = GlobalKey<FormState>();
   final JugadoresService _jugadoresService = JugadoresService();
   final EquiposService _equiposService = EquiposService();
-  final ImagePicker _picker = ImagePicker();
 
   final nombresCtrl = TextEditingController();
   final apellidosCtrl = TextEditingController();
@@ -62,7 +60,23 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _verificarAccesoAdmin();
+    });
     cargarDatos();
+  }
+
+  void _verificarAccesoAdmin() {
+    final session = SessionManager();
+    final tieneAcceso = (widget.token.isNotEmpty && session.isAuthenticated) ||
+        session.hasAdminAccess;
+    if (!tieneAcceso && mounted) {
+      UiHelpers.showError(
+        context,
+        'Acceso restringido: Se requieren permisos de administrador.',
+      );
+      Navigator.pushReplacementNamed(context, '/login');
+    }
   }
 
   @override
@@ -123,35 +137,31 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
   }
 
   Future<void> _seleccionarFoto() async {
+    setState(() => procesandoFoto = true);
+    UiHelpers.showInfo(context, 'Abriendo selector de imágenes...');
+
     try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
-      );
+      final AppPickedImage? picked = await MobileImagePicker.pickImage();
 
-      if (pickedFile == null) return;
+      if (!mounted) return;
 
-      setState(() => procesandoFoto = true);
-      final bytes = await pickedFile.readAsBytes();
-      if (bytes.isEmpty) {
+      if (picked == null) {
         setState(() => procesandoFoto = false);
         return;
       }
 
-      final mime = pickedFile.mimeType ?? 'image/jpeg';
-      final base64String = base64Encode(bytes);
-      final dataUri = 'data:$mime;base64,$base64String';
-
       setState(() {
-        _nuevaFotoBytes = bytes;
-        _nuevaFotoBase64 = dataUri;
+        _nuevaFotoBytes = picked.bytes;
+        _nuevaFotoBase64 = picked.dataUri;
         procesandoFoto = false;
       });
-    } catch (e) {
-      setState(() => procesandoFoto = false);
+
       if (mounted) {
+        UiHelpers.showSuccess(context, 'Fotografía cargada correctamente.');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => procesandoFoto = false);
         UiHelpers.showError(context, 'No se pudo seleccionar la fotografía: $e');
       }
     }

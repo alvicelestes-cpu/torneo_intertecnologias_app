@@ -6,6 +6,7 @@ import 'core/session/session_manager.dart';
 import 'core/utils/ui_helpers.dart';
 import 'services/auth_service.dart';
 
+import 'crear_jugador_page.dart';
 import 'equipos_page.dart';
 import 'estadisticas_page.dart';
 import 'goleadores_page.dart';
@@ -109,6 +110,22 @@ class TorneoApp extends StatelessWidget {
           return MaterialPageRoute(
             settings: settings,
             builder: (_) => const JugadoresPage(),
+          );
+        }
+
+        if (path == '/crear-jugador' ||
+            path == '/inscribir-jugador' ||
+            path == '/nuevo-jugador') {
+          final session = SessionManager();
+          if (session.hasAdminAccess) {
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (_) => CrearJugadorPage(token: session.token),
+            );
+          }
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const LoginPage(),
           );
         }
 
