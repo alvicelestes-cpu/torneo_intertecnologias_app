@@ -32,6 +32,9 @@ COPY . .
 
 RUN flutter build web --release
 
+# Eliminar flutter_service_worker.js para evitar que navegadores antiguos retengan o ejecuten service workers
+RUN rm -f /app/build/web/flutter_service_worker.js
+
 FROM nginx:alpine
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
@@ -40,4 +43,3 @@ COPY --from=build /app/build/web /usr/share/nginx/html
 EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]
-

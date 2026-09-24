@@ -18,12 +18,30 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Portal Deportivo - Torneo Intertecnologías">
 
-  <!-- Anti-cache meta tags para forzar recarga en dispositivos móviles -->
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
+  <!-- Invalidación estricta de caché para navegadores móviles y de escritorio -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <!-- Desregistrar cualquier Service Worker activo previo de inmediato antes de cargar recursos -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (let registration of registrations) {
+          registration.unregister();
+        }
+      });
+    }
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        for (let name of names) {
+          caches.delete(name);
+        }
+      });
+    }
+  </script>
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -34,30 +52,17 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>torneo_intertecnologias_app</title>
-  <!-- Manifest PWA desvinculado para evitar instalacion como app en navegadores moviles -->
-  <!-- <link rel="manifest" href="manifest.json"> -->
+  <title>Torneo Intertecnologías</title>
 </head>
 <body>
   <script>
-    // Desactivar el banner / aviso emergente de "Instalar App" (PWA) en navegadores móviles
+    // Desactivar el banner emergente de "Instalar App" (PWA)
     window.addEventListener('beforeinstallprompt', function(e) {
       e.preventDefault();
       return false;
     });
 
-    // Invalidar caché de Service Worker en navegadores móviles
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for (var i = 0; i < registrations.length; i++) {
-          registrations[i].update();
-        }
-      }).catch(function(err) {
-        console.warn('Error al verificar service worker:', err);
-      });
-    }
-
-    // Inyectar script de arranque de Flutter con timestamp para evitar caché persistente
+    // Inyectar script de arranque de Flutter con timestamp para forzar su recarga inmediata en cada despliegue
     var script = document.createElement('script');
     var versionTimestamp = new Date().getTime();
     script.src = 'flutter_bootstrap.js?v=' + versionTimestamp;
