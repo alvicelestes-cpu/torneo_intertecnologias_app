@@ -25,6 +25,10 @@ class Tarjeta {
     this.motivo,
   });
 
+  String get nombreJugador => jugadorNombre;
+  String get tipoTarjeta => tipo;
+  String? get observacion => motivo;
+
   factory Tarjeta.fromJson(Map<String, dynamic> json) {
     int? jId;
     String jNombre = 'Jugador';
@@ -42,6 +46,11 @@ class Tarjeta {
     } else if (rawJugador != null) {
       jNombre = rawJugador.toString();
     }
+    if (json['nombreJugador'] != null && json['nombreJugador'].toString().trim().isNotEmpty) {
+      jNombre = json['nombreJugador'].toString().trim();
+    } else if (json['jugadorNombre'] != null && json['jugadorNombre'].toString().trim().isNotEmpty) {
+      jNombre = json['jugadorNombre'].toString().trim();
+    }
     if (json['jugadorId'] != null) {
       jId = TextUtils.toInt(json['jugadorId']);
     }
@@ -55,9 +64,16 @@ class Tarjeta {
     } else if (rawEquipo != null) {
       eqNombre = rawEquipo.toString();
     }
+    if (json['equipoNombre'] != null && json['equipoNombre'].toString().trim().isNotEmpty) {
+      eqNombre = json['equipoNombre'].toString().trim();
+    }
     if (json['equipoId'] != null) {
       eqId = TextUtils.toInt(json['equipoId']);
     }
+
+    final rawTipo = json['tipoTarjeta'] ?? json['tipo'];
+    final tipoStr = rawTipo?.toString().trim().toUpperCase() ?? 'AMARILLA';
+    final obs = (json['observacion'] ?? json['motivo'])?.toString().trim();
 
     return Tarjeta(
       id: TextUtils.toInt(json['id']),
@@ -67,9 +83,9 @@ class Tarjeta {
       numeroCamiseta: camiseta,
       equipoId: eqId,
       equipoNombre: eqNombre,
-      tipo: json['tipo']?.toString().trim().toUpperCase() ?? 'AMARILLA',
+      tipo: tipoStr,
       minuto: json['minuto'] != null ? TextUtils.toInt(json['minuto']) : null,
-      motivo: json['motivo']?.toString().trim(),
+      motivo: obs,
     );
   }
 

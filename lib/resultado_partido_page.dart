@@ -4,8 +4,14 @@ import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
 import 'core/utils/ui_helpers.dart';
+import 'models/gol.dart';
+import 'models/jugador.dart';
 import 'models/partido_detalle.dart';
+import 'models/tarjeta.dart';
+import 'services/equipos_service.dart';
+import 'services/goles_service.dart';
 import 'services/partidos_service.dart';
+import 'services/tarjetas_service.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
 
@@ -26,6 +32,9 @@ class ResultadoPartidoPage extends StatefulWidget {
 class _ResultadoPartidoPageState extends State<ResultadoPartidoPage> {
   final _formKey = GlobalKey<FormState>();
   final PartidosService _partidosService = PartidosService();
+  final EquiposService _equiposService = EquiposService();
+  final GolesService _golesService = GolesService();
+  final TarjetasService _tarjetasService = TarjetasService();
 
   final golesLocalCtrl = TextEditingController();
   final golesVisitanteCtrl = TextEditingController();
@@ -39,6 +48,13 @@ class _ResultadoPartidoPageState extends State<ResultadoPartidoPage> {
 
   String equipoLocal = 'Equipo local';
   String equipoVisitante = 'Equipo visitante';
+  int localEquipoId = 0;
+  int visitanteEquipoId = 0;
+
+  List<Jugador> localJugadores = [];
+  List<Jugador> visitanteJugadores = [];
+  List<Gol> goles = [];
+  List<Tarjeta> tarjetas = [];
 
   @override
   void initState() {
@@ -69,23 +85,67 @@ class _ResultadoPartidoPageState extends State<ResultadoPartidoPage> {
       );
 
       final partido = detalle.partido;
+      localEquipoId = partido.equipoLocalId ?? 0;
+      visitanteEquipoId = partido.equipoVisitanteId ?? 0;
+      equipoLocal = partido.equipoLocalNombre;
+      equipoVisitante = partido.equipoVisitanteNombre;
+      observacionesCtrl.text = partido.observaciones ?? '';
+
+      if (partido.fechaHora != null && partido.fechaHora!.isNotEmpty) {
+        final dt = DateTime.tryParse(partido.fechaHora!);
+        if (dt != null) {
+          fechaCtrl.text =
+              '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+          horaCtrl.text =
+              '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+        }
+      }
+
+      final results = await Future.wait([
+        if (localEquipoId > 0)
+          _equiposService.getJugadoresEquipo(localEquipoId, token: widget.token)
+        else
+          Future.value(<Jugador>[]),
+        if (visitanteEquipoId > 0)
+          _equiposService.getJugadoresEquipo(visitanteEquipoId, token: widget.token)
+        else
+          Future.value(<Jugador>[]),
+        _golesService.getGolesPartido(widget.partidoId, token: widget.token),
+        _tarjetasService.getTarjetasPartido(widget.partidoId, token: widget.token),
+      ]);
+
+      final jLocal = results[0] as List<Jugador>;
+      final jVisitante = results[1] as List<Jugador>;
+      final gList = results[2] as List<Gol>;
+      final tList = results[3] as List<Tarjeta>;
+
       if (mounted) {
         setState(() {
-          equipoLocal = partido.equipoLocalNombre;
-          equipoVisitante = partido.equipoVisitanteNombre;
-          golesLocalCtrl.text = partido.golesLocal != null ? partido.golesLocal.toString() : '';
-          golesVisitanteCtrl.text =
-              partido.golesVisitante != null ? partido.golesVisitante.toString() : '';
-          observacionesCtrl.text = partido.observaciones ?? '';
+          localJugadores = jLocal;
+          visitanteJugadores = jVisitante;
+          goles = gList;
+          tarjetas = tList;
 
-          if (partido.fechaHora != null && partido.fechaHora!.isNotEmpty) {
-            final dt = DateTime.tryParse(partido.fechaHora!);
-            if (dt != null) {
-              fechaCtrl.text =
-                  '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
-              horaCtrl.text =
-                  '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+          final countLocalGoles = goles.where((g) {
+            if (localEquipoId > 0 && g.equipoId != null) {
+              return g.equipoId == localEquipoId;
             }
+            return g.equipoNombre.toUpperCase() == equipoLocal.toUpperCase();
+          }).length;
+
+          final countVisitanteGoles = goles.where((g) {
+            if (visitanteEquipoId > 0 && g.equipoId != null) {
+              return g.equipoId == visitanteEquipoId;
+            }
+            return g.equipoNombre.toUpperCase() == equipoVisitante.toUpperCase();
+          }).length;
+
+          if (goles.isNotEmpty) {
+            golesLocalCtrl.text = countLocalGoles.toString();
+            golesVisitanteCtrl.text = countVisitanteGoles.toString();
+          } else {
+            golesLocalCtrl.text = partido.golesLocal != null ? partido.golesLocal.toString() : '0';
+            golesVisitanteCtrl.text = partido.golesVisitante != null ? partido.golesVisitante.toString() : '0';
           }
         });
       }
@@ -95,6 +155,337 @@ class _ResultadoPartidoPageState extends State<ResultadoPartidoPage> {
       if (mounted) setState(() => error = 'No se pudo conectar con el servidor.');
     } finally {
       if (mounted) setState(() => cargando = false);
+    }
+  }
+
+  Future<void> _mostrarDialogoAgregarGol(bool esLocal) async {
+    final jugadoresEquipo = esLocal ? localJugadores : visitanteJugadores;
+    final nombreEquipo = esLocal ? equipoLocal : equipoVisitante;
+
+    if (jugadoresEquipo.isEmpty) {
+      UiHelpers.showError(context, 'No hay jugadores registrados en el plantel de $nombreEquipo.');
+      return;
+    }
+
+    int? jugadorSeleccionadoId = jugadoresEquipo.first.id;
+    final minutoLocalCtrl = TextEditingController();
+    final obsLocalCtrl = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.sports_soccer, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Añadir Gol • $nombreEquipo',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<int>(
+                  initialValue: jugadorSeleccionadoId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Jugador anotador',
+                    prefixIcon: Icon(Icons.person),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: jugadoresEquipo.map((j) {
+                    final num = j.numeroCamiseta != null ? '#${j.numeroCamiseta} ' : '';
+                    return DropdownMenuItem<int>(
+                      value: j.id,
+                      child: Text('$num${j.nombreCompleto}', overflow: TextOverflow.ellipsis),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setDialogState(() => jugadorSeleccionadoId = val);
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: minutoLocalCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Minuto del gol (opcional)',
+                    prefixIcon: Icon(Icons.timer_outlined),
+                    border: OutlineInputBorder(),
+                    hintText: 'Ej. 23',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: obsLocalCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Observación (opcional)',
+                    prefixIcon: Icon(Icons.notes_outlined),
+                    border: OutlineInputBorder(),
+                    hintText: 'Ej. Tiro libre, penal...',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('CANCELAR'),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+              icon: const Icon(Icons.add),
+              label: const Text('REGISTRAR GOL'),
+              onPressed: () async {
+                if (jugadorSeleccionadoId == null) return;
+                int? min;
+                if (minutoLocalCtrl.text.trim().isNotEmpty) {
+                  min = int.tryParse(minutoLocalCtrl.text.trim());
+                  if (min == null || min < 0 || min > 300) {
+                    UiHelpers.showError(ctx, 'Minuto no válido.');
+                    return;
+                  }
+                }
+                Navigator.pop(ctx);
+                if (!mounted) return;
+                setState(() => cargando = true);
+                try {
+                  await _golesService.registrarGol(
+                    {
+                      'partidoId': widget.partidoId,
+                      'jugadorId': jugadorSeleccionadoId,
+                      'minuto': min,
+                      'observacion': obsLocalCtrl.text.trim().isEmpty ? null : obsLocalCtrl.text.trim(),
+                    },
+                    token: widget.token,
+                  );
+                  if (!mounted) return;
+                  UiHelpers.showSuccess(context, 'Gol registrado correctamente.');
+                  await cargarPartido();
+                } catch (e) {
+                  if (!mounted) return;
+                  setState(() => cargando = false);
+                  UiHelpers.showError(context, 'Error al registrar el gol: $e');
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _eliminarGol(int golId) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar Gol'),
+        content: const Text('¿Desea quitar este gol registrado del encuentro?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('CANCELAR')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('ELIMINAR'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmar != true) return;
+
+    setState(() => cargando = true);
+    try {
+      await _golesService.eliminarGol(golId, token: widget.token);
+      if (!mounted) return;
+      UiHelpers.showSuccess(context, 'Gol eliminado.');
+      await cargarPartido();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => cargando = false);
+      UiHelpers.showError(context, 'Error al eliminar el gol.');
+    }
+  }
+
+  Future<void> _mostrarDialogoAgregarTarjeta(bool esLocal) async {
+    final jugadoresEquipo = esLocal ? localJugadores : visitanteJugadores;
+    final nombreEquipo = esLocal ? equipoLocal : equipoVisitante;
+
+    if (jugadoresEquipo.isEmpty) {
+      UiHelpers.showError(context, 'No hay jugadores registrados en el plantel de $nombreEquipo.');
+      return;
+    }
+
+    int? jugadorSeleccionadoId = jugadoresEquipo.first.id;
+    String tipoSeleccionado = 'AMARILLA';
+    final minutoLocalCtrl = TextEditingController();
+    final motivoLocalCtrl = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.style, color: Color(0xFFFBC02D)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Añadir Tarjeta • $nombreEquipo',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<int>(
+                  initialValue: jugadorSeleccionadoId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Jugador sancionado',
+                    prefixIcon: Icon(Icons.person),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: jugadoresEquipo.map((j) {
+                    final num = j.numeroCamiseta != null ? '#${j.numeroCamiseta} ' : '';
+                    return DropdownMenuItem<int>(
+                      value: j.id,
+                      child: Text('$num${j.nombreCompleto}', overflow: TextOverflow.ellipsis),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setDialogState(() => jugadorSeleccionadoId = val);
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: tipoSeleccionado,
+                  decoration: const InputDecoration(
+                    labelText: 'Tipo de Tarjeta',
+                    prefixIcon: Icon(Icons.style_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'AMARILLA', child: Text('🟨 Tarjeta Amarilla')),
+                    DropdownMenuItem(value: 'ROJA', child: Text('🟥 Tarjeta Roja')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setDialogState(() => tipoSeleccionado = val);
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: minutoLocalCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Minuto (opcional)',
+                    prefixIcon: Icon(Icons.timer_outlined),
+                    border: OutlineInputBorder(),
+                    hintText: 'Ej. 42',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: motivoLocalCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Motivo / Observación (opcional)',
+                    prefixIcon: Icon(Icons.notes_outlined),
+                    border: OutlineInputBorder(),
+                    hintText: 'Ej. Falta táctica, conducta...',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('CANCELAR'),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: tipoSeleccionado == 'ROJA' ? const Color(0xFFD32F2F) : const Color(0xFFFBC02D),
+                foregroundColor: tipoSeleccionado == 'ROJA' ? Colors.white : Colors.black87,
+              ),
+              icon: const Icon(Icons.add),
+              label: const Text('REGISTRAR TARJETA'),
+              onPressed: () async {
+                if (jugadorSeleccionadoId == null) return;
+                int? min;
+                if (minutoLocalCtrl.text.trim().isNotEmpty) {
+                  min = int.tryParse(minutoLocalCtrl.text.trim());
+                  if (min == null || min < 0 || min > 300) {
+                    UiHelpers.showError(ctx, 'Minuto no válido.');
+                    return;
+                  }
+                }
+                Navigator.pop(ctx);
+                if (!mounted) return;
+                setState(() => cargando = true);
+                try {
+                  await _tarjetasService.registrarTarjeta(
+                    {
+                      'partidoId': widget.partidoId,
+                      'jugadorId': jugadorSeleccionadoId,
+                      'tipo': tipoSeleccionado,
+                      'minuto': min,
+                      'observacion': motivoLocalCtrl.text.trim().isEmpty ? null : motivoLocalCtrl.text.trim(),
+                    },
+                    token: widget.token,
+                  );
+                  if (!mounted) return;
+                  UiHelpers.showSuccess(context, 'Tarjeta registrada correctamente.');
+                  await cargarPartido();
+                } catch (e) {
+                  if (!mounted) return;
+                  setState(() => cargando = false);
+                  UiHelpers.showError(context, 'Error al registrar la tarjeta: $e');
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _eliminarTarjeta(int tarjetaId) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar Tarjeta'),
+        content: const Text('¿Desea quitar esta tarjeta registrada del encuentro?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('CANCELAR')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('ELIMINAR'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmar != true) return;
+
+    setState(() => cargando = true);
+    try {
+      await _tarjetasService.eliminarTarjeta(tarjetaId, token: widget.token);
+      if (!mounted) return;
+      UiHelpers.showSuccess(context, 'Tarjeta eliminada.');
+      await cargarPartido();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => cargando = false);
+      UiHelpers.showError(context, 'Error al eliminar la tarjeta.');
     }
   }
 
@@ -195,7 +586,7 @@ class _ResultadoPartidoPageState extends State<ResultadoPartidoPage> {
       );
 
       if (!mounted) return;
-      UiHelpers.showSuccess(context, 'Resultado registrado correctamente.');
+      UiHelpers.showSuccess(context, 'Resultado registrado y finalizado correctamente.');
       await Future.delayed(const Duration(milliseconds: 300));
       if (!mounted) return;
       Navigator.pop(context, true);
@@ -218,7 +609,7 @@ class _ResultadoPartidoPageState extends State<ResultadoPartidoPage> {
         title: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Registrar resultado'),
+            const Text('Registrar resultado e incidencias'),
             ListenableBuilder(
               listenable: SessionManager(),
               builder: (context, _) => Text(
@@ -243,15 +634,44 @@ class _ResultadoPartidoPageState extends State<ResultadoPartidoPage> {
             );
           }
 
+          final golesLocal = goles.where((g) {
+            if (localEquipoId > 0 && g.equipoId != null) {
+              return g.equipoId == localEquipoId;
+            }
+            return g.equipoNombre.toUpperCase() == equipoLocal.toUpperCase();
+          }).toList();
+
+          final golesVisitante = goles.where((g) {
+            if (visitanteEquipoId > 0 && g.equipoId != null) {
+              return g.equipoId == visitanteEquipoId;
+            }
+            return g.equipoNombre.toUpperCase() == equipoVisitante.toUpperCase();
+          }).toList();
+
+          final tarjetasLocal = tarjetas.where((t) {
+            if (localEquipoId > 0 && t.equipoId != null) {
+              return t.equipoId == localEquipoId;
+            }
+            return t.equipoNombre.toUpperCase() == equipoLocal.toUpperCase();
+          }).toList();
+
+          final tarjetasVisitante = tarjetas.where((t) {
+            if (visitanteEquipoId > 0 && t.equipoId != null) {
+              return t.equipoId == visitanteEquipoId;
+            }
+            return t.equipoNombre.toUpperCase() == equipoVisitante.toUpperCase();
+          }).toList();
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 650),
+                constraints: const BoxConstraints(maxWidth: 680),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     children: [
+                      // TARJETA DE MARCADOR
                       Card(
                         elevation: 2,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -346,7 +766,283 @@ class _ResultadoPartidoPageState extends State<ResultadoPartidoPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
+
+                      // GESTIÓN DE GOLES INDIVIDUALES
+                      Card(
+                        elevation: 1.5,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.sports_soccer, color: AppColors.primary),
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                      'Anotadores de Goles (Top 10 Goleadores)',
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Los goles individuales registrados aquí alimentan automáticamente la Tabla de Goleadores.',
+                                style: TextStyle(fontSize: 12, color: Colors.black54),
+                              ),
+                              const SizedBox(height: 14),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Local
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        OutlinedButton.icon(
+                                          style: OutlinedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                          ),
+                                          onPressed: () => _mostrarDialogoAgregarGol(true),
+                                          icon: const Icon(Icons.add, size: 16),
+                                          label: Text('+ Gol $equipoLocal', maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        if (golesLocal.isEmpty)
+                                          const Text(
+                                            'Sin goles',
+                                            style: TextStyle(color: Colors.black38, fontSize: 12.5, fontStyle: FontStyle.italic),
+                                          )
+                                        else
+                                          ...golesLocal.map((g) => Card(
+                                                color: const Color(0xFFF8FAFC),
+                                                margin: const EdgeInsets.only(bottom: 6),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(Icons.sports_soccer, size: 14),
+                                                      const SizedBox(width: 4),
+                                                      Expanded(
+                                                        child: Text(
+                                                          '${g.nombreJugador}${g.minuto != null ? " (${g.minuto}')" : ""}',
+                                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                                          overflow: TextOverflow.ellipsis,
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                        icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                                                        visualDensity: VisualDensity.compact,
+                                                        onPressed: () => _eliminarGol(g.id),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              )),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  // Visitante
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        OutlinedButton.icon(
+                                          style: OutlinedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                          ),
+                                          onPressed: () => _mostrarDialogoAgregarGol(false),
+                                          icon: const Icon(Icons.add, size: 16),
+                                          label: Text('+ Gol $equipoVisitante', maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        if (golesVisitante.isEmpty)
+                                          const Text(
+                                            'Sin goles',
+                                            style: TextStyle(color: Colors.black38, fontSize: 12.5, fontStyle: FontStyle.italic),
+                                          )
+                                        else
+                                          ...golesVisitante.map((g) => Card(
+                                                color: const Color(0xFFF8FAFC),
+                                                margin: const EdgeInsets.only(bottom: 6),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(Icons.sports_soccer, size: 14),
+                                                      const SizedBox(width: 4),
+                                                      Expanded(
+                                                        child: Text(
+                                                          '${g.nombreJugador}${g.minuto != null ? " (${g.minuto}')" : ""}',
+                                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                                          overflow: TextOverflow.ellipsis,
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                        icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                                                        visualDensity: VisualDensity.compact,
+                                                        onPressed: () => _eliminarGol(g.id),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              )),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // GESTIÓN DE TARJETAS
+                      Card(
+                        elevation: 1.5,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.style, color: Color(0xFFFBC02D)),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Tarjetas y Sanciones Disciplinarias',
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Registre amonestaciones (amarillas) y expulsiones (rojas) para el control del torneo.',
+                                style: TextStyle(fontSize: 12, color: Colors.black54),
+                              ),
+                              const SizedBox(height: 14),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Local
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        OutlinedButton.icon(
+                                          style: OutlinedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                          ),
+                                          onPressed: () => _mostrarDialogoAgregarTarjeta(true),
+                                          icon: const Icon(Icons.add, size: 16),
+                                          label: Text('+ Tarjeta $equipoLocal', maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        if (tarjetasLocal.isEmpty)
+                                          const Text(
+                                            'Sin tarjetas',
+                                            style: TextStyle(color: Colors.black38, fontSize: 12.5, fontStyle: FontStyle.italic),
+                                          )
+                                        else
+                                          ...tarjetasLocal.map((t) => Card(
+                                                color: t.esRoja ? const Color(0xFFD32F2F) : const Color(0xFFFBC02D),
+                                                margin: const EdgeInsets.only(bottom: 6),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                  child: Row(
+                                                    children: [
+                                                      Expanded(
+                                                        child: Text(
+                                                          '${t.esRoja ? "🟥" : "🟨"} ${t.nombreJugador}${t.minuto != null ? " (${t.minuto}')" : ""}',
+                                                          style: TextStyle(
+                                                            fontSize: 11.5,
+                                                            fontWeight: FontWeight.w800,
+                                                            color: t.esRoja ? Colors.white : Colors.black87,
+                                                          ),
+                                                          overflow: TextOverflow.ellipsis,
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                        icon: Icon(Icons.close, size: 14, color: t.esRoja ? Colors.white : Colors.black87),
+                                                        visualDensity: VisualDensity.compact,
+                                                        onPressed: () => _eliminarTarjeta(t.id),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              )),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  // Visitante
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        OutlinedButton.icon(
+                                          style: OutlinedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                          ),
+                                          onPressed: () => _mostrarDialogoAgregarTarjeta(false),
+                                          icon: const Icon(Icons.add, size: 16),
+                                          label: Text('+ Tarjeta $equipoVisitante', maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        if (tarjetasVisitante.isEmpty)
+                                          const Text(
+                                            'Sin tarjetas',
+                                            style: TextStyle(color: Colors.black38, fontSize: 12.5, fontStyle: FontStyle.italic),
+                                          )
+                                        else
+                                          ...tarjetasVisitante.map((t) => Card(
+                                                color: t.esRoja ? const Color(0xFFD32F2F) : const Color(0xFFFBC02D),
+                                                margin: const EdgeInsets.only(bottom: 6),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                  child: Row(
+                                                    children: [
+                                                      Expanded(
+                                                        child: Text(
+                                                          '${t.esRoja ? "🟥" : "🟨"} ${t.nombreJugador}${t.minuto != null ? " (${t.minuto}')" : ""}',
+                                                          style: TextStyle(
+                                                            fontSize: 11.5,
+                                                            fontWeight: FontWeight.w800,
+                                                            color: t.esRoja ? Colors.white : Colors.black87,
+                                                          ),
+                                                          overflow: TextOverflow.ellipsis,
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                        icon: Icon(Icons.close, size: 14, color: t.esRoja ? Colors.white : Colors.black87),
+                                                        visualDensity: VisualDensity.compact,
+                                                        onPressed: () => _eliminarTarjeta(t.id),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              )),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // FECHA, HORA Y OBSERVACIONES
                       Row(
                         children: [
                           Expanded(

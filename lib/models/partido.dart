@@ -1,4 +1,6 @@
 import '../core/utils/text_utils.dart';
+import 'gol.dart';
+import 'tarjeta.dart';
 
 class Partido {
   final int id;
@@ -21,6 +23,8 @@ class Partido {
   final String? cancha;
   final String? llave;
   final String? observaciones;
+  final List<Gol> goles;
+  final List<Tarjeta> tarjetas;
 
   const Partido({
     required this.id,
@@ -41,6 +45,8 @@ class Partido {
     this.cancha,
     this.llave,
     this.observaciones,
+    this.goles = const [],
+    this.tarjetas = const [],
   });
 
   factory Partido.fromJson(Map<String, dynamic> json) {
@@ -116,6 +122,24 @@ class Partido {
       }
     }
 
+    final rawGoles = json['goles'];
+    List<Gol> parsedGoles = const [];
+    if (rawGoles is List) {
+      parsedGoles = rawGoles
+          .whereType<Map>()
+          .map((g) => Gol.fromJson(Map<String, dynamic>.from(g)))
+          .toList();
+    }
+
+    final rawTarjetas = json['tarjetas'];
+    List<Tarjeta> parsedTarjetas = const [];
+    if (rawTarjetas is List) {
+      parsedTarjetas = rawTarjetas
+          .whereType<Map>()
+          .map((t) => Tarjeta.fromJson(Map<String, dynamic>.from(t)))
+          .toList();
+    }
+
     return Partido(
       id: TextUtils.toInt(json['id']),
       equipoLocalId: localId,
@@ -135,6 +159,8 @@ class Partido {
       cancha: json['cancha']?.toString().trim(),
       llave: json['llave']?.toString().trim(),
       observaciones: json['observaciones']?.toString().trim(),
+      goles: parsedGoles,
+      tarjetas: parsedTarjetas,
     );
   }
 
@@ -154,7 +180,55 @@ class Partido {
       if (cancha != null) 'cancha': cancha,
       if (llave != null) 'llave': llave,
       if (observaciones != null) 'observaciones': observaciones,
+      if (goles.isNotEmpty) 'goles': goles.map((g) => g.toJson()).toList(),
+      if (tarjetas.isNotEmpty) 'tarjetas': tarjetas.map((t) => t.toJson()).toList(),
     };
+  }
+
+  Partido copyWith({
+    int? id,
+    int? equipoLocalId,
+    String? equipoLocalNombre,
+    String? equipoLocalSigla,
+    String? equipoLocalLogo,
+    int? equipoVisitanteId,
+    String? equipoVisitanteNombre,
+    String? equipoVisitanteSigla,
+    String? equipoVisitanteLogo,
+    int? golesLocal,
+    int? golesVisitante,
+    String? estado,
+    String? fase,
+    int? jornada,
+    String? fechaHora,
+    String? cancha,
+    String? llave,
+    String? observaciones,
+    List<Gol>? goles,
+    List<Tarjeta>? tarjetas,
+  }) {
+    return Partido(
+      id: id ?? this.id,
+      equipoLocalId: equipoLocalId ?? this.equipoLocalId,
+      equipoLocalNombre: equipoLocalNombre ?? this.equipoLocalNombre,
+      equipoLocalSigla: equipoLocalSigla ?? this.equipoLocalSigla,
+      equipoLocalLogo: equipoLocalLogo ?? this.equipoLocalLogo,
+      equipoVisitanteId: equipoVisitanteId ?? this.equipoVisitanteId,
+      equipoVisitanteNombre: equipoVisitanteNombre ?? this.equipoVisitanteNombre,
+      equipoVisitanteSigla: equipoVisitanteSigla ?? this.equipoVisitanteSigla,
+      equipoVisitanteLogo: equipoVisitanteLogo ?? this.equipoVisitanteLogo,
+      golesLocal: golesLocal ?? this.golesLocal,
+      golesVisitante: golesVisitante ?? this.golesVisitante,
+      estado: estado ?? this.estado,
+      fase: fase ?? this.fase,
+      jornada: jornada ?? this.jornada,
+      fechaHora: fechaHora ?? this.fechaHora,
+      cancha: cancha ?? this.cancha,
+      llave: llave ?? this.llave,
+      observaciones: observaciones ?? this.observaciones,
+      goles: goles ?? this.goles,
+      tarjetas: tarjetas ?? this.tarjetas,
+    );
   }
 
   String get marcador {

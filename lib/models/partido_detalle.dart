@@ -1,26 +1,44 @@
+import 'gol.dart';
 import 'partido.dart';
+import 'tarjeta.dart';
 
 class PartidoDetalle {
   final Partido partido;
   final PartidoResumen? resumen;
+  final List<Gol> goles;
+  final List<Tarjeta> tarjetas;
 
   const PartidoDetalle({
     required this.partido,
     this.resumen,
+    this.goles = const [],
+    this.tarjetas = const [],
   });
 
   factory PartidoDetalle.fromJson(Map<String, dynamic> json) {
-    final partidoJson = json['partido'] is Map<String, dynamic>
-        ? json['partido'] as Map<String, dynamic>
-        : (json['partido'] is Map ? Map<String, dynamic>.from(json['partido']) : json);
+    final rawPartido = json['partido'];
+    final Map<String, dynamic> partidoMap = rawPartido is Map
+        ? Map<String, dynamic>.from(rawPartido)
+        : Map<String, dynamic>.from(json);
 
-    final resumenJson = json['resumen'] is Map<String, dynamic>
-        ? json['resumen'] as Map<String, dynamic>
-        : (json['resumen'] is Map ? Map<String, dynamic>.from(json['resumen']) : null);
+    // Propagar goles y tarjetas desde el nivel raíz si están disponibles
+    if (json['goles'] is List && partidoMap['goles'] == null) {
+      partidoMap['goles'] = json['goles'];
+    }
+    if (json['tarjetas'] is List && partidoMap['tarjetas'] == null) {
+      partidoMap['tarjetas'] = json['tarjetas'];
+    }
+
+    final parsedPartido = Partido.fromJson(partidoMap);
+
+    final rawResumen = json['resumen'];
+    final resumen = rawResumen is Map ? PartidoResumen.fromJson(Map<String, dynamic>.from(rawResumen)) : null;
 
     return PartidoDetalle(
-      partido: Partido.fromJson(partidoJson),
-      resumen: resumenJson != null ? PartidoResumen.fromJson(resumenJson) : null,
+      partido: parsedPartido,
+      resumen: resumen,
+      goles: parsedPartido.goles,
+      tarjetas: parsedPartido.tarjetas,
     );
   }
 }

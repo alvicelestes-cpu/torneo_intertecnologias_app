@@ -6,8 +6,12 @@ import 'core/session/session_manager.dart';
 import 'core/utils/date_utils.dart';
 import 'core/utils/text_utils.dart';
 import 'core/utils/ui_helpers.dart';
+import 'models/gol.dart';
 import 'models/partido_detalle.dart';
+import 'models/tarjeta.dart';
+import 'services/goles_service.dart';
 import 'services/partidos_service.dart';
+import 'services/tarjetas_service.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
 import 'widgets/status_chip.dart';
@@ -21,11 +25,13 @@ import 'tarjetas_partido_page.dart';
 class PartidoDetallePage extends StatefulWidget {
   final int partidoId;
   final String? token;
+  final PartidoDetalle? initialDetalle;
 
   const PartidoDetallePage({
     super.key,
     required this.partidoId,
     this.token,
+    this.initialDetalle,
   });
 
   @override
@@ -34,6 +40,8 @@ class PartidoDetallePage extends StatefulWidget {
 
 class _PartidoDetallePageState extends State<PartidoDetallePage> {
   final PartidosService _partidosService = PartidosService();
+  final GolesService _golesService = GolesService();
+  final TarjetasService _tarjetasService = TarjetasService();
 
   bool cargando = true;
   bool reabriendo = false;
@@ -43,7 +51,12 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   @override
   void initState() {
     super.initState();
-    cargarPartido();
+    if (widget.initialDetalle != null) {
+      detalle = widget.initialDetalle;
+      cargando = false;
+    } else {
+      cargarPartido();
+    }
   }
 
   Future<void> cargarPartido() async {
@@ -57,9 +70,27 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
         widget.partidoId,
         token: widget.token,
       );
+      var goles = res.goles;
+      var tarjetas = res.tarjetas;
+      if (goles.isEmpty && tarjetas.isEmpty) {
+        try {
+          final extras = await Future.wait([
+            _golesService.getGolesPartido(widget.partidoId, token: widget.token),
+            _tarjetasService.getTarjetasPartido(widget.partidoId, token: widget.token),
+          ]);
+          goles = extras[0] as List<Gol>;
+          tarjetas = extras[1] as List<Tarjeta>;
+        } catch (_) {}
+      }
+
       if (mounted) {
         setState(() {
-          detalle = res;
+          detalle = PartidoDetalle(
+            partido: res.partido.copyWith(goles: goles, tarjetas: tarjetas),
+            resumen: res.resumen,
+            goles: goles,
+            tarjetas: tarjetas,
+          );
         });
       }
     } on AppException catch (e) {
@@ -206,104 +237,434 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
     }
   }
 
-  Widget construirResumenIncidencias(PartidoDetalle det) {
-    final resumen = det.resumen;
-    if (resumen == null) return const SizedBox.shrink();
+  Widget _construirSeccionIncidencias(PartidoDetalle det) {
+    final partido = det.partido;
+    final localId = partido.equipoLocalId;
+    final visitanteId = partido.equipoVisitanteId;
 
-    final golesLocal = resumen.golesLocal;
-    final golesVisitante = resumen.golesVisitante;
-    final tarjetasLocal = resumen.tarjetasLocal;
-    final tarjetasVisitante = resumen.tarjetasVisitante;
+    // 1. Filtrar goles por equipo
+    final golesLocal = partido.goles.where((g) {
+      if (localId != null && g.equipoId != null) {
+        return g.equipoId == localId;
+      }
+      return g.equipoNombre.toUpperCase() == partido.equipoLocalNombre.toUpperCase();
+    }).toList();
 
-    final tieneGoles = golesLocal.isNotEmpty || golesVisitante.isNotEmpty;
-    final tieneTarjetas = tarjetasLocal.isNotEmpty || tarjetasVisitante.isNotEmpty;
+    final golesVisitante = partido.goles.where((g) {
+      if (visitanteId != null && g.equipoId != null) {
+        return g.equipoId == visitanteId;
+      }
+      return g.equipoNombre.toUpperCase() == partido.equipoVisitanteNombre.toUpperCase();
+    }).toList();
 
-    if (!tieneGoles && !tieneTarjetas) return const SizedBox.shrink();
+    // Agrupar goles por jugador para formatear ej. "⚽ Juan Pérez (23', 54')"
+    List<String> formatearGolesEquipo(List<Gol> goles) {
+      final Map<String, List<int>> mapJugadorMinutos = {};
+      final Map<String, int> mapGolesSinMinuto = {};
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 20),
-        const Text(
-          'Resumen de incidencias',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-        if (tieneGoles)
-          Card(
-            elevation: 1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
+      for (final g in goles) {
+        final nombre = g.nombreJugador.trim();
+        if (g.minuto != null && g.minuto! > 0) {
+          mapJugadorMinutos.putIfAbsent(nombre, () => []).add(g.minuto!);
+        } else {
+          mapGolesSinMinuto[nombre] = (mapGolesSinMinuto[nombre] ?? 0) + 1;
+        }
+      }
+
+      final List<String> resultado = [];
+      final todosNombres = {...mapJugadorMinutos.keys, ...mapGolesSinMinuto.keys}.toList();
+
+      for (final nom in todosNombres) {
+        final mins = mapJugadorMinutos[nom] ?? [];
+        mins.sort();
+        final sinMin = mapGolesSinMinuto[nom] ?? 0;
+
+        if (mins.isNotEmpty) {
+          final minsStr = mins.map((m) => "$m'").join(', ');
+          if (sinMin > 0) {
+            resultado.add('$nom ($minsStr, +$sinMin)');
+          } else {
+            resultado.add('$nom ($minsStr)');
+          }
+        } else {
+          if (sinMin > 1) {
+            resultado.add('$nom ($sinMin goles)');
+          } else {
+            resultado.add(nom);
+          }
+        }
+      }
+
+      return resultado;
+    }
+
+    final listaGolesLocal = formatearGolesEquipo(golesLocal);
+    final listaGolesVisitante = formatearGolesEquipo(golesVisitante);
+    final bool hayGoles = partido.goles.isNotEmpty;
+
+    // 2. Filtrar tarjetas por equipo
+    final tarjetasLocal = partido.tarjetas.where((t) {
+      if (localId != null && t.equipoId != null) {
+        return t.equipoId == localId;
+      }
+      return t.equipoNombre.toUpperCase() == partido.equipoLocalNombre.toUpperCase();
+    }).toList();
+
+    final tarjetasVisitante = partido.tarjetas.where((t) {
+      if (visitanteId != null && t.equipoId != null) {
+        return t.equipoId == visitanteId;
+      }
+      return t.equipoNombre.toUpperCase() == partido.equipoVisitanteNombre.toUpperCase();
+    }).toList();
+
+    final bool hayTarjetas = partido.tarjetas.isNotEmpty;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ==========================================
+            // SECCIÓN GOLES
+            // ==========================================
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0D233A).withAlpha(15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.sports_soccer,
+                    size: 20,
+                    color: Color(0xFF0D233A),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'Goles',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.3,
+                    color: Color(0xFF0D233A),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            if (!hayGoles)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.sports_soccer_outlined, size: 18, color: Colors.black38),
+                    SizedBox(width: 8),
+                    Text(
+                      'Sin goles registrados',
+                      style: TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 13.5,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.sports_soccer, size: 20, color: AppColors.primary),
-                      SizedBox(width: 8),
-                      Text('Goles', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    ],
+                  // Columna Local
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          partido.equipoLocalNombre.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF64748B),
+                            letterSpacing: 0.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        if (listaGolesLocal.isEmpty)
+                          const Text(
+                            '-',
+                            style: TextStyle(color: Colors.black38, fontSize: 13),
+                          )
+                        else
+                          ...listaGolesLocal.map((txt) => Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.sports_soccer,
+                                      size: 15,
+                                      color: Color(0xFF1E293B),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        txt,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                      ],
+                    ),
                   ),
-                  const Divider(),
-                  if (golesLocal.isNotEmpty) ...[
-                    Text('${det.partido.equipoLocalNombre}:', style: const TextStyle(fontWeight: FontWeight.w600)),
-                    ...golesLocal.map((g) => Padding(
-                          padding: const EdgeInsets.only(left: 8, top: 4),
-                          child: Text('• ${g.toString()}'),
-                        )),
-                    const SizedBox(height: 8),
-                  ],
-                  if (golesVisitante.isNotEmpty) ...[
-                    Text('${det.partido.equipoVisitanteNombre}:', style: const TextStyle(fontWeight: FontWeight.w600)),
-                    ...golesVisitante.map((g) => Padding(
-                          padding: const EdgeInsets.only(left: 8, top: 4),
-                          child: Text('• ${g.toString()}'),
-                        )),
-                  ],
+                  Container(
+                    width: 1,
+                    height: 50,
+                    color: const Color(0xFFE2E8F0),
+                    margin: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  // Columna Visitante
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          partido.equipoVisitanteNombre.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF64748B),
+                            letterSpacing: 0.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        if (listaGolesVisitante.isEmpty)
+                          const Text(
+                            '-',
+                            style: TextStyle(color: Colors.black38, fontSize: 13),
+                          )
+                        else
+                          ...listaGolesVisitante.map((txt) => Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.sports_soccer,
+                                      size: 15,
+                                      color: Color(0xFF1E293B),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        txt,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                      ],
+                    ),
+                  ),
                 ],
               ),
+
+            const SizedBox(height: 18),
+            const Divider(color: Color(0xFFE2E8F0), height: 1),
+            const SizedBox(height: 16),
+
+            // ==========================================
+            // SECCIÓN TARJETAS Y SANCIONES DISCIPLINARIAS
+            // ==========================================
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0D233A).withAlpha(15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.style,
+                    size: 20,
+                    color: Color(0xFF0D233A),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'Tarjetas y Sanciones Disciplinarias',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.3,
+                    color: Color(0xFF0D233A),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            if (!hayTarjetas)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.verified_outlined, size: 18, color: Colors.green),
+                    SizedBox(width: 8),
+                    Text(
+                      'Sin amonestaciones registradas',
+                      style: TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 13.5,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Tarjetas Local
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          partido.equipoLocalNombre.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF64748B),
+                            letterSpacing: 0.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        if (tarjetasLocal.isEmpty)
+                          const Text(
+                            '-',
+                            style: TextStyle(color: Colors.black38, fontSize: 13),
+                          )
+                        else
+                          ...tarjetasLocal.map((t) => _buildBadgeTarjeta(t)),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 50,
+                    color: const Color(0xFFE2E8F0),
+                    margin: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  // Tarjetas Visitante
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          partido.equipoVisitanteNombre.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF64748B),
+                            letterSpacing: 0.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        if (tarjetasVisitante.isEmpty)
+                          const Text(
+                            '-',
+                            style: TextStyle(color: Colors.black38, fontSize: 13),
+                          )
+                        else
+                          ...tarjetasVisitante.map((t) => _buildBadgeTarjeta(t)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadgeTarjeta(Tarjeta t) {
+    final esRoja = t.esRoja;
+    final Color badgeColor = esRoja ? const Color(0xFFD32F2F) : const Color(0xFFFBC02D);
+    final Color textColor = esRoja ? Colors.white : const Color(0xFF1F2937);
+    final String label = t.nombreJugador + (t.minuto != null ? " (${t.minuto}')" : '');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: badgeColor,
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(20),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 9,
+            height: 13,
+            decoration: BoxDecoration(
+              color: esRoja ? Colors.white : const Color(0xFFB78103),
+              borderRadius: BorderRadius.circular(1.5),
             ),
           ),
-        if (tieneTarjetas) ...[
-          const SizedBox(height: 10),
-          Card(
-            elevation: 1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.warning_amber_rounded, size: 20, color: Colors.orange),
-                      SizedBox(width: 8),
-                      Text('Tarjetas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    ],
-                  ),
-                  const Divider(),
-                  if (tarjetasLocal.isNotEmpty) ...[
-                    Text('${det.partido.equipoLocalNombre}:', style: const TextStyle(fontWeight: FontWeight.w600)),
-                    ...tarjetasLocal.map((t) => Padding(
-                          padding: const EdgeInsets.only(left: 8, top: 4),
-                          child: Text('• ${t.toString()}'),
-                        )),
-                    const SizedBox(height: 8),
-                  ],
-                  if (tarjetasVisitante.isNotEmpty) ...[
-                    Text('${det.partido.equipoVisitanteNombre}:', style: const TextStyle(fontWeight: FontWeight.w600)),
-                    ...tarjetasVisitante.map((t) => Padding(
-                          padding: const EdgeInsets.only(left: 8, top: 4),
-                          child: Text('• ${t.toString()}'),
-                        )),
-                  ],
-                ],
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 
@@ -449,6 +810,8 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
+                _construirSeccionIncidencias(det),
                 const SizedBox(height: 20),
                 if (SessionManager().isAuthenticated) ...[
                   Wrap(
@@ -508,7 +871,6 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                     partido.observaciones != null &&
                     partido.observaciones!.isNotEmpty)
                   filaDato(Icons.note_outlined, 'Observaciones', partido.observaciones!),
-                construirResumenIncidencias(det),
                 const SizedBox(height: 20),
               ],
             ),

@@ -23,6 +23,8 @@ class Gol {
     this.observacion,
   });
 
+  String get nombreJugador => jugadorNombre;
+
   factory Gol.fromJson(Map<String, dynamic> json) {
     int? jId;
     String jNombre = 'Jugador';
@@ -40,6 +42,11 @@ class Gol {
     } else if (rawJugador != null) {
       jNombre = rawJugador.toString();
     }
+    if (json['nombreJugador'] != null && json['nombreJugador'].toString().trim().isNotEmpty) {
+      jNombre = json['nombreJugador'].toString().trim();
+    } else if (json['jugadorNombre'] != null && json['jugadorNombre'].toString().trim().isNotEmpty) {
+      jNombre = json['jugadorNombre'].toString().trim();
+    }
     if (json['jugadorId'] != null) {
       jId = TextUtils.toInt(json['jugadorId']);
     }
@@ -52,6 +59,9 @@ class Gol {
       eqNombre = rawEquipo['nombre']?.toString().trim() ?? eqNombre;
     } else if (rawEquipo != null) {
       eqNombre = rawEquipo.toString();
+    }
+    if (json['equipoNombre'] != null && json['equipoNombre'].toString().trim().isNotEmpty) {
+      eqNombre = json['equipoNombre'].toString().trim();
     }
     if (json['equipoId'] != null) {
       eqId = TextUtils.toInt(json['equipoId']);
