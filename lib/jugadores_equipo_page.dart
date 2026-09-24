@@ -17,6 +17,8 @@ import 'widgets/public_age_group_section.dart';
 import 'widgets/public_navbar.dart';
 import 'widgets/team_logo_avatar.dart';
 
+import 'core/utils/ui_helpers.dart';
+import 'crear_jugador_page.dart';
 import 'jugador_detalle_page.dart';
 
 class JugadoresEquipoPage extends StatefulWidget {
@@ -166,6 +168,31 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
     }
   }
 
+  Future<void> _abrirInscripcion() async {
+    if (jugadores.length >= 23) {
+      UiHelpers.showError(
+        context,
+        'Este equipo ya ha alcanzado el límite reglamentario máximo de 23 jugadores inscritos.',
+      );
+      return;
+    }
+
+    final nuevoRegistrado = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CrearJugadorPage(
+          equipoIdInicial: widget.equipoId,
+          equipoNombreInicial: widget.equipoNombre,
+          token: widget.token,
+        ),
+      ),
+    );
+
+    if (nuevoRegistrado == true && mounted) {
+      cargarJugadores();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -187,9 +214,35 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
             }
 
             if (jugadores.isEmpty) {
-              return const AppEmptyView(
-                message: 'No hay jugadores registrados en este equipo.',
-                icon: Icons.person_off_outlined,
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const AppEmptyView(
+                        message: 'No hay jugadores registrados en este equipo.',
+                        icon: Icons.person_off_outlined,
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: _abrirInscripcion,
+                        icon: const Icon(Icons.person_add),
+                        label: const Text(
+                          'Inscribir Jugador',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               );
             }
 
@@ -342,6 +395,32 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 14),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: FilledButton.icon(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: jugadores.length >= 23
+                                        ? Colors.white24
+                                        : Colors.white,
+                                    foregroundColor: jugadores.length >= 23
+                                        ? Colors.white60
+                                        : const Color(0xFF0D233A),
+                                    elevation: 2,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  onPressed: _abrirInscripcion,
+                                  icon: const Icon(Icons.person_add, size: 18),
+                                  label: Text(
+                                    jugadores.length >= 23
+                                        ? 'Plantel Completo (23/23)'
+                                        : '+ Inscribir Jugador',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -364,6 +443,19 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
               ),
             );
           },
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor:
+            (jugadores.length >= 23) ? Colors.blueGrey : AppColors.primary,
+        onPressed: _abrirInscripcion,
+        icon: const Icon(Icons.person_add, color: Colors.white),
+        label: Text(
+          jugadores.length >= 23 ? 'Plantel Completo (23/23)' : 'Inscribir Jugador',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
       ),
     );

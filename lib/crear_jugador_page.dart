@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart';
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
-import 'core/utils/date_utils.dart';
 import 'core/utils/ui_helpers.dart';
 import 'models/equipo.dart';
 import 'models/jugador.dart';
@@ -14,23 +13,24 @@ import 'services/equipos_service.dart';
 import 'services/jugadores_service.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
-import 'widgets/player_avatar.dart';
 
-class EditarJugadorPage extends StatefulWidget {
-  final int jugadorId;
-  final String token;
+class CrearJugadorPage extends StatefulWidget {
+  final int? equipoIdInicial;
+  final String? equipoNombreInicial;
+  final String? token;
 
-  const EditarJugadorPage({
+  const CrearJugadorPage({
     super.key,
-    required this.jugadorId,
-    required this.token,
+    this.equipoIdInicial,
+    this.equipoNombreInicial,
+    this.token,
   });
 
   @override
-  State<EditarJugadorPage> createState() => _EditarJugadorPageState();
+  State<CrearJugadorPage> createState() => _CrearJugadorPageState();
 }
 
-class _EditarJugadorPageState extends State<EditarJugadorPage> {
+class _CrearJugadorPageState extends State<CrearJugadorPage> {
   final _formKey = GlobalKey<FormState>();
   final JugadoresService _jugadoresService = JugadoresService();
   final EquiposService _equiposService = EquiposService();
@@ -50,18 +50,19 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
   String? error;
 
   List<Equipo> equipos = [];
-  int? equipoId;
-  String equipoNombre = '';
-  String? equipoSigla;
-  String? fotoJugador;
-  String estado = 'PENDIENTE';
+  Map<int, int> conteoPorEquipo = {};
+  int? equipoIdSeleccionado;
+  String estado = 'ACTIVO';
 
   Uint8List? _nuevaFotoBytes;
   String? _nuevaFotoBase64;
 
+  static const int kMaxJugadoresPorEquipo = 23;
+
   @override
   void initState() {
     super.initState();
+    equipoIdSeleccionado = widget.equipoIdInicial;
     cargarDatos();
   }
 
@@ -77,6 +78,11 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
     super.dispose();
   }
 
+  String get _effectiveToken =>
+      (widget.token != null && widget.token!.isNotEmpty)
+          ? widget.token!
+          : SessionManager().token;
+
   Future<void> cargarDatos() async {
     setState(() {
       cargando = true;
@@ -85,32 +91,35 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
 
     try {
       final resultados = await Future.wait([
-        _jugadoresService.getJugadorById(widget.jugadorId, token: widget.token),
-        _equiposService.getEquipos(token: widget.token).catchError((_) => <Equipo>[]),
+        _equiposService.getEquipos(token: _effectiveToken),
+        _jugadoresService.getJugadores(token: _effectiveToken).catchError((_) => <Jugador>[]),
       ]);
 
-      final Jugador jugador = resultados[0] as Jugador;
-      final List<Equipo> listaEquipos = resultados[1] as List<Equipo>;
+      final listaEquipos = resultados[0] as List<Equipo>;
+      final listaJugadores = resultados[1] as List<Jugador>;
+
+      final mapConteo = <int, int>{};
+      for (final j in listaJugadores) {
+        if (j.estado.toUpperCase() != 'RECHAZADO') {
+          mapConteo[j.equipoId] = (mapConteo[j.equipoId] ?? 0) + 1;
+        }
+      }
+
+      listaEquipos.sort(
+        (a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()),
+      );
 
       if (mounted) {
         setState(() {
           equipos = listaEquipos;
-          equipoId = jugador.equipoId > 0 ? jugador.equipoId : null;
-          equipoNombre = jugador.equipoNombre ?? '';
-          equipoSigla = jugador.equipoSigla;
-          nombresCtrl.text = jugador.nombres;
-          apellidosCtrl.text = jugador.apellidos;
-          numeroCamisetaCtrl.text =
-              jugador.numeroCamiseta != null ? jugador.numeroCamiseta.toString() : '';
-          documentoCtrl.text = jugador.documento ?? '';
-          fechaNacimientoCtrl.text = AppDateUtils.formatDate(
-            jugador.fechaNacimiento,
-            defaultText: '',
-          );
-          posicionCtrl.text = jugador.posicion ?? '';
-          fotoJugador = jugador.fotoJugador;
-          estado = jugador.estado.isNotEmpty ? jugador.estado : 'PENDIENTE';
-          observacionCtrl.text = jugador.observacionAdmin ?? '';
+          conteoPorEquipo = mapConteo;
+
+          if (equipoIdSeleccionado == null && listaEquipos.isNotEmpty) {
+            final disponible = listaEquipos
+                .where((e) => (mapConteo[e.id] ?? e.cantidadJugadores) < kMaxJugadoresPorEquipo)
+                .firstOrNull;
+            equipoIdSeleccionado = disponible?.id ?? listaEquipos.first.id;
+          }
         });
       }
     } on AppException catch (e) {
@@ -164,25 +173,7 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
     });
   }
 
-  String get _equipoBadgeText {
-    if (equipoId != null) {
-      final eq = equipos.where((e) => e.id == equipoId).firstOrNull;
-      if (eq != null) {
-        return '${eq.nombre} (${eq.sigla})';
-      }
-    }
-    if (equipoNombre.isNotEmpty) {
-      if (equipoSigla != null &&
-          equipoSigla!.isNotEmpty &&
-          !equipoNombre.contains(equipoSigla!)) {
-        return '$equipoNombre ($equipoSigla)';
-      }
-      return equipoNombre;
-    }
-    return 'Sin equipo asignado';
-  }
-
-  Future<void> seleccionarFecha() async {
+  Future<void> _seleccionarFecha() async {
     DateTime fechaInicial = DateTime(2000, 1, 1);
     final actual = DateTime.tryParse(fechaNacimientoCtrl.text.trim());
     if (actual != null) {
@@ -207,13 +198,33 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
     });
   }
 
-  Future<void> guardarCambios() async {
+  int _conteoActualDelEquipo(int eqId) {
+    if (conteoPorEquipo.containsKey(eqId)) {
+      return conteoPorEquipo[eqId]!;
+    }
+    final eq = equipos.where((e) => e.id == eqId).firstOrNull;
+    return eq?.cantidadJugadores ?? 0;
+  }
+
+  bool _equipoEstaLleno(int eqId) {
+    return _conteoActualDelEquipo(eqId) >= kMaxJugadoresPorEquipo;
+  }
+
+  Future<void> registrarJugador() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    if (equipoId == null) {
-      UiHelpers.showError(context, 'El jugador debe tener un equipo asignado.');
+    if (equipoIdSeleccionado == null) {
+      UiHelpers.showError(context, 'Seleccione un equipo de destino.');
+      return;
+    }
+
+    if (_equipoEstaLleno(equipoIdSeleccionado!)) {
+      UiHelpers.showError(
+        context,
+        'El equipo seleccionado ya tiene el límite reglamentario de $kMaxJugadoresPorEquipo jugadores.',
+      );
       return;
     }
 
@@ -226,46 +237,33 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
       }
     }
 
-    String? fechaNacimiento;
-    if (fechaNacimientoCtrl.text.trim().isNotEmpty) {
-      final fecha = DateTime.tryParse(fechaNacimientoCtrl.text.trim());
-      if (fecha == null) {
-        UiHelpers.showError(context, 'La fecha de nacimiento no es válida.');
-        return;
-      }
-      fechaNacimiento = fecha.toIso8601String();
+    final fecha = DateTime.tryParse(fechaNacimientoCtrl.text.trim());
+    if (fecha == null) {
+      UiHelpers.showError(context, 'La fecha de nacimiento no es válida.');
+      return;
     }
 
     final body = <String, dynamic>{
-      'equipoId': equipoId,
+      'equipoId': equipoIdSeleccionado,
       'nombres': nombresCtrl.text.trim(),
       'apellidos': apellidosCtrl.text.trim(),
       'numeroCamiseta': numeroCamiseta,
       'documento': documentoCtrl.text.trim().isEmpty ? null : documentoCtrl.text.trim(),
-      'fechaNacimiento': fechaNacimiento,
+      'fechaNacimiento': fecha.toIso8601String(),
       'posicion': posicionCtrl.text.trim().isEmpty ? null : posicionCtrl.text.trim(),
-      'fotoJugador': _nuevaFotoBase64 ??
-          (fotoJugador != null && fotoJugador!.trim().isNotEmpty
-              ? fotoJugador!.trim()
-              : null),
+      'fotoJugador': _nuevaFotoBase64,
       'estado': estado,
       'observacionAdmin': observacionCtrl.text.trim().isEmpty ? null : observacionCtrl.text.trim(),
     };
 
-    setState(() {
-      guardando = true;
-    });
+    setState(() => guardando = true);
 
     try {
-      await _jugadoresService.updateJugador(
-        widget.jugadorId,
-        body,
-        token: widget.token,
-      );
+      await _jugadoresService.createJugador(body, token: _effectiveToken);
 
       if (!mounted) return;
-      UiHelpers.showSuccess(context, 'Jugador actualizado correctamente.');
-      await Future.delayed(const Duration(milliseconds: 300));
+      UiHelpers.showSuccess(context, '¡Jugador inscrito correctamente en el plantel!');
+      await Future.delayed(const Duration(milliseconds: 350));
       if (!mounted) return;
       Navigator.pop(context, true);
     } on AppException catch (e) {
@@ -273,7 +271,7 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
       UiHelpers.showError(context, e.message);
     } catch (_) {
       if (!mounted) return;
-      UiHelpers.showError(context, 'Error al actualizar el jugador.');
+      UiHelpers.showError(context, 'Error al inscribir el nuevo jugador.');
     } finally {
       if (mounted) setState(() => guardando = false);
     }
@@ -281,13 +279,16 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
 
   @override
   Widget build(BuildContext context) {
+    final bool equipoLleno =
+        equipoIdSeleccionado != null && _equipoEstaLleno(equipoIdSeleccionado!);
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
         title: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Editar jugador'),
+            const Text('Inscribir Jugador'),
             ListenableBuilder(
               listenable: SessionManager(),
               builder: (context, _) => Text(
@@ -321,7 +322,7 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
                   key: _formKey,
                   child: Column(
                     children: [
-                      // Avatar interactivo con vista previa y selección de fotografía
+                      // Avatar interactivo con preview y selección de fotografía
                       Stack(
                         alignment: Alignment.center,
                         children: [
@@ -352,8 +353,11 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
                                     ),
                                   )
                                 : Container(
+                                    width: 130,
+                                    height: 130,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
+                                      color: AppColors.primary.withAlpha(25),
                                       border: Border.all(
                                         color: AppColors.primary.withAlpha(90),
                                         width: 2.5,
@@ -366,11 +370,12 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
                                         ),
                                       ],
                                     ),
-                                    child: PlayerAvatar(
-                                      photoUrl: fotoJugador,
-                                      playerName:
-                                          '${nombresCtrl.text} ${apellidosCtrl.text}',
-                                      radius: 65,
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.person_add_alt_1,
+                                        size: 60,
+                                        color: AppColors.primary,
+                                      ),
                                     ),
                                   ),
                           ),
@@ -417,7 +422,11 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
                           OutlinedButton.icon(
                             onPressed: _seleccionarFoto,
                             icon: const Icon(Icons.photo_camera, size: 18),
-                            label: const Text('Cambiar fotografía'),
+                            label: Text(
+                              _nuevaFotoBytes != null
+                                  ? 'Cambiar fotografía'
+                                  : 'Seleccionar fotografía',
+                            ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.primary,
                               side: const BorderSide(color: AppColors.primary),
@@ -429,9 +438,9 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
                           if (_nuevaFotoBytes != null)
                             TextButton.icon(
                               onPressed: _deshacerFoto,
-                              icon: const Icon(Icons.undo, size: 18, color: Colors.red),
+                              icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
                               label: const Text(
-                                'Deshacer cambio',
+                                'Quitar foto',
                                 style: TextStyle(color: Colors.red),
                               ),
                             ),
@@ -439,78 +448,101 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Badge compacto y limpio del equipo
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withAlpha(20),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: AppColors.primary.withAlpha(70),
-                            width: 1.2,
+                      // Alerta si el equipo seleccionado ya tiene 23 inscritos
+                      if (equipoLleno)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.red.shade300),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.warning_amber_rounded, color: Colors.red.shade800),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Este equipo ha alcanzado el límite reglamentario máximo de $kMaxJugadoresPorEquipo jugadores inscritos.',
+                                  style: TextStyle(
+                                    color: Colors.red.shade900,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.shield, size: 18, color: AppColors.primary),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                _equipoBadgeText,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
 
-                      // Selector de Equipo para reasignación
+                      // Selector de Equipo de destino
                       DropdownButtonFormField<int>(
-                        initialValue: (equipoId != null && equipos.any((e) => e.id == equipoId))
-                            ? equipoId
-                            : null,
+                        initialValue: equipoIdSeleccionado,
                         decoration: const InputDecoration(
-                          labelText: 'Equipo asignado',
+                          labelText: 'Equipo de destino *',
                           prefixIcon: Icon(Icons.shield_outlined),
                           border: OutlineInputBorder(),
                         ),
                         items: equipos.map((e) {
+                          final cant = _conteoActualDelEquipo(e.id);
+                          final lleno = cant >= kMaxJugadoresPorEquipo;
+
                           return DropdownMenuItem<int>(
                             value: e.id,
-                            child: Text(
-                              '${e.nombre} (${e.sigla})',
-                              overflow: TextOverflow.ellipsis,
+                            enabled: !lleno,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '${e.nombre} (${e.sigla})',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: lleno ? Colors.grey : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: lleno
+                                        ? Colors.red.withAlpha(30)
+                                        : Colors.green.withAlpha(30),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    lleno ? 'LLENO (23/23)' : '$cant/23',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: lleno ? Colors.red.shade700 : Colors.green.shade800,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           );
                         }).toList(),
                         onChanged: (val) {
                           if (val != null) {
-                            final selected =
-                                equipos.where((e) => e.id == val).firstOrNull;
-                            setState(() {
-                              equipoId = val;
-                              if (selected != null) {
-                                equipoNombre = selected.nombre;
-                                equipoSigla = selected.sigla;
-                              }
-                            });
+                            setState(() => equipoIdSeleccionado = val);
                           }
                         },
-                        validator: (v) => v == null ? 'Seleccione un equipo.' : null,
+                        validator: (v) {
+                          if (v == null) return 'Seleccione el equipo de destino.';
+                          if (_equipoEstaLleno(v)) {
+                            return 'El equipo ya tiene 23 jugadores inscritos.';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 14),
 
                       TextFormField(
                         controller: nombresCtrl,
                         decoration: const InputDecoration(
-                          labelText: 'Nombres',
+                          labelText: 'Nombres *',
                           prefixIcon: Icon(Icons.person),
                           border: OutlineInputBorder(),
                         ),
@@ -521,7 +553,7 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
                       TextFormField(
                         controller: apellidosCtrl,
                         decoration: const InputDecoration(
-                          labelText: 'Apellidos',
+                          labelText: 'Apellidos *',
                           prefixIcon: Icon(Icons.person_outline),
                           border: OutlineInputBorder(),
                         ),
@@ -542,7 +574,7 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
                       TextFormField(
                         controller: documentoCtrl,
                         decoration: const InputDecoration(
-                          labelText: 'Documento',
+                          labelText: 'Documento de identidad',
                           prefixIcon: Icon(Icons.badge),
                           border: OutlineInputBorder(),
                         ),
@@ -551,9 +583,9 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
                       TextFormField(
                         controller: fechaNacimientoCtrl,
                         readOnly: true,
-                        onTap: seleccionarFecha,
+                        onTap: _seleccionarFecha,
                         decoration: const InputDecoration(
-                          labelText: 'Fecha de nacimiento (AAAA-MM-DD)',
+                          labelText: 'Fecha de nacimiento (AAAA-MM-DD) *',
                           prefixIcon: Icon(Icons.calendar_today),
                           suffixIcon: Icon(Icons.arrow_drop_down),
                           border: OutlineInputBorder(),
@@ -595,17 +627,16 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
                       ),
                       const SizedBox(height: 14),
                       DropdownButtonFormField<String>(
-                        initialValue: estado.isEmpty ? 'PENDIENTE' : estado,
+                        initialValue: estado,
                         decoration: const InputDecoration(
-                          labelText: 'Estado',
+                          labelText: 'Estado de inscripción',
                           prefixIcon: Icon(Icons.verified),
                           border: OutlineInputBorder(),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'PENDIENTE', child: Text('PENDIENTE')),
-                          DropdownMenuItem(value: 'VALIDADO', child: Text('VALIDADO')),
                           DropdownMenuItem(value: 'ACTIVO', child: Text('ACTIVO')),
-                          DropdownMenuItem(value: 'RECHAZADO', child: Text('RECHAZADO')),
+                          DropdownMenuItem(value: 'VALIDADO', child: Text('VALIDADO')),
+                          DropdownMenuItem(value: 'PENDIENTE', child: Text('PENDIENTE')),
                         ],
                         onChanged: (val) {
                           if (val != null) setState(() => estado = val);
@@ -627,12 +658,13 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
                         height: 52,
                         child: FilledButton.icon(
                           style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.primary,
+                            backgroundColor:
+                                equipoLleno ? Colors.grey : AppColors.primary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          onPressed: guardando ? null : guardarCambios,
+                          onPressed: (guardando || equipoLleno) ? null : registrarJugador,
                           icon: guardando
                               ? const SizedBox(
                                   width: 20,
@@ -642,9 +674,9 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
                                     color: Colors.white,
                                   ),
                                 )
-                              : const Icon(Icons.save),
+                              : const Icon(Icons.person_add),
                           label: Text(
-                            guardando ? 'GUARDANDO...' : 'GUARDAR CAMBIOS',
+                            guardando ? 'INSCRIBIENDO...' : 'INSCRIBIR JUGADOR',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),

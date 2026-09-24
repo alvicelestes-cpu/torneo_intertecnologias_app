@@ -14,6 +14,7 @@ import 'widgets/app_loading_indicator.dart';
 import 'widgets/public_navbar.dart';
 import 'widgets/public_team_card.dart';
 
+import 'crear_jugador_page.dart';
 import 'jugadores_equipo_page.dart';
 
 class EquiposPage extends StatefulWidget {
@@ -129,6 +130,19 @@ class _EquiposPageState extends State<EquiposPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _abrirInscripcion() async {
+    final nuevoRegistrado = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CrearJugadorPage(token: widget.token),
+      ),
+    );
+
+    if (nuevoRegistrado == true && mounted) {
+      cargarEquipos();
+    }
   }
 
   @override
@@ -305,6 +319,15 @@ class _EquiposPageState extends State<EquiposPage> {
               ),
             );
           },
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.primary,
+        onPressed: _abrirInscripcion,
+        icon: const Icon(Icons.person_add, color: Colors.white),
+        label: const Text(
+          'Inscribir Jugador',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
       ),
     );

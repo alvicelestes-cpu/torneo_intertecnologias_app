@@ -62,4 +62,21 @@ class JugadoresService {
       token: token,
     );
   }
+
+  Future<Jugador> createJugador(Map<String, dynamic> data, {String? token}) async {
+    final response = await _apiClient.post(
+      ApiConstants.jugadores,
+      body: data,
+      token: token,
+    );
+
+    if (response is Map<String, dynamic>) {
+      if (response['jugador'] is Map) {
+        return Jugador.fromJson(Map<String, dynamic>.from(response['jugador'] as Map));
+      }
+      return Jugador.fromJson(response);
+    }
+
+    throw const AppException('No se pudo crear el jugador.');
+  }
 }

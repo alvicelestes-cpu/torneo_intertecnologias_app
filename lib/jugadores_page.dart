@@ -16,6 +16,7 @@ import 'widgets/app_loading_indicator.dart';
 import 'widgets/public_age_group_section.dart';
 import 'widgets/public_navbar.dart';
 
+import 'crear_jugador_page.dart';
 import 'jugador_detalle_page.dart';
 
 class JugadoresPage extends StatefulWidget {
@@ -183,6 +184,19 @@ class _JugadoresPageState extends State<JugadoresPage> {
     }
   }
 
+  Future<void> _abrirInscripcion() async {
+    final nuevoRegistrado = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CrearJugadorPage(token: widget.token),
+      ),
+    );
+
+    if (nuevoRegistrado == true && mounted) {
+      cargarJugadores();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -305,6 +319,15 @@ class _JugadoresPageState extends State<JugadoresPage> {
               ),
             );
           },
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.primary,
+        onPressed: _abrirInscripcion,
+        icon: const Icon(Icons.person_add, color: Colors.white),
+        label: const Text(
+          'Inscribir Jugador',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
       ),
     );

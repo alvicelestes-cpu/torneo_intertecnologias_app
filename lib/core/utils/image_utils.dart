@@ -16,7 +16,10 @@ class ImageUtils {
     if (!isValidImageUrl(path)) return '';
 
     final valor = path.toString().trim();
-    if (valor.startsWith('http://') || valor.startsWith('https://')) {
+    if (valor.startsWith('http://') ||
+        valor.startsWith('https://') ||
+        valor.startsWith('data:') ||
+        valor.startsWith('blob:')) {
       return valor;
     }
 

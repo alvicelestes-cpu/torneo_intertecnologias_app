@@ -41,16 +41,49 @@ class Jugador {
   });
 
   factory Jugador.fromJson(Map<String, dynamic> json) {
+    Map<String, dynamic>? equipoMap;
+    if (json['equipo'] is Map) {
+      equipoMap = Map<String, dynamic>.from(json['equipo'] as Map);
+    }
+
+    final parsedEquipoId = TextUtils.toInt(
+      json['equipoId'] ?? json['equipo_id'] ?? equipoMap?['id'] ?? equipoMap?['Id'],
+    );
+
+    String? parsedEquipoNombre = json['equipoNombre']?.toString().trim();
+    if (parsedEquipoNombre == null || parsedEquipoNombre.isEmpty) {
+      if (equipoMap != null) {
+        parsedEquipoNombre = (equipoMap['nombre'] ?? equipoMap['Nombre'])?.toString().trim();
+      } else if (json['equipo'] != null && json['equipo'] is! Map) {
+        final val = json['equipo'].toString().trim();
+        if (!val.startsWith('{')) {
+          parsedEquipoNombre = val;
+        }
+      }
+    }
+    if (parsedEquipoNombre != null && parsedEquipoNombre.startsWith('{')) {
+      parsedEquipoNombre = null;
+    }
+
+    final parsedEquipoSigla = json['equipoSigla']?.toString().trim() ??
+        json['siglaEquipo']?.toString().trim() ??
+        json['sigla']?.toString().trim() ??
+        equipoMap?['sigla']?.toString().trim() ??
+        equipoMap?['Sigla']?.toString().trim();
+
+    final parsedEquipoColor = json['equipoColor']?.toString().trim() ??
+        json['colorPrincipal']?.toString().trim() ??
+        json['color']?.toString().trim() ??
+        equipoMap?['colorPrincipal']?.toString().trim() ??
+        equipoMap?['ColorPrincipal']?.toString().trim() ??
+        equipoMap?['color']?.toString().trim();
+
     return Jugador(
       id: TextUtils.toInt(json['id']),
-      equipoId: TextUtils.toInt(json['equipoId'] ?? json['equipo_id']),
-      equipoNombre: json['equipoNombre']?.toString() ?? json['equipo']?.toString(),
-      equipoSigla: json['equipoSigla']?.toString().trim() ??
-          json['siglaEquipo']?.toString().trim() ??
-          json['sigla']?.toString().trim(),
-      equipoColor: json['equipoColor']?.toString().trim() ??
-          json['colorPrincipal']?.toString().trim() ??
-          json['color']?.toString().trim(),
+      equipoId: parsedEquipoId,
+      equipoNombre: parsedEquipoNombre,
+      equipoSigla: parsedEquipoSigla,
+      equipoColor: parsedEquipoColor,
       nombres: json['nombres']?.toString().trim() ?? '',
       apellidos: json['apellidos']?.toString().trim() ?? '',
       numeroCamiseta: json['numeroCamiseta'] != null
