@@ -13,6 +13,7 @@ import 'services/torneo_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
+import 'widgets/boton_generar_fase.dart';
 import 'widgets/public_jornada_accordion.dart';
 import 'widgets/public_navbar.dart';
 
@@ -331,6 +332,12 @@ class _PartidosPageState extends State<PartidosPage> {
                       partidos: seccion.partidos,
                       esPendiente: seccion.esPendiente,
                       mensajePendiente: seccion.mensajePendiente,
+                      adminAction: BotonGenerarFase(
+                        fase: seccion.fase,
+                        todosLosPartidos: partidos,
+                        faseGenerada: !seccion.esPendiente && seccion.partidos.isNotEmpty,
+                        onFaseGenerada: cargarPartidos,
+                      ),
                       initiallyExpanded: seccion.id == seccionInicialId,
                       onPartidoTap: (partido) => _abrirPartido(partido.id),
                     );

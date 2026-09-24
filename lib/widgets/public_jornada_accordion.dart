@@ -15,6 +15,7 @@ class PublicJornadaAccordion extends StatefulWidget {
   final bool initiallyExpanded;
   final bool esPendiente;
   final String? mensajePendiente;
+  final Widget? adminAction;
   final void Function(Partido partido)? onPartidoTap;
 
   const PublicJornadaAccordion({
@@ -29,6 +30,7 @@ class PublicJornadaAccordion extends StatefulWidget {
     this.initiallyExpanded = false,
     this.esPendiente = false,
     this.mensajePendiente,
+    this.adminAction,
     this.onPartidoTap,
   });
 
@@ -270,8 +272,8 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                           : null,
                     ),
                     child: Text(
-                      widget.esPendiente
-                          ? (cantPartidos > 0 ? '$cantPartidos por definir' : 'Pendiente')
+                      widget.esPendiente || cantPartidos == 0
+                          ? 'Pendiente'
                           : '$cantPartidos ${cantPartidos == 1 ? 'partido' : 'partidos'}',
                       style: TextStyle(
                         fontSize: 11,
@@ -326,20 +328,42 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                         ],
                       ),
                     ),
+                  if (widget.adminAction != null) widget.adminAction!,
                   if (widget.partidos.isEmpty)
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Center(
-                        child: Text(
-                          widget.esPendiente
-                              ? 'Enfrentamientos pendientes de definición por clasificación.'
-                              : 'No hay partidos registrados en esta jornada.',
-                          style: const TextStyle(
-                            color: Color(0xFF64748B),
-                            fontWeight: FontWeight.w500,
-                            fontSize: 13,
+                      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: const Icon(
+                              Icons.hourglass_top_rounded,
+                              size: 26,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          Text(
+                            widget.esPendiente
+                                ? (widget.mensajePendiente ??
+                                    'Fase pendiente de inicio. Los cruces se habilitarán una vez concluyan los encuentros de la fase anterior.')
+                                : 'No hay partidos registrados en esta jornada.',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Color(0xFF475569),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
                       ),
                     )
                   else

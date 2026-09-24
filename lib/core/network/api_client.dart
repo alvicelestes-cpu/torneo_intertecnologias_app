@@ -41,6 +41,7 @@ class ApiClient {
         lowerPath.startsWith('/api/goles') ||
         lowerPath.startsWith('/api/tarjetas') ||
         lowerPath.startsWith('/api/goleadores') ||
+        lowerPath.startsWith('/api/fases') ||
         lowerPath.startsWith('/api/torneo');
   }
 

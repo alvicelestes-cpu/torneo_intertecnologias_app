@@ -19,6 +19,7 @@ import 'package:torneo_intertecnologias_app/models/jugador.dart';
 import 'package:torneo_intertecnologias_app/models/partido.dart';
 import 'package:torneo_intertecnologias_app/models/posicion.dart';
 import 'package:torneo_intertecnologias_app/services/jugadores_service.dart';
+import 'package:torneo_intertecnologias_app/widgets/boton_generar_fase.dart';
 import 'package:torneo_intertecnologias_app/widgets/public_team_card.dart';
 
 void main() {
@@ -282,11 +283,11 @@ void main() {
   });
 
   group('Fixture y Fases Posteriores (FixtureUtils)', () {
-    test('Construye las 5 fases reglamentarias del torneo incluso sin partidos jugados', () {
+    test('Construye las 5 fases reglamentarias en limpio cuando están pendientes (sin partidos ficticios)', () {
       final sections = FixtureUtils.buildTournamentSections(partidos: []);
 
-      // 7 Jornadas de Primera Fase + Cuadrangular Grupo A + Cuadrangular Grupo B + Cuartos de Final + Semifinal + Gran Final = 12 secciones
-      expect(sections.length, equals(12));
+      // 7 Jornadas de Primera Fase + Segunda Ronda (1 sección limpia) + Cuartos de Final + Semifinal + Gran Final = 11 secciones
+      expect(sections.length, equals(11));
 
       // 1. Primera Fase: Jornadas 1 a 7
       for (int j = 1; j <= 7; j++) {
@@ -296,62 +297,40 @@ void main() {
         expect(sec.titulo, equals('Jornada $j'));
       }
 
-      // 2. Segunda Ronda: Cuadrangulares Grupo A y Grupo B
-      final grupoA = sections.firstWhere((s) => s.id == 'cuadrangular_grupo_a');
-      expect(grupoA.fase, equals(TournamentPhase.segundaRonda));
-      expect(grupoA.titulo, contains('Grupo A'));
-      expect(grupoA.subtitulo, contains('1°, 3°, 5° y 7°'));
-      expect(grupoA.subtitulo, contains('Punto Invisible'));
-      expect(grupoA.esPendiente, isTrue);
-      expect(grupoA.mensajePendiente, contains('Punto Invisible'));
-      expect(grupoA.partidos.length, equals(6));
+      // 2. Segunda Ronda: Cuadrangulares (pendiente de generación)
+      final segundaRonda = sections.firstWhere((s) => s.id == 'segunda_ronda');
+      expect(segundaRonda.fase, equals(TournamentPhase.segundaRonda));
+      expect(segundaRonda.titulo, contains('Segunda Ronda'));
+      expect(segundaRonda.esPendiente, isTrue);
+      expect(segundaRonda.partidos, isEmpty);
+      expect(segundaRonda.mensajePendiente, contains('Fase pendiente de inicio. Los cruces se habilitarán una vez concluyan los encuentros de la fase anterior'));
 
-      final grupoB = sections.firstWhere((s) => s.id == 'cuadrangular_grupo_b');
-      expect(grupoB.fase, equals(TournamentPhase.segundaRonda));
-      expect(grupoB.titulo, contains('Grupo B'));
-      expect(grupoB.subtitulo, contains('2°, 4°, 6° y 8°'));
-      expect(grupoB.subtitulo, contains('Punto Invisible'));
-      expect(grupoB.esPendiente, isTrue);
-      expect(grupoB.mensajePendiente, contains('Punto Invisible'));
-      expect(grupoB.partidos.length, equals(6));
-
-      // 3. Tercera Ronda: Cuartos de Final (4 llaves)
+      // 3. Tercera Ronda: Cuartos de Final (pendiente de generación)
       final cuartos = sections.firstWhere((s) => s.id == 'cuartos_de_final');
       expect(cuartos.fase, equals(TournamentPhase.terceraRonda));
       expect(cuartos.titulo, contains('Cuartos de Final'));
       expect(cuartos.esPendiente, isTrue);
-      expect(cuartos.partidos.length, equals(4));
-      expect(cuartos.partidos[0].equipoLocalNombre, contains('1° Grupo A'));
-      expect(cuartos.partidos[0].equipoVisitanteNombre, contains('4° Grupo B'));
-      expect(cuartos.partidos[1].equipoLocalNombre, contains('2° Grupo A'));
-      expect(cuartos.partidos[1].equipoVisitanteNombre, contains('3° Grupo B'));
-      expect(cuartos.partidos[2].equipoLocalNombre, contains('1° Grupo B'));
-      expect(cuartos.partidos[2].equipoVisitanteNombre, contains('4° Grupo A'));
-      expect(cuartos.partidos[3].equipoLocalNombre, contains('2° Grupo B'));
-      expect(cuartos.partidos[3].equipoVisitanteNombre, contains('3° Grupo A'));
+      expect(cuartos.partidos, isEmpty);
+      expect(cuartos.mensajePendiente, contains('Fase pendiente de inicio'));
 
-      // 4. Cuarta Ronda: Semifinal (2 llaves)
+      // 4. Cuarta Ronda: Semifinal (pendiente de generación)
       final semifinal = sections.firstWhere((s) => s.id == 'semifinal');
       expect(semifinal.fase, equals(TournamentPhase.cuartaRonda));
       expect(semifinal.titulo, contains('Semifinales'));
       expect(semifinal.esPendiente, isTrue);
-      expect(semifinal.partidos.length, equals(2));
-      expect(semifinal.partidos[0].equipoLocalNombre, contains('Ganador Llave 1'));
-      expect(semifinal.partidos[0].equipoVisitanteNombre, contains('Ganador Llave 4'));
-      expect(semifinal.partidos[1].equipoLocalNombre, contains('Ganador Llave 3'));
-      expect(semifinal.partidos[1].equipoVisitanteNombre, contains('Ganador Llave 2'));
+      expect(semifinal.partidos, isEmpty);
+      expect(semifinal.mensajePendiente, contains('Fase pendiente de inicio'));
 
-      // 5. Quinta Ronda: Gran Final y Tercer Puesto
+      // 5. Quinta Ronda: Gran Final (pendiente de generación)
       final granFinal = sections.firstWhere((s) => s.id == 'gran_final');
       expect(granFinal.fase, equals(TournamentPhase.quintaRonda));
       expect(granFinal.titulo, contains('Gran Final'));
       expect(granFinal.esPendiente, isTrue);
-      expect(granFinal.partidos.length, equals(2));
-      expect(granFinal.partidos[0].equipoLocalNombre, contains('Ganador Semifinal 1'));
-      expect(granFinal.partidos[1].equipoLocalNombre, contains('Perdedor Semifinal 1'));
+      expect(granFinal.partidos, isEmpty);
+      expect(granFinal.mensajePendiente, contains('Fase pendiente de inicio'));
     });
 
-    test('Siembra equipos reales en Cuadrangulares cuando se provee la tabla de posiciones', () {
+    test('NO genera partidos predictivos tentativos con nombres reales aunque se provea tabla de posiciones', () {
       Posicion crearPos({
         required int pos,
         required int equipoId,
@@ -391,25 +370,10 @@ void main() {
         posiciones: mockPosiciones,
       );
 
-      final grupoA = sections.firstWhere((s) => s.id == 'cuadrangular_grupo_a');
-      final nombresEquiposA = grupoA.partidos
-          .expand((p) => [p.equipoLocalNombre, p.equipoVisitanteNombre])
-          .toSet();
-      expect(nombresEquiposA.any((n) => n.contains('DEP ELITE')), isTrue);
-      expect(nombresEquiposA.any((n) => n.contains('CONEXIÓN DIGITAL')), isTrue);
-      expect(nombresEquiposA.any((n) => n.contains('TELEMATIK')), isTrue);
-      expect(nombresEquiposA.any((n) => n.contains('INPEC')), isTrue);
-      expect(nombresEquiposA.any((n) => n.contains('CEMENTEROS')), isFalse);
-
-      final grupoB = sections.firstWhere((s) => s.id == 'cuadrangular_grupo_b');
-      final nombresEquiposB = grupoB.partidos
-          .expand((p) => [p.equipoLocalNombre, p.equipoVisitanteNombre])
-          .toSet();
-      expect(nombresEquiposB.any((n) => n.contains('CEMENTEROS')), isTrue);
-      expect(nombresEquiposB.any((n) => n.contains('TIENDA RACING FC')), isTrue);
-      expect(nombresEquiposB.any((n) => n.contains('GREMIO HFC')), isTrue);
-      expect(nombresEquiposB.any((n) => n.contains('TIGO CITY')), isTrue);
-      expect(nombresEquiposB.any((n) => n.contains('DEP ELITE')), isFalse);
+      final segundaRonda = sections.firstWhere((s) => s.id == 'segunda_ronda');
+      expect(segundaRonda.esPendiente, isTrue);
+      expect(segundaRonda.partidos, isEmpty);
+      expect(segundaRonda.mensajePendiente, contains('Fase pendiente de inicio'));
     });
 
     test('Carga automáticamente partidos reales de cuadrangular cuando el backend los provee', () {
@@ -430,6 +394,78 @@ void main() {
       expect(grupoA.partidos.length, equals(1));
       expect(grupoA.partidos.first.id, equals(162));
       expect(grupoA.partidos.first.equipoLocalNombre, equals('INPEC FC'));
+    });
+  });
+
+  group('BotonGenerarFase - Control de acceso y visualización administrativa', () {
+    setUp(() {
+      SessionManager().clearSession();
+    });
+
+    testWidgets('Visitante anónimo no ve el botón de generación', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BotonGenerarFase(
+              fase: TournamentPhase.segundaRonda,
+              todosLosPartidos: const [],
+              faseGenerada: false,
+              onFaseGenerada: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(ElevatedButton), findsNothing);
+      expect(find.text('⚡ Generar Cuadrangulares (Grupos A y B)'), findsNothing);
+    });
+
+    testWidgets('Administrador ve el botón de generación de fase', (WidgetTester tester) async {
+      SessionManager().setSession(const AuthUser(
+        token: 'token-admin',
+        usuario: 'admin',
+        rol: 'ADMIN',
+      ));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BotonGenerarFase(
+              fase: TournamentPhase.segundaRonda,
+              todosLosPartidos: const [],
+              faseGenerada: false,
+              onFaseGenerada: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(ElevatedButton), findsOneWidget);
+      expect(find.text('⚡ Generar Cuadrangulares (Grupos A y B)'), findsOneWidget);
+    });
+
+    testWidgets('Muestra badge "✓ Fase Generada" cuando la fase ya fue generada', (WidgetTester tester) async {
+      SessionManager().setSession(const AuthUser(
+        token: 'token-admin',
+        usuario: 'admin',
+        rol: 'ADMIN',
+      ));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BotonGenerarFase(
+              fase: TournamentPhase.segundaRonda,
+              todosLosPartidos: const [],
+              faseGenerada: true,
+              onFaseGenerada: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('✓ Fase Generada (Cruces Oficiales Activos)'), findsOneWidget);
+      expect(find.byType(ElevatedButton), findsNothing);
     });
   });
 

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
+import 'models/partido.dart';
 import 'models/posicion.dart';
+import 'services/partidos_service.dart';
 import 'services/torneo_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
@@ -25,10 +27,12 @@ class PosicionesPage extends StatefulWidget {
 
 class _PosicionesPageState extends State<PosicionesPage> {
   final TorneoService _torneoService = TorneoService();
+  final PartidosService _partidosService = PartidosService();
 
   bool cargando = true;
   String? error;
   List<Posicion> posiciones = [];
+  bool segundaRondaGenerada = false;
   int _tabFase = 0; // 0: Primera Fase, 1: Segunda Ronda (Cuadrangulares)
 
   @override
@@ -55,10 +59,22 @@ class _PosicionesPageState extends State<PosicionesPage> {
     });
 
     try {
-      final list = await _torneoService.getPosiciones(token: widget.token);
+      final resultados = await Future.wait([
+        _torneoService.getPosiciones(token: widget.token),
+        _partidosService.getPartidos(token: widget.token).catchError((_) => <Partido>[]),
+      ]);
+
+      final list = resultados[0] as List<Posicion>;
+      final partidos = resultados[1] as List<Partido>;
+      final bool generada = partidos.any((p) {
+        final f = p.fase?.toUpperCase().trim() ?? '';
+        return f.contains('SEGUNDA') || f.contains('CUADRANGULAR') || p.jornada == 8;
+      });
+
       if (mounted) {
         setState(() {
           posiciones = list;
+          segundaRondaGenerada = generada;
         });
       }
     } on AppException catch (e) {
@@ -380,18 +396,55 @@ class _PosicionesPageState extends State<PosicionesPage> {
   }
 
   Widget _construirVistaCuadrangulares() {
-    if (posiciones.length < 8) {
+    if (!segundaRondaGenerada || posiciones.length < 8) {
       return Card(
         elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
         color: Colors.white,
-        child: const Padding(
-          padding: EdgeInsets.all(24),
-          child: Center(
-            child: Text(
-              'Esperando el registro de los 8 equipos para la siembra de Cuadrangulares.',
-              style: TextStyle(color: Color(0xFF64748B)),
-            ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Icon(
+                  Icons.hourglass_top_rounded,
+                  size: 28,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Fase pendiente de inicio. Los cruces se habilitarán una vez concluyan los encuentros de la fase anterior.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFF334155),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Las tablas de los cuadrangulares se publicarán oficialmente una vez finalicen las 7 jornadas de la Primera Fase y el administrador genere la ronda.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.normal,
+                  fontSize: 12.5,
+                ),
+              ),
+            ],
           ),
         ),
       );

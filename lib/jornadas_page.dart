@@ -15,6 +15,7 @@ import 'services/torneo_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
+import 'widgets/boton_generar_fase.dart';
 import 'widgets/public_jornada_accordion.dart';
 import 'widgets/public_navbar.dart';
 
@@ -39,6 +40,7 @@ class _JornadasPageState extends State<JornadasPage> {
   String? error;
   int cantidadJornadas = 0;
   List<Jornada> jornadas = [];
+  List<Partido> todosPartidos = [];
   List<FixtureSection> seccionesFixture = [];
   List<Posicion> posiciones = [];
   String faseSeleccionada = 'TODAS';
@@ -91,6 +93,7 @@ class _JornadasPageState extends State<JornadasPage> {
         setState(() {
           cantidadJornadas = resJornadas.cantidadJornadas;
           jornadas = sortedJornadas;
+          todosPartidos = listaPartidos;
           seccionesFixture = sections;
           posiciones = listaPosiciones;
         });
@@ -339,6 +342,12 @@ class _JornadasPageState extends State<JornadasPage> {
                         partidos: seccion.partidos,
                         esPendiente: seccion.esPendiente,
                         mensajePendiente: seccion.mensajePendiente,
+                        adminAction: BotonGenerarFase(
+                          fase: seccion.fase,
+                          todosLosPartidos: todosPartidos,
+                          faseGenerada: !seccion.esPendiente && seccion.partidos.isNotEmpty,
+                          onFaseGenerada: cargarJornadas,
+                        ),
                         initiallyExpanded: seccion.id == seccionInicialId,
                         onPartidoTap: (partido) => _abrirPartido(partido.id),
                       );

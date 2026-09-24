@@ -57,6 +57,13 @@ class ApiConstants {
   static const String goleadores = '$baseUrl/api/goleadores';
   static const String estadisticas = '$baseUrl/api/estadisticas';
 
+  // Fases Eliminatorias
+  static const String fasesEstado = '$baseUrl/api/fases/estado';
+  static const String generarSegundaRonda = '$baseUrl/api/fases/generar-segunda-ronda';
+  static const String generarCuartos = '$baseUrl/api/fases/generar-cuartos';
+  static const String generarSemifinales = '$baseUrl/api/fases/generar-semifinales';
+  static const String generarFinal = '$baseUrl/api/fases/generar-final';
+
   // Headers por defecto con soporte multitorneo
   static Map<String, String> defaultHeaders({String? token, int? campeonatoId}) {
     final headers = <String, String>{
