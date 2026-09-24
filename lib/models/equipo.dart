@@ -24,11 +24,24 @@ class Equipo {
   });
 
   factory Equipo.fromJson(Map<String, dynamic> json) {
+    final nombre = json['nombre']?.toString().trim() ?? 'Sin nombre';
+    final sigla = json['sigla']?.toString().trim() ?? '';
+    String? logo = json['logo']?.toString().trim();
+    if (logo == null || logo.isEmpty || logo == 'string' || logo == 'null') {
+      final upperNombre = nombre.toUpperCase();
+      final upperSigla = sigla.toUpperCase();
+      if (upperNombre.contains('RACING') || upperSigla == 'TRF' || upperSigla == 'TR') {
+        logo = 'assets/logos/tienda_racing.png';
+      } else {
+        logo = null;
+      }
+    }
+
     return Equipo(
       id: TextUtils.toInt(json['id']),
-      nombre: json['nombre']?.toString().trim() ?? 'Sin nombre',
-      sigla: json['sigla']?.toString().trim() ?? '',
-      logo: json['logo']?.toString().trim(),
+      nombre: nombre,
+      sigla: sigla,
+      logo: logo,
       colorPrincipal: json['colorPrincipal']?.toString().trim() ??
           json['color_principal']?.toString().trim() ??
           json['color']?.toString().trim(),

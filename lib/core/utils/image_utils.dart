@@ -23,10 +23,31 @@ class ImageUtils {
       return valor;
     }
 
+    if (valor.startsWith('assets/')) {
+      return valor;
+    }
+
     if (valor.startsWith('/')) {
       return '${ApiConstants.baseUrl}$valor';
     }
 
     return '${ApiConstants.baseUrl}/$valor';
+  }
+
+  static String? resolveTeamLogo(String? logo, {String? teamName, String? sigla}) {
+    if (isValidImageUrl(logo)) {
+      final clean = logo!.trim();
+      if (clean.toLowerCase() != 'null' && clean.toLowerCase() != 'string') {
+        return clean;
+      }
+    }
+
+    final nameUpper = teamName?.toUpperCase() ?? '';
+    final siglaUpper = sigla?.toUpperCase() ?? '';
+    if (nameUpper.contains('RACING') || siglaUpper == 'TRF' || siglaUpper == 'TR') {
+      return 'assets/logos/tienda_racing.png';
+    }
+
+    return null;
   }
 }

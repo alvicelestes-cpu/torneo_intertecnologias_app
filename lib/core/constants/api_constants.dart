@@ -17,6 +17,8 @@ class ApiConstants {
 
   // Equipos
   static const String equipos = '$baseUrl/api/equipos';
+  static String equipoDetalle(int equipoId) =>
+      '$baseUrl/api/equipos/$equipoId';
   static String equipoJugadores(int equipoId) =>
       '$baseUrl/api/equipos/$equipoId/jugadores';
 

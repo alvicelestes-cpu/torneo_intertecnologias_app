@@ -19,6 +19,7 @@ import 'widgets/team_logo_avatar.dart';
 
 import 'core/utils/ui_helpers.dart';
 import 'crear_jugador_page.dart';
+import 'editar_equipo_page.dart';
 import 'jugador_detalle_page.dart';
 
 class JugadoresEquipoPage extends StatefulWidget {
@@ -95,6 +96,7 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
           equipoNombre: widget.equipoNombre,
           equipoSigla: equipoEncontrado?.sigla ?? j.equipoSigla,
           equipoColor: equipoEncontrado?.colorPrincipal ?? j.equipoColor,
+          equipoLogo: equipoEncontrado?.logo ?? j.equipoLogo,
           goles: totalGoles,
         );
       }).toList();
@@ -189,6 +191,29 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
     );
 
     if (nuevoRegistrado == true && mounted) {
+      cargarJugadores();
+    }
+  }
+
+  Future<void> _abrirEditarEquipo() async {
+    final eq = equipoInfo ??
+        Equipo(
+          id: widget.equipoId,
+          nombre: widget.equipoNombre,
+          sigla: '',
+        );
+
+    final actualizado = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditarEquipoPage(
+          equipo: eq,
+          token: widget.token,
+        ),
+      ),
+    );
+
+    if (actualizado == true && mounted) {
       cargarJugadores();
     }
   }
@@ -322,25 +347,52 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                               // Escudo, Nombre del club y Badge inscritos
                               Row(
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white70, width: 2),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Colors.black26,
-                                          blurRadius: 6,
-                                          offset: Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: TeamLogoAvatar(
-                                      logoUrl: equipoInfo?.logo,
-                                      teamName: widget.equipoNombre,
-                                      sigla: equipoInfo?.sigla,
-                                      size: 52,
-                                      borderRadius: 26,
+                                  Tooltip(
+                                    message: _esAdmin
+                                        ? 'Cambiar escudo / Editar club'
+                                        : widget.equipoNombre,
+                                    child: InkWell(
+                                      onTap: _esAdmin ? _abrirEditarEquipo : null,
+                                      borderRadius: BorderRadius.circular(26),
+                                      child: Stack(
+                                        alignment: Alignment.bottomRight,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(2),
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(color: Colors.white70, width: 2),
+                                              boxShadow: const [
+                                                BoxShadow(
+                                                  color: Colors.black26,
+                                                  blurRadius: 6,
+                                                  offset: Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: TeamLogoAvatar(
+                                              logoUrl: equipoInfo?.logo,
+                                              teamName: widget.equipoNombre,
+                                              sigla: equipoInfo?.sigla,
+                                              size: 52,
+                                              isCircle: true,
+                                            ),
+                                          ),
+                                          if (_esAdmin)
+                                            Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: const BoxDecoration(
+                                                color: Color(0xFF0D233A),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.camera_alt,
+                                                size: 11,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 14),
@@ -348,14 +400,42 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        const Text(
-                                          'PLANTEL OFICIAL',
-                                          style: TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 11,
-                                            letterSpacing: 1.1,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                        Row(
+                                          children: [
+                                            const Text(
+                                              'PLANTEL OFICIAL',
+                                              style: TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 11,
+                                                letterSpacing: 1.1,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            if (_esAdmin) ...[
+                                              const SizedBox(width: 8),
+                                              InkWell(
+                                                onTap: _abrirEditarEquipo,
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white24,
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: const Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.edit, size: 10, color: Colors.white),
+                                                      SizedBox(width: 3),
+                                                      Text(
+                                                        'Editar Club',
+                                                        style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                         const SizedBox(height: 2),
                                         Text(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/utils/date_utils.dart';
 import '../models/partido.dart';
+import 'team_logo_avatar.dart';
 
 class PublicPartidoRow extends StatelessWidget {
   final int index;
@@ -108,22 +109,13 @@ class PublicPartidoRow extends StatelessWidget {
               width: 175,
               child: Row(
                 children: [
-                  Container(
-                    width: 30,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: localColor,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      localSigla,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
+                  TeamLogoAvatar(
+                    logoUrl: partido.equipoLocalLogo,
+                    teamName: partido.equipoLocalNombre,
+                    sigla: partido.equipoLocalSigla ?? localSigla,
+                    teamColor: localColor,
+                    size: 26,
+                    borderRadius: 6,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -169,22 +161,13 @@ class PublicPartidoRow extends StatelessWidget {
               child: Row(
                 children: [
                   const SizedBox(width: 12),
-                  Container(
-                    width: 30,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: visitColor,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      visitSigla,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
+                  TeamLogoAvatar(
+                    logoUrl: partido.equipoVisitanteLogo,
+                    teamName: partido.equipoVisitanteNombre,
+                    sigla: partido.equipoVisitanteSigla ?? visitSigla,
+                    teamColor: visitColor,
+                    size: 26,
+                    borderRadius: 6,
                   ),
                   const SizedBox(width: 8),
                   Expanded(

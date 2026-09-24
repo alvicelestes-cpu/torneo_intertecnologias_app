@@ -7,6 +7,7 @@ class Jugador {
   final String? equipoNombre;
   final String? equipoSigla;
   final String? equipoColor;
+  final String? equipoLogo;
   final String nombres;
   final String apellidos;
   final int? numeroCamiseta;
@@ -26,6 +27,7 @@ class Jugador {
     this.equipoNombre,
     this.equipoSigla,
     this.equipoColor,
+    this.equipoLogo,
     required this.nombres,
     required this.apellidos,
     this.numeroCamiseta,
@@ -78,12 +80,29 @@ class Jugador {
         equipoMap?['ColorPrincipal']?.toString().trim() ??
         equipoMap?['color']?.toString().trim();
 
+    String? parsedEquipoLogo = json['equipoLogo']?.toString().trim() ??
+        json['logoEquipo']?.toString().trim() ??
+        json['logo']?.toString().trim() ??
+        equipoMap?['logo']?.toString().trim() ??
+        equipoMap?['Logo']?.toString().trim();
+
+    if (parsedEquipoLogo == null || parsedEquipoLogo.isEmpty || parsedEquipoLogo == 'string' || parsedEquipoLogo == 'null') {
+      final upperNombre = (parsedEquipoNombre ?? '').toUpperCase();
+      final upperSigla = (parsedEquipoSigla ?? '').toUpperCase();
+      if (upperNombre.contains('RACING') || upperSigla == 'TRF' || upperSigla == 'TR') {
+        parsedEquipoLogo = 'assets/logos/tienda_racing.png';
+      } else {
+        parsedEquipoLogo = null;
+      }
+    }
+
     return Jugador(
       id: TextUtils.toInt(json['id']),
       equipoId: parsedEquipoId,
       equipoNombre: parsedEquipoNombre,
       equipoSigla: parsedEquipoSigla,
       equipoColor: parsedEquipoColor,
+      equipoLogo: parsedEquipoLogo,
       nombres: json['nombres']?.toString().trim() ?? '',
       apellidos: json['apellidos']?.toString().trim() ?? '',
       numeroCamiseta: json['numeroCamiseta'] != null
@@ -108,6 +127,7 @@ class Jugador {
       if (equipoNombre != null) 'equipoNombre': equipoNombre,
       if (equipoSigla != null) 'equipoSigla': equipoSigla,
       if (equipoColor != null) 'equipoColor': equipoColor,
+      if (equipoLogo != null) 'equipoLogo': equipoLogo,
       'nombres': nombres,
       'apellidos': apellidos,
       'numeroCamiseta': numeroCamiseta,
@@ -129,6 +149,7 @@ class Jugador {
     String? equipoNombre,
     String? equipoSigla,
     String? equipoColor,
+    String? equipoLogo,
     String? nombres,
     String? apellidos,
     int? numeroCamiseta,
@@ -148,6 +169,7 @@ class Jugador {
       equipoNombre: equipoNombre ?? this.equipoNombre,
       equipoSigla: equipoSigla ?? this.equipoSigla,
       equipoColor: equipoColor ?? this.equipoColor,
+      equipoLogo: equipoLogo ?? this.equipoLogo,
       nombres: nombres ?? this.nombres,
       apellidos: apellidos ?? this.apellidos,
       numeroCamiseta: numeroCamiseta ?? this.numeroCamiseta,

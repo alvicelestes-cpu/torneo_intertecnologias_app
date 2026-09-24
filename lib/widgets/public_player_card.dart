@@ -6,6 +6,7 @@ import '../core/utils/image_utils.dart';
 import '../core/utils/text_utils.dart';
 import '../models/jugador.dart';
 import 'stat_badge.dart';
+import 'team_logo_avatar.dart';
 
 class PublicPlayerCard extends StatelessWidget {
   final Jugador jugador;
@@ -70,23 +71,14 @@ class PublicPlayerCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // Sigla en pastilla blanca traslúcida
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(45),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.white30, width: 1),
-                  ),
-                  child: Text(
-                    sigla,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 12,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
+                // Escudo o Sigla del equipo en el carnet
+                TeamLogoAvatar(
+                  logoUrl: jugador.equipoLogo,
+                  teamName: equipoNombre,
+                  sigla: sigla,
+                  teamColor: carnetColor,
+                  size: 28,
+                  borderRadius: 6,
                 ),
                 const SizedBox(width: 8),
                 // Equipo + Nombre del Jugador

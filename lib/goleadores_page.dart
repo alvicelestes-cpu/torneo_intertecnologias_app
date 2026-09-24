@@ -10,6 +10,7 @@ import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
 import 'widgets/player_avatar.dart';
 import 'widgets/public_navbar.dart';
+import 'widgets/team_logo_avatar.dart';
 
 class GoleadoresPage extends StatefulWidget {
   final String? token;
@@ -58,9 +59,12 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
         token: widget.token,
         cargarFotos: true,
       );
+      // Restricción reglamentaria: Exclusivamente los 10 primeros artilleros (Top 10 descendente)
+      list.sort((a, b) => b.goles.compareTo(a.goles));
+      final top10 = list.take(10).toList();
       if (mounted) {
         setState(() {
-          goleadores = list;
+          goleadores = top10;
         });
       }
     } on AppException catch (e) {
@@ -179,7 +183,7 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'TABLA DE GOLEADORES',
+                                      'TABLA DE GOLEADORES • TOP 10',
                                       style: TextStyle(
                                         color: Colors.white70,
                                         fontSize: 11,
@@ -189,7 +193,7 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      '${goleadores.length} futbolistas con gol',
+                                      'Top ${goleadores.length} máximos artilleros',
                                       style: const TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w900,
@@ -272,6 +276,13 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
                                     const SizedBox(height: 2),
                                     Row(
                                       children: [
+                                        TeamLogoAvatar(
+                                          teamName: goleador.equipo,
+                                          sigla: goleador.siglaEquipo,
+                                          size: 18,
+                                          borderRadius: 4,
+                                        ),
+                                        const SizedBox(width: 6),
                                         Expanded(
                                           child: Text(
                                             equipoTexto,

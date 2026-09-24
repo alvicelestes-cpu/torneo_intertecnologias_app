@@ -49,4 +49,28 @@ class EquiposService {
 
     throw const AppException('La respuesta no contiene una lista válida de jugadores.');
   }
+
+  Future<Equipo> getEquipoById(int id, {String? token}) async {
+    final response = await _apiClient.get(
+      ApiConstants.equipoDetalle(id),
+      token: token,
+    );
+
+    if (response is Map<String, dynamic>) {
+      if (response['equipo'] is Map) {
+        return Equipo.fromJson(Map<String, dynamic>.from(response['equipo'] as Map));
+      }
+      return Equipo.fromJson(response);
+    }
+
+    throw const AppException('No se pudo obtener la información del equipo.');
+  }
+
+  Future<void> updateEquipo(int id, Map<String, dynamic> data, {String? token}) async {
+    await _apiClient.put(
+      ApiConstants.equipoDetalle(id),
+      body: data,
+      token: token,
+    );
+  }
 }

@@ -32,12 +32,25 @@ class Posicion {
   });
 
   factory Posicion.fromJson(Map<String, dynamic> json) {
+    final equipo = json['equipo']?.toString().trim() ?? 'Sin equipo';
+    final sigla = json['sigla']?.toString().trim() ?? '';
+    String? logo = json['logo']?.toString().trim() ?? json['logoEquipo']?.toString().trim();
+    if (logo == null || logo.isEmpty || logo == 'string' || logo == 'null') {
+      final upperNombre = equipo.toUpperCase();
+      final upperSigla = sigla.toUpperCase();
+      if (upperNombre.contains('RACING') || upperSigla == 'TRF' || upperSigla == 'TR') {
+        logo = 'assets/logos/tienda_racing.png';
+      } else {
+        logo = null;
+      }
+    }
+
     return Posicion(
       posicion: TextUtils.toInt(json['posicion']),
       equipoId: json['equipoId'] != null ? TextUtils.toInt(json['equipoId']) : null,
-      equipo: json['equipo']?.toString().trim() ?? 'Sin equipo',
-      sigla: json['sigla']?.toString().trim() ?? '',
-      logo: json['logo']?.toString().trim() ?? json['logoEquipo']?.toString().trim(),
+      equipo: equipo,
+      sigla: sigla,
+      logo: logo,
       pj: TextUtils.toInt(json['pj']),
       pg: TextUtils.toInt(json['pg']),
       pe: TextUtils.toInt(json['pe']),

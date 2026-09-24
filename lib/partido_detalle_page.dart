@@ -11,6 +11,7 @@ import 'services/partidos_service.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
 import 'widgets/status_chip.dart';
+import 'widgets/team_logo_avatar.dart';
 
 import 'editar_partido_page.dart';
 import 'goles_partido_page.dart';
@@ -388,10 +389,22 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                         Row(
                           children: [
                             Expanded(
-                              child: Text(
-                                partido.equipoLocalNombre,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+                              child: Column(
+                                children: [
+                                  TeamLogoAvatar(
+                                    logoUrl: partido.equipoLocalLogo,
+                                    teamName: partido.equipoLocalNombre,
+                                    sigla: partido.equipoLocalSigla,
+                                    size: 54,
+                                    isCircle: true,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    partido.equipoLocalNombre,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
                               ),
                             ),
                             Container(
@@ -410,10 +423,22 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                               ),
                             ),
                             Expanded(
-                              child: Text(
-                                partido.equipoVisitanteNombre,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+                              child: Column(
+                                children: [
+                                  TeamLogoAvatar(
+                                    logoUrl: partido.equipoVisitanteLogo,
+                                    teamName: partido.equipoVisitanteNombre,
+                                    sigla: partido.equipoVisitanteSigla,
+                                    size: 54,
+                                    isCircle: true,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    partido.equipoVisitanteNombre,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
                               ),
                             ),
                           ],

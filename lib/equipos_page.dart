@@ -15,6 +15,7 @@ import 'widgets/public_navbar.dart';
 import 'widgets/public_team_card.dart';
 
 import 'crear_jugador_page.dart';
+import 'editar_equipo_page.dart';
 import 'jugadores_equipo_page.dart';
 
 class EquiposPage extends StatefulWidget {
@@ -141,6 +142,22 @@ class _EquiposPageState extends State<EquiposPage> {
     );
 
     if (nuevoRegistrado == true && mounted) {
+      cargarEquipos();
+    }
+  }
+
+  Future<void> _abrirEditarEquipo(Equipo equipo) async {
+    final actualizado = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditarEquipoPage(
+          equipo: equipo,
+          token: widget.token,
+        ),
+      ),
+    );
+
+    if (actualizado == true && mounted) {
       cargarEquipos();
     }
   }
@@ -291,6 +308,7 @@ class _EquiposPageState extends State<EquiposPage> {
                                       child: PublicTeamCard(
                                         equipo: equipo,
                                         onTap: () => _abrirPlantilla(equipo),
+                                        onEdit: _esAdmin ? () => _abrirEditarEquipo(equipo) : null,
                                       ),
                                     ),
                                   ),
@@ -314,6 +332,7 @@ class _EquiposPageState extends State<EquiposPage> {
                             return PublicTeamCard(
                               equipo: equipo,
                               onTap: () => _abrirPlantilla(equipo),
+                              onEdit: _esAdmin ? () => _abrirEditarEquipo(equipo) : null,
                             );
                           },
                         );

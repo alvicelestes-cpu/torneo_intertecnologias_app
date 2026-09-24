@@ -9,6 +9,7 @@ import 'models/jugador.dart';
 import 'services/jugadores_service.dart';
 import 'widgets/player_avatar.dart';
 import 'widgets/status_chip.dart';
+import 'widgets/team_logo_avatar.dart';
 
 class JugadorDetallePage extends StatefulWidget {
   final Map<String, dynamic> jugador;
@@ -243,13 +244,29 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
                             color: Colors.white.withAlpha(40),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(
-                            widget.equipoNombre,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TeamLogoAvatar(
+                                logoUrl: jugador.equipoLogo,
+                                teamName: widget.equipoNombre,
+                                sigla: jugador.equipoSigla,
+                                size: 20,
+                                borderRadius: 5,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  widget.equipoNombre,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 10),

@@ -59,6 +59,15 @@ class Partido {
     } else if (rawLocal != null) {
       localNombre = rawLocal.toString().trim();
     }
+    if (json['equipoLocalNombre'] != null) {
+      localNombre = json['equipoLocalNombre'].toString().trim();
+    }
+    if (json['equipoLocalSigla'] != null) {
+      localSigla = json['equipoLocalSigla'].toString().trim();
+    }
+    if (json['equipoLocalLogo'] != null) {
+      localLogo = json['equipoLocalLogo'].toString().trim();
+    }
     if (json['equipoLocalId'] != null) {
       localId = TextUtils.toInt(json['equipoLocalId']);
     }
@@ -78,8 +87,33 @@ class Partido {
     } else if (rawVisitante != null) {
       visitanteNombre = rawVisitante.toString().trim();
     }
+    if (json['equipoVisitanteNombre'] != null) {
+      visitanteNombre = json['equipoVisitanteNombre'].toString().trim();
+    }
+    if (json['equipoVisitanteSigla'] != null) {
+      visitanteSigla = json['equipoVisitanteSigla'].toString().trim();
+    }
+    if (json['equipoVisitanteLogo'] != null) {
+      visitanteLogo = json['equipoVisitanteLogo'].toString().trim();
+    }
     if (json['equipoVisitanteId'] != null) {
       visitanteId = TextUtils.toInt(json['equipoVisitanteId']);
+    }
+
+    if (localLogo == null || localLogo.isEmpty || localLogo == 'string' || localLogo == 'null') {
+      final upperNombre = localNombre.toUpperCase();
+      final upperSigla = localSigla?.toUpperCase() ?? '';
+      if (upperNombre.contains('RACING') || upperSigla == 'TRF' || upperSigla == 'TR') {
+        localLogo = 'assets/logos/tienda_racing.png';
+      }
+    }
+
+    if (visitanteLogo == null || visitanteLogo.isEmpty || visitanteLogo == 'string' || visitanteLogo == 'null') {
+      final upperNombre = visitanteNombre.toUpperCase();
+      final upperSigla = visitanteSigla?.toUpperCase() ?? '';
+      if (upperNombre.contains('RACING') || upperSigla == 'TRF' || upperSigla == 'TR') {
+        visitanteLogo = 'assets/logos/tienda_racing.png';
+      }
     }
 
     return Partido(
