@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/auth_user.dart';
 import '../../models/campeonato.dart';
+import '../../services/torneo_config_service.dart';
 
 class SessionManager extends ChangeNotifier {
   static final SessionManager _instance = SessionManager._internal();
@@ -69,10 +70,12 @@ class SessionManager extends ChangeNotifier {
     } catch (_) {
       // Ignorar fallo al leer SharedPreferences para no bloquear inicio
     }
+    TorneoConfigService().cargarConfiguracion(torneoId: selectedCampeonatoId);
   }
 
   void _persistCampeonatoId(int id) {
     _persistedCampeonatoId = id;
+    TorneoConfigService().cargarConfiguracion(torneoId: id, token: token);
     SharedPreferences.getInstance().then((prefs) {
       prefs.setInt(_keySelectedCampeonatoId, id);
     }).catchError((_) {});

@@ -6,6 +6,7 @@ import 'core/session/session_manager.dart';
 import 'core/utils/ui_helpers.dart';
 import 'services/auth_service.dart';
 
+import 'configuracion_torneo_page.dart';
 import 'crear_jugador_page.dart';
 import 'equipos_page.dart';
 import 'estadisticas_page.dart';
@@ -121,6 +122,22 @@ class TorneoApp extends StatelessWidget {
             return MaterialPageRoute(
               settings: settings,
               builder: (_) => CrearJugadorPage(token: session.token),
+            );
+          }
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const LoginPage(),
+          );
+        }
+
+        if (path == '/configuracion-torneo' ||
+            path == '/configuracion' ||
+            path == '/torneo-config') {
+          final session = SessionManager();
+          if (session.hasAdminAccess) {
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (_) => ConfiguracionTorneoPage(token: session.token),
             );
           }
           return MaterialPageRoute(
@@ -409,6 +426,11 @@ class InicioPage extends StatelessWidget {
         'subtitulo': 'Estadísticas del torneo',
         'icono': Icons.bar_chart,
       },
+      {
+        'titulo': 'Configuración del Torneo',
+        'subtitulo': 'Reglas, cupos y parámetros',
+        'icono': Icons.tune,
+      },
     ];
 
     return Scaffold(
@@ -564,6 +586,9 @@ class InicioPage extends StatelessWidget {
                               break;
                             case 'Estadísticas':
                               destination = EstadisticasPage(token: token);
+                              break;
+                            case 'Configuración del Torneo':
+                              destination = ConfiguracionTorneoPage(token: token);
                               break;
                             default:
                               UiHelpers.showSnackBar(

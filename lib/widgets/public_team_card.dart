@@ -3,10 +3,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../models/equipo.dart';
+import '../services/torneo_config_service.dart';
 import 'team_logo_avatar.dart';
 
 class PublicTeamCard extends StatelessWidget {
-  static const int maxPlantilla = 14;
+  static int get maxPlantilla => TorneoConfigService().limiteJugadores;
   final Equipo equipo;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
@@ -21,7 +22,7 @@ class PublicTeamCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final teamColor = equipo.color;
-    const maxPlantilla = PublicTeamCard.maxPlantilla;
+    final maxPlantilla = PublicTeamCard.maxPlantilla;
     final cant = equipo.cantidadJugadores;
     final porcentaje = min(1.0, cant / maxPlantilla);
 

@@ -4,6 +4,7 @@ import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
 import 'models/goleador.dart';
+import 'services/torneo_config_service.dart';
 import 'services/torneo_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
@@ -30,6 +31,7 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
   bool cargando = true;
   String? error;
   List<Goleador> goleadores = [];
+  int get _topMax => TorneoConfigService().topGoleadoresMax;
 
   @override
   void initState() {
@@ -59,12 +61,12 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
         token: widget.token,
         cargarFotos: true,
       );
-      // Restricción reglamentaria: Exclusivamente los 10 primeros artilleros (Top 10 descendente)
+      // Restricción reglamentaria dinámica: Exclusivamente el Top configurado en el torneo
       list.sort((a, b) => b.goles.compareTo(a.goles));
-      final top10 = list.take(10).toList();
+      final topN = list.take(_topMax).toList();
       if (mounted) {
         setState(() {
-          goleadores = top10;
+          goleadores = topN;
         });
       }
     } on AppException catch (e) {
@@ -182,9 +184,9 @@ class _GoleadoresPageState extends State<GoleadoresPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'TABLA DE GOLEADORES • TOP 10',
-                                      style: TextStyle(
+                                    Text(
+                                      'TABLA DE GOLEADORES • TOP $_topMax',
+                                      style: const TextStyle(
                                         color: Colors.white70,
                                         fontSize: 11,
                                         letterSpacing: 1.1,

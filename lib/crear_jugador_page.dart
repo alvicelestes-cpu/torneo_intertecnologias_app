@@ -9,11 +9,12 @@ import 'models/equipo.dart';
 import 'models/jugador.dart';
 import 'services/equipos_service.dart';
 import 'services/jugadores_service.dart';
+import 'services/torneo_config_service.dart';
 import 'widgets/app_error_view.dart';
 import 'widgets/app_loading_indicator.dart';
 
 class CrearJugadorPage extends StatefulWidget {
-  static const int kMaxJugadoresPorEquipo = 14;
+  static int get kMaxJugadoresPorEquipo => TorneoConfigService().limiteJugadores;
   final int? equipoIdInicial;
   final String? equipoNombreInicial;
   final String? token;
@@ -55,7 +56,7 @@ class _CrearJugadorPageState extends State<CrearJugadorPage> {
   Uint8List? _nuevaFotoBytes;
   String? _nuevaFotoBase64;
 
-  static const int kMaxJugadoresPorEquipo = CrearJugadorPage.kMaxJugadoresPorEquipo;
+  int get kMaxJugadoresPorEquipo => TorneoConfigService().limiteJugadores;
 
   @override
   void initState() {
@@ -525,7 +526,7 @@ class _CrearJugadorPageState extends State<CrearJugadorPage> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    lleno ? 'LLENO (14/14)' : '$cant/14',
+                                    lleno ? 'LLENO ($kMaxJugadoresPorEquipo/$kMaxJugadoresPorEquipo)' : '$cant/$kMaxJugadoresPorEquipo',
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
@@ -545,7 +546,7 @@ class _CrearJugadorPageState extends State<CrearJugadorPage> {
                         validator: (v) {
                           if (v == null) return 'Seleccione el equipo de destino.';
                           if (_equipoEstaLleno(v)) {
-                            return 'El equipo ya tiene 14 jugadores inscritos.';
+                            return 'El equipo ya tiene $kMaxJugadoresPorEquipo jugadores inscritos.';
                           }
                           return null;
                         },
@@ -691,7 +692,7 @@ class _CrearJugadorPageState extends State<CrearJugadorPage> {
                           label: Text(
                             guardando
                                 ? 'INSCRIBIENDO...'
-                                : (equipoLleno ? 'LLENO (14/14)' : 'INSCRIBIR JUGADOR'),
+                                : (equipoLleno ? 'LLENO ($kMaxJugadoresPorEquipo/$kMaxJugadoresPorEquipo)' : 'INSCRIBIR JUGADOR'),
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),

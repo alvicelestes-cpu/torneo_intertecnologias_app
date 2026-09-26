@@ -9,8 +9,10 @@ class ApiConstants {
   static String campeonatoDetalle(int campeonatoId) =>
       '$baseUrl/api/campeonatos/$campeonatoId';
 
-  // Torneo Resumen
+  // Torneo Resumen & Configuración (Multi-Tenant & Reglas Dinámicas)
   static const String torneoResumen = '$baseUrl/api/torneo';
+  static const String torneoActual = '$baseUrl/api/torneo/actual';
+  static const String torneoConfig = '$baseUrl/api/torneo/config';
 
   // Auth
   static const String login = '$baseUrl/api/auth/login';
@@ -67,7 +69,7 @@ class ApiConstants {
   static const String generarFinal = '$baseUrl/api/fases/generar-final';
 
   // Headers por defecto con soporte multitorneo
-  static Map<String, String> defaultHeaders({String? token, int? campeonatoId}) {
+  static Map<String, String> defaultHeaders({String? token, int? campeonatoId, int? torneoId}) {
     final headers = <String, String>{
       'Accept': 'application/json',
       'Content-Type': 'application/json',
@@ -75,8 +77,10 @@ class ApiConstants {
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
     }
-    if (campeonatoId != null && campeonatoId > 0) {
-      headers['X-Campeonato-Id'] = campeonatoId.toString();
+    final resolvedId = torneoId ?? campeonatoId;
+    if (resolvedId != null && resolvedId > 0) {
+      headers['X-Campeonato-Id'] = resolvedId.toString();
+      headers['X-Torneo-Id'] = resolvedId.toString();
     }
     return headers;
   }

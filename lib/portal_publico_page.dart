@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'configuracion_torneo_page.dart';
 import 'core/constants/app_colors.dart';
 import 'core/session/session_manager.dart';
 import 'core/utils/text_utils.dart';
@@ -228,6 +229,23 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                     }
                   },
                 ),
+                if (SessionManager().hasAdminAccess)
+                  ListTile(
+                    leading: const Icon(Icons.tune, color: Color(0xFF1E88E5)),
+                    title: const Text(
+                      '⚙️ Configuración del Torneo',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ConfiguracionTorneoPage(token: SessionManager().token),
+                        ),
+                      );
+                    },
+                  ),
               ],
             ),
           ),

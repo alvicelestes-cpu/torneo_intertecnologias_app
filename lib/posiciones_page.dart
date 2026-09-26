@@ -6,6 +6,7 @@ import 'core/session/session_manager.dart';
 import 'models/partido.dart';
 import 'models/posicion.dart';
 import 'services/partidos_service.dart';
+import 'services/torneo_config_service.dart';
 import 'services/torneo_service.dart';
 import 'widgets/app_empty_view.dart';
 import 'widgets/app_error_view.dart';
@@ -34,6 +35,7 @@ class _PosicionesPageState extends State<PosicionesPage> {
   List<Posicion> posiciones = [];
   bool segundaRondaGenerada = false;
   int _tabFase = 0; // 0: Primera Fase, 1: Segunda Ronda (Cuadrangulares)
+  bool get _tienePuntoInvisible => TorneoConfigService().tienePuntoInvisible;
 
   @override
   void initState() {
@@ -475,8 +477,8 @@ class _PosicionesPageState extends State<PosicionesPage> {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         'SEGUNDA RONDA - CUADRANGULARES SEMIFINALES',
                         style: TextStyle(
                           fontSize: 12,
@@ -485,11 +487,11 @@ class _PosicionesPageState extends State<PosicionesPage> {
                           letterSpacing: 0.5,
                         ),
                       ),
-                      SizedBox(height: 3),
+                      const SizedBox(height: 3),
                       Text(
                         '• Los 8 equipos se siembran al finalizar la Fecha 7: Grupo A (1°, 3°, 5° y 7°) y Grupo B (2°, 4°, 6° y 8°).\n'
-                        '• ★ Ventaja Deportiva ("Punto Invisible"): En caso de empate en puntos dentro del cuadrangular, el 1° y 2° de la Primera Fase obtienen la clasificación automática.',
-                        style: TextStyle(
+                        '${_tienePuntoInvisible ? '• ★ Ventaja Deportiva ("Punto Invisible"): En caso de empate en puntos dentro del cuadrangular, el 1° y 2° de la Primera Fase obtienen la clasificación automática.' : '• En caso de empate en puntos dentro del cuadrangular, se define por diferencia de gol y goles a favor reglamentarios.'}',
+                        style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF334155),
                           height: 1.35,
@@ -506,9 +508,11 @@ class _PosicionesPageState extends State<PosicionesPage> {
         // GRUPO A
         _construirCardGrupo(
           titulo: 'CUADRANGULAR GRUPO A',
-          subtitulo: '1°, 3°, 5° y 7° Puesto • 1° cuenta con Punto Invisible',
+          subtitulo: _tienePuntoInvisible
+              ? '1°, 3°, 5° y 7° Puesto • 1° cuenta con Punto Invisible'
+              : '1°, 3°, 5° y 7° Puesto',
           equipos: grupoA,
-          posicionVentaja: 1,
+          posicionVentaja: _tienePuntoInvisible ? 1 : 0,
           colorGradiente: const [Color(0xFF312E81), Color(0xFF4338CA)],
         ),
         const SizedBox(height: 16),
@@ -516,9 +520,11 @@ class _PosicionesPageState extends State<PosicionesPage> {
         // GRUPO B
         _construirCardGrupo(
           titulo: 'CUADRANGULAR GRUPO B',
-          subtitulo: '2°, 4°, 6° y 8° Puesto • 2° cuenta con Punto Invisible',
+          subtitulo: _tienePuntoInvisible
+              ? '2°, 4°, 6° y 8° Puesto • 2° cuenta con Punto Invisible'
+              : '2°, 4°, 6° y 8° Puesto',
           equipos: grupoB,
-          posicionVentaja: 2,
+          posicionVentaja: _tienePuntoInvisible ? 2 : 0,
           colorGradiente: const [Color(0xFF1E1B4B), Color(0xFF3730A3)],
         ),
       ],
@@ -817,8 +823,8 @@ class _PosicionesPageState extends State<PosicionesPage> {
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: const [
-                                      Text(
+                                    children: [
+                                      const Text(
                                         'SISTEMA DE COMPETICIÓN & VENTAJA DEPORTIVA',
                                         style: TextStyle(
                                           fontSize: 11.5,
@@ -827,11 +833,11 @@ class _PosicionesPageState extends State<PosicionesPage> {
                                           letterSpacing: 0.5,
                                         ),
                                       ),
-                                      SizedBox(height: 3),
+                                      const SizedBox(height: 3),
                                       Text(
                                         '• Los 8 equipos avanzan a Cuadrangulares Semifinales (Grupo A: 1°, 3°, 5°, 7° | Grupo B: 2°, 4°, 6°, 8°).\n'
-                                        '• ★ Ventaja Deportiva ("Punto Invisible"): El 1° y 2° de la Primera Fase ganan el desempate por puntos en su grupo.',
-                                        style: TextStyle(
+                                        '${_tienePuntoInvisible ? '• ★ Ventaja Deportiva ("Punto Invisible"): El 1° y 2° de la Primera Fase ganan el desempate por puntos en su grupo.' : '• En caso de empate en puntos en su grupo, se define por diferencia de gol reglamentaria.'}',
+                                        style: const TextStyle(
                                           fontSize: 12,
                                           color: Color(0xFF334155),
                                           height: 1.35,
