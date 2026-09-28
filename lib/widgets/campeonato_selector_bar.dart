@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/constants/app_colors.dart';
 import '../core/session/session_manager.dart';
+import '../core/utils/web_url_helper.dart';
 import '../models/campeonato.dart';
 import '../models/torneo_model.dart';
 import '../services/torneo_config_service.dart';
@@ -24,6 +26,48 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
   late final TorneoService _torneoService;
   final SessionManager _sessionManager = SessionManager();
   bool _cargando = false;
+
+  Future<void> _copiarEnlaceTorneo([String? slugOverride, String? nombreOverride]) async {
+    final slug = (slugOverride != null && slugOverride.isNotEmpty)
+        ? slugOverride
+        : _sessionManager.selectedCampeonatoSlug;
+    final nombre = nombreOverride ?? _sessionManager.selectedCampeonatoNombre;
+
+    String url;
+    try {
+      final base = Uri.base;
+      if (base.hasAuthority) {
+        final portStr = (base.hasPort && base.port != 80 && base.port != 443) ? ':${base.port}' : '';
+        url = '${base.scheme}://${base.host}$portStr/t/$slug';
+      } else {
+        url = '/t/$slug';
+      }
+    } catch (_) {
+      url = '/t/$slug';
+    }
+
+    await Clipboard.setData(ClipboardData(text: url));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.link, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Enlace copiado para "$nombre": $url',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.primaryDark,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -312,6 +356,8 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
                             // Registrar y activar torneo en el contexto
                             _sessionManager.registrarNuevoTorneo(nuevoCampeonato);
                             TorneoConfigService().setLocalConfig(nuevoModel);
+                            final slug = nuevoCampeonato.slug.isNotEmpty ? nuevoCampeonato.slug : 'campeonato-${nuevoCampeonato.id}';
+                            setBrowserUrl('/t/$slug');
 
                             if (dialogCtx.mounted) {
                               Navigator.pop(dialogCtx);
@@ -404,6 +450,12 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
                         color: AppColors.textPrimary,
                       ),
                     ),
+                  ),
+                  IconButton(
+                    key: const Key('btn_copiar_enlace_modal_header'),
+                    icon: const Icon(Icons.link, size: 22, color: AppColors.primary),
+                    tooltip: 'Copiar enlace del torneo activo',
+                    onPressed: () => _copiarEnlaceTorneo(),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, size: 20),
@@ -534,11 +586,22 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
                             '${c.totalEquipos} equipos • ${c.totalPartidos} partidos',
                             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                           ),
-                          trailing: isSelected
-                              ? const Icon(Icons.check_circle, color: AppColors.primary)
-                              : null,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.link, size: 18, color: Colors.blueGrey),
+                                tooltip: 'Copiar enlace de este torneo',
+                                onPressed: () => _copiarEnlaceTorneo(c.slug, c.nombre),
+                              ),
+                              if (isSelected)
+                                const Icon(Icons.check_circle, color: AppColors.primary),
+                            ],
+                          ),
                           onTap: () {
                             _sessionManager.selectCampeonato(c);
+                            final slug = c.slug.isNotEmpty ? c.slug : 'campeonato-${c.id}';
+                            setBrowserUrl('/t/$slug');
                             Navigator.pop(ctx);
                             widget.onCampeonatoChanged?.call();
                           },
@@ -564,48 +627,64 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
         final nombreTorneo = _sessionManager.selectedCampeonatoNombre;
         final canChange = _sessionManager.canChangeCampeonato;
 
-        return InkWell(
-          onTap: canChange ? _abrirSelectorModal : null,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary.withAlpha(50)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.emoji_events,
-                  size: 18,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    nombreTorneo,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primaryDark,
-                    ),
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: InkWell(
+                onTap: canChange ? _abrirSelectorModal : null,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primary.withAlpha(50)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.emoji_events,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          nombreTorneo,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryDark,
+                          ),
+                        ),
+                      ),
+                      if (canChange) ...[
+                        const SizedBox(width: 2),
+                        const Icon(
+                          Icons.arrow_drop_down,
+                          size: 18,
+                          color: AppColors.primary,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                if (canChange) ...[
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.arrow_drop_down,
-                    size: 20,
-                    color: AppColors.primary,
-                  ),
-                ],
-              ],
+              ),
             ),
-          ),
+            const SizedBox(width: 4),
+            IconButton(
+              key: const Key('btn_copiar_enlace_torneo_bar'),
+              icon: const Icon(Icons.share, size: 16, color: AppColors.primary),
+              tooltip: 'Copiar enlace del torneo',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              onPressed: () => _copiarEnlaceTorneo(),
+            ),
+          ],
         );
       },
     );

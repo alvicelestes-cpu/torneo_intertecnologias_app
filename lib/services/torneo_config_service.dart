@@ -74,6 +74,42 @@ class TorneoConfigService extends ChangeNotifier {
     return _config;
   }
 
+  /// Carga la configuración del torneo resolviendo por Slug.
+  Future<TorneoModel> cargarConfiguracionPorSlug(String slug, {String? token}) async {
+    _cargando = true;
+    _ultimoError = null;
+
+    try {
+      final response = await _apiClient.get(
+        ApiConstants.torneoPorSlug(slug),
+        headers: ApiConstants.defaultHeaders(
+          token: token,
+          torneoSlug: slug,
+        ),
+      );
+
+      if (response is Map<String, dynamic>) {
+        if (response.containsKey('torneo') && response['torneo'] is Map<String, dynamic>) {
+          _config = TorneoModel.fromJson(response['torneo'] as Map<String, dynamic>);
+        } else {
+          _config = TorneoModel.fromJson(response);
+        }
+        notifyListeners();
+        return _config;
+      }
+    } catch (e) {
+      _ultimoError = e.toString();
+      if (kDebugMode) {
+        debugPrint('TorneoConfigService: Fallback a valores por defecto ($e)');
+      }
+    } finally {
+      _cargando = false;
+      notifyListeners();
+    }
+
+    return _config;
+  }
+
   /// Actualiza los parámetros reglamentarios en el backend (Endpoint protegido de Administrador)
   Future<TorneoModel> actualizarConfiguracion({
     required String token,

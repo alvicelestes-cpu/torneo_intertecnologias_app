@@ -78,6 +78,16 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
     }
   }
 
+  void _navegarAModulo(BuildContext context, String subpath, Widget page) {
+    final slug = SessionManager().selectedCampeonatoSlug;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        settings: RouteSettings(name: '/t/$slug$subpath'),
+        builder: (_) => page,
+      ),
+    );
+  }
 
   Drawer _buildDrawer(BuildContext context) {
     return Drawer(
@@ -145,10 +155,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                   title: const Text('Equipos', style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const EquiposPage()),
-                    );
+                    _navegarAModulo(context, '/equipos', const EquiposPage());
                   },
                 ),
                 ListTile(
@@ -156,10 +163,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                   title: const Text('Estadísticas', style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const EstadisticasPage()),
-                    );
+                    _navegarAModulo(context, '/estadisticas', const EstadisticasPage());
                   },
                 ),
                 ListTile(
@@ -167,10 +171,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                   title: const Text('Partidos', style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PartidosPage()),
-                    );
+                    _navegarAModulo(context, '/partidos', const PartidosPage());
                   },
                 ),
                 ListTile(
@@ -178,10 +179,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                   title: const Text('Posiciones', style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PosicionesPage()),
-                    );
+                    _navegarAModulo(context, '/posiciones', const PosicionesPage());
                   },
                 ),
                 ListTile(
@@ -189,10 +187,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                   title: const Text('Goleadores', style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const GoleadoresPage()),
-                    );
+                    _navegarAModulo(context, '/goleadores', const GoleadoresPage());
                   },
                 ),
                 ListTile(
@@ -200,10 +195,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                   title: const Text('Jugadores', style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const JugadoresPage()),
-                    );
+                    _navegarAModulo(context, '/jugadores', const JugadoresPage());
                   },
                 ),
                 const Divider(),
@@ -323,10 +315,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
         'icono': Icons.groups,
         'color': const Color(0xFF2E7D32),
         'bgPastilla': const Color(0xFFE8F5E9),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const EquiposPage()),
-        ),
+        'onTap': () => _navegarAModulo(context, '/equipos', const EquiposPage()),
       },
       {
         'titulo': 'Partidos',
@@ -334,10 +323,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
         'icono': Icons.sports_soccer,
         'color': const Color(0xFF2E7D32),
         'bgPastilla': const Color(0xFFE8F5E9),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const PartidosPage()),
-        ),
+        'onTap': () => _navegarAModulo(context, '/partidos', const PartidosPage()),
       },
       {
         'titulo': 'Jornadas',
@@ -345,10 +331,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
         'icono': Icons.calendar_month,
         'color': const Color(0xFF7B1FA2),
         'bgPastilla': const Color(0xFFF3E5F5),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const JornadasPage()),
-        ),
+        'onTap': () => _navegarAModulo(context, '/jornadas', const JornadasPage()),
       },
       {
         'titulo': 'Posiciones',
@@ -356,10 +339,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
         'icono': Icons.sports_soccer,
         'color': const Color(0xFFFFA000),
         'bgPastilla': const Color(0xFFFFF8E1),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const PosicionesPage()),
-        ),
+        'onTap': () => _navegarAModulo(context, '/posiciones', const PosicionesPage()),
       },
       {
         'titulo': 'Goleadores',
@@ -367,10 +347,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
         'icono': Icons.emoji_events,
         'color': const Color(0xFFE65100),
         'bgPastilla': const Color(0xFFFFF3E0),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const GoleadoresPage()),
-        ),
+        'onTap': () => _navegarAModulo(context, '/goleadores', const GoleadoresPage()),
       },
       {
         'titulo': 'Estadísticas',
@@ -378,10 +355,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
         'icono': Icons.bar_chart,
         'color': const Color(0xFF8E24AA),
         'bgPastilla': const Color(0xFFEDE7F6),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const EstadisticasPage()),
-        ),
+        'onTap': () => _navegarAModulo(context, '/estadisticas', const EstadisticasPage()),
       },
       {
         'titulo': 'Jugadores',
@@ -389,10 +363,7 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
         'icono': Icons.person,
         'color': const Color(0xFF546E7A),
         'bgPastilla': const Color(0xFFECEFF1),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const JugadoresPage()),
-        ),
+        'onTap': () => _navegarAModulo(context, '/jugadores', const JugadoresPage()),
       },
       {
         'titulo': 'Acerca del Torneo',
@@ -429,30 +400,10 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                     totalJornadas: _totalJornadas,
                     totalPartidos: _totalPartidos,
                     cargando: _cargandoResumen,
-                    onEquiposTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const EquiposPage()),
-                      );
-                    },
-                    onJugadoresTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const JugadoresPage()),
-                      );
-                    },
-                    onJornadasTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const JornadasPage()),
-                      );
-                    },
-                    onPartidosTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const PartidosPage()),
-                      );
-                    },
+                    onEquiposTap: () => _navegarAModulo(context, '/equipos', const EquiposPage()),
+                    onJugadoresTap: () => _navegarAModulo(context, '/jugadores', const JugadoresPage()),
+                    onJornadasTap: () => _navegarAModulo(context, '/jornadas', const JornadasPage()),
+                    onPartidosTap: () => _navegarAModulo(context, '/partidos', const PartidosPage()),
                   ),
                   const SizedBox(height: 16),
 

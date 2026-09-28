@@ -25,44 +25,65 @@ class PublicTopNavBar extends StatelessWidget implements PreferredSizeWidget {
   void _navigateTo(BuildContext context, String routeName) {
     if (activeRoute == routeName) return;
 
+    final slug = SessionManager().selectedCampeonatoSlug;
+    final prefix = '/t/$slug';
+
     switch (routeName) {
       case 'Inicio':
-        Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(context, prefix, (route) => false);
         break;
       case 'Equipos':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const EquiposPage()),
+          MaterialPageRoute(
+            settings: RouteSettings(name: '$prefix/equipos'),
+            builder: (_) => const EquiposPage(),
+          ),
         );
         break;
       case 'Partidos':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const PartidosPage()),
+          MaterialPageRoute(
+            settings: RouteSettings(name: '$prefix/partidos'),
+            builder: (_) => const PartidosPage(),
+          ),
         );
         break;
       case 'Jornadas':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const JornadasPage()),
+          MaterialPageRoute(
+            settings: RouteSettings(name: '$prefix/jornadas'),
+            builder: (_) => const JornadasPage(),
+          ),
         );
         break;
       case 'Posiciones':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const PosicionesPage()),
+          MaterialPageRoute(
+            settings: RouteSettings(name: '$prefix/posiciones'),
+            builder: (_) => const PosicionesPage(),
+          ),
         );
         break;
       case 'Goleadores':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const GoleadoresPage()),
+          MaterialPageRoute(
+            settings: RouteSettings(name: '$prefix/goleadores'),
+            builder: (_) => const GoleadoresPage(),
+          ),
         );
         break;
       case 'Estadísticas':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const EstadisticasPage()),
+          MaterialPageRoute(
+            settings: RouteSettings(name: '$prefix/estadisticas'),
+            builder: (_) => const EstadisticasPage(),
+          ),
         );
         break;
     }

@@ -15,6 +15,7 @@ class ApiConstants {
   static const String torneoConfig = '$baseUrl/api/torneo/config';
   static const String torneoCrear = '$baseUrl/api/torneo/crear';
   static const String torneoListar = '$baseUrl/api/torneo/listar';
+  static String torneoPorSlug(String slug) => '$baseUrl/api/torneo/por-slug/$slug';
 
   // Auth
   static const String login = '$baseUrl/api/auth/login';
@@ -71,7 +72,12 @@ class ApiConstants {
   static const String generarFinal = '$baseUrl/api/fases/generar-final';
 
   // Headers por defecto con soporte multitorneo
-  static Map<String, String> defaultHeaders({String? token, int? campeonatoId, int? torneoId}) {
+  static Map<String, String> defaultHeaders({
+    String? token,
+    int? campeonatoId,
+    int? torneoId,
+    String? torneoSlug,
+  }) {
     final headers = <String, String>{
       'Accept': 'application/json',
       'Content-Type': 'application/json',
@@ -83,6 +89,9 @@ class ApiConstants {
     if (resolvedId != null && resolvedId > 0) {
       headers['X-Campeonato-Id'] = resolvedId.toString();
       headers['X-Torneo-Id'] = resolvedId.toString();
+    }
+    if (torneoSlug != null && torneoSlug.isNotEmpty) {
+      headers['X-Torneo-Slug'] = torneoSlug;
     }
     return headers;
   }

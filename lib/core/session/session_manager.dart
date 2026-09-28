@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/auth_user.dart';
 import '../../models/campeonato.dart';
+import '../../models/torneo_model.dart';
 import '../../services/torneo_config_service.dart';
+import '../../services/torneo_service.dart';
 
 class SessionManager extends ChangeNotifier {
   static final SessionManager _instance = SessionManager._internal();
@@ -54,8 +56,33 @@ class SessionManager extends ChangeNotifier {
       _currentUser?.campeonato ??
       'Torneo Intertecnologías';
 
-  /// Inicializa la sesión cargando el campeonatoId previamente guardado
-  Future<void> init() async {
+  String get selectedCampeonatoSlug =>
+      _selectedCampeonato?.slug.isNotEmpty == true
+          ? _selectedCampeonato!.slug
+          : 'campeonato-$selectedCampeonatoId';
+
+  /// Extrae el slug de una URI con soporte para rutas web amigables y con hash (#)
+  static String? extractSlugFromUri(Uri uri) {
+    // 1. Path directo: /t/:slug o /t/:slug/...
+    final pathMatch = RegExp(r'^/t/([^/]+)').firstMatch(uri.path);
+    if (pathMatch != null) {
+      return pathMatch.group(1);
+    }
+
+    // 2. Hash fragment (Flutter Web hash URL strategy: #/t/:slug)
+    if (uri.fragment.isNotEmpty) {
+      final cleanFragment = uri.fragment.startsWith('/') ? uri.fragment : '/${uri.fragment}';
+      final fragmentMatch = RegExp(r'^/t/([^/]+)').firstMatch(cleanFragment);
+      if (fragmentMatch != null) {
+        return fragmentMatch.group(1);
+      }
+    }
+
+    return null;
+  }
+
+  /// Inicializa la sesión cargando el campeonatoId previamente guardado o resolviendo el slug de la URL
+  Future<void> init({Uri? currentUri, TorneoService? torneoService}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedId = prefs.getInt(_keySelectedCampeonatoId);
@@ -70,7 +97,75 @@ class SessionManager extends ChangeNotifier {
     } catch (_) {
       // Ignorar fallo al leer SharedPreferences para no bloquear inicio
     }
+
+    // Intentar resolver slug desde la URL del navegador si aplica
+    final uri = currentUri ?? Uri.base;
+    final slugFromUrl = extractSlugFromUri(uri);
+    if (slugFromUrl != null && slugFromUrl.isNotEmpty) {
+      final exito = await selectCampeonatoBySlug(slugFromUrl, torneoService: torneoService);
+      if (exito) return;
+    }
+
     TorneoConfigService().cargarConfiguracion(torneoId: selectedCampeonatoId);
+  }
+
+  /// Selecciona y sincroniza el torneo activo a partir de su Slug
+  Future<bool> selectCampeonatoBySlug(String slug, {TorneoService? torneoService}) async {
+    final cleanSlug = slug.trim().toLowerCase();
+    if (cleanSlug.isEmpty) return false;
+
+    // Si ya coincide con el seleccionado actualmente
+    if (_selectedCampeonato?.slug.trim().toLowerCase() == cleanSlug) {
+      return true;
+    }
+
+    // Si ya existe en la lista de torneos en memoria
+    final match = _campeonatos.cast<Campeonato?>().firstWhere(
+          (c) => c?.slug.trim().toLowerCase() == cleanSlug,
+          orElse: () => null,
+        );
+    if (match != null) {
+      selectCampeonato(match);
+      return true;
+    }
+
+    // Consultar backend vía /api/torneo/por-slug/{slug}
+    try {
+      final service = torneoService ?? TorneoService();
+      final data = await service.getTorneoPorSlug(cleanSlug, token: token);
+      final rawTorneo = (data.containsKey('torneo') && data['torneo'] is Map<String, dynamic>)
+          ? data['torneo'] as Map<String, dynamic>
+          : data;
+
+      final resolvedId = (rawTorneo['id'] as num?)?.toInt() ?? 1;
+      final resolvedNombre = rawTorneo['nombre']?.toString() ?? 'Torneo $cleanSlug';
+      final resolvedSlug = rawTorneo['slug']?.toString() ?? cleanSlug;
+      final totalEquipos = (rawTorneo['totalEquipos'] as num?)?.toInt() ?? 0;
+      final totalPartidos = (rawTorneo['totalPartidos'] as num?)?.toInt() ?? 0;
+      final estaActivo = rawTorneo['activo'] == true || rawTorneo['estaActivo'] == true;
+      final estaPublicado = rawTorneo['publicado'] == true || rawTorneo['estaPublicado'] == true;
+
+      final torneoModel = TorneoModel.fromJson(rawTorneo);
+      TorneoConfigService().setLocalConfig(torneoModel);
+
+      final nuevoCampeonato = Campeonato(
+        id: resolvedId,
+        nombre: resolvedNombre,
+        slug: resolvedSlug,
+        activo: estaActivo,
+        publicado: estaPublicado,
+        totalEquipos: totalEquipos,
+        totalPartidos: totalPartidos,
+      );
+
+      registrarNuevoTorneo(nuevoCampeonato);
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('SessionManager: Error al resolver torneo por slug "$slug": $e');
+      }
+      return false;
+    }
   }
 
   void _persistCampeonatoId(int id) {

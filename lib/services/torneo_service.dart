@@ -100,6 +100,20 @@ class TorneoService {
     throw const AppException('Respuesta inesperada al crear el nuevo torneo.');
   }
 
+  /// Obtiene la configuración/detalle de un torneo por su slug
+  Future<Map<String, dynamic>> getTorneoPorSlug(String slug, {String? token}) async {
+    final response = await _apiClient.get(
+      ApiConstants.torneoPorSlug(slug),
+      token: token,
+    );
+
+    if (response is Map<String, dynamic>) {
+      return response;
+    }
+
+    throw const AppException('La respuesta del torneo por slug no tiene el formato esperado.');
+  }
+
   /// Obtiene el detalle de un campeonato específico
   Future<Campeonato> getCampeonatoById(int id, {String? token}) async {
     final response = await _apiClient.get(
