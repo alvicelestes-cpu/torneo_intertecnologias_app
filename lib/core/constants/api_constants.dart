@@ -34,6 +34,7 @@ class ApiConstants {
 
   // Partidos
   static const String partidos = '$baseUrl/api/partidos';
+  static const String partidosGenerarFixture = '$baseUrl/api/partidos/generar-fixture';
   static String partidoDetalle(int partidoId) =>
       '$baseUrl/api/partidos/$partidoId';
   static String partidoResultado(int partidoId) =>

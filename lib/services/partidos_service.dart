@@ -1,6 +1,7 @@
 import '../core/constants/api_constants.dart';
 import '../core/errors/app_exception.dart';
 import '../core/network/api_client.dart';
+import '../core/session/session_manager.dart';
 import '../models/partido.dart';
 import '../models/partido_detalle.dart';
 
@@ -67,5 +68,44 @@ class PartidosService {
       ApiConstants.partidoReabrir(id),
       token: token,
     );
+  }
+
+  /// Genera o previsualiza el fixture de una fase (Primera Fase, Cuadrangulares, Cuartos, Semifinal, Final)
+  Future<Map<String, dynamic>> generarFixture({
+    required String fase,
+    DateTime? fechaInicio,
+    String modalidad = 'Ida',
+    bool soloVistaPrevia = false,
+    bool sobrescribirFase = false,
+    int? torneoId,
+    int? campeonatoId,
+    int intervaloDiasEntreJornadas = 7,
+    String? token,
+  }) async {
+    final session = SessionManager();
+    final resolvedTorneoId = torneoId ?? campeonatoId ?? session.selectedCampeonatoId;
+
+    final body = <String, dynamic>{
+      'torneoId': resolvedTorneoId,
+      'campeonatoId': resolvedTorneoId,
+      'fase': fase,
+      if (fechaInicio != null) 'fechaInicio': fechaInicio.toIso8601String(),
+      'modalidad': modalidad,
+      'soloVistaPrevia': soloVistaPrevia,
+      'sobrescribirFase': sobrescribirFase,
+      'intervaloDiasEntreJornadas': intervaloDiasEntreJornadas,
+    };
+
+    final response = await _apiClient.post(
+      ApiConstants.partidosGenerarFixture,
+      body: body,
+      token: token ?? (session.token.isNotEmpty ? session.token : null),
+    );
+
+    if (response is Map<String, dynamic>) {
+      return response;
+    }
+
+    throw const AppException('La respuesta del servidor no tiene el formato esperado al generar el fixture.');
   }
 }

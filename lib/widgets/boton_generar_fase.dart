@@ -11,6 +11,7 @@ class BotonGenerarFase extends StatefulWidget {
   final List<Partido> todosLosPartidos;
   final bool faseGenerada;
   final VoidCallback onFaseGenerada;
+  final VoidCallback? onCustomGenerar;
 
   const BotonGenerarFase({
     super.key,
@@ -18,6 +19,7 @@ class BotonGenerarFase extends StatefulWidget {
     required this.todosLosPartidos,
     required this.faseGenerada,
     required this.onFaseGenerada,
+    this.onCustomGenerar,
   });
 
   @override
@@ -105,6 +107,11 @@ class _BotonGenerarFaseState extends State<BotonGenerarFase> {
   }
 
   Future<void> _ejecutarGeneracion() async {
+    if (widget.onCustomGenerar != null) {
+      widget.onCustomGenerar!();
+      return;
+    }
+
     final (puedeGenerar, errorMensaje) = _validarFasePreviaCompletada();
 
     if (!puedeGenerar) {
