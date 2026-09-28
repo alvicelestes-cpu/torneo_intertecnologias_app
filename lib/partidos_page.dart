@@ -61,6 +61,8 @@ class _PartidosPageState extends State<PartidosPage> {
     setState(() {
       cargando = true;
       error = null;
+      partidos = [];
+      seccionesFixture = [];
     });
 
     try {

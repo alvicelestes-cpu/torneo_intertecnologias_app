@@ -199,4 +199,52 @@ void main() {
       expect(mockClient.lastUri?.queryParameters['campeonatoId'], equals('1'));
     });
   });
+
+  group('SessionManager registrarNuevoTorneo y Aislamiento', () {
+    test('registrarNuevoTorneo agrega el torneo y lo activa automáticamente', () {
+      final session = SessionManager();
+      session.setSession(const AuthUser(
+        token: 'super-token',
+        usuario: 'superadmin',
+        rol: 'SUPERADMIN',
+        campeonatoId: 1,
+      ));
+
+      expect(session.selectedCampeonatoId, equals(1));
+
+      const nuevo = Campeonato(
+        id: 5,
+        nombre: 'Copa Verano 2026',
+        slug: 'copa-verano-2026',
+        totalEquipos: 0,
+        totalPartidos: 0,
+      );
+
+      session.registrarNuevoTorneo(nuevo);
+
+      expect(session.selectedCampeonatoId, equals(5));
+      expect(session.selectedCampeonatoNombre, equals('Copa Verano 2026'));
+      expect(session.campeonatos.any((c) => c.id == 5), isTrue);
+    });
+
+    test('registrarNuevoTorneo actualiza si el torneo ya existía', () {
+      final session = SessionManager();
+      session.setCampeonatos([
+        const Campeonato(id: 1, nombre: 'Torneo 1', slug: 't1'),
+        const Campeonato(id: 2, nombre: 'Torneo 2', slug: 't2'),
+      ]);
+
+      const actualizado = Campeonato(
+        id: 2,
+        nombre: 'Torneo 2 Modificado',
+        slug: 't2-mod',
+      );
+
+      session.registrarNuevoTorneo(actualizado);
+
+      expect(session.selectedCampeonatoId, equals(2));
+      expect(session.selectedCampeonatoNombre, equals('Torneo 2 Modificado'));
+      expect(session.campeonatos.length, equals(2));
+    });
+  });
 }

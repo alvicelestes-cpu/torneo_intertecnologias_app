@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
 import '../core/session/session_manager.dart';
+import '../models/campeonato.dart';
+import '../models/torneo_model.dart';
+import '../services/torneo_config_service.dart';
 import '../services/torneo_service.dart';
 
 class CampeonatoSelectorBar extends StatefulWidget {
   final VoidCallback? onCampeonatoChanged;
+  final TorneoService? torneoService;
 
   const CampeonatoSelectorBar({
     super.key,
     this.onCampeonatoChanged,
+    this.torneoService,
   });
 
   @override
@@ -16,13 +21,14 @@ class CampeonatoSelectorBar extends StatefulWidget {
 }
 
 class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
-  final TorneoService _torneoService = TorneoService();
+  late final TorneoService _torneoService;
   final SessionManager _sessionManager = SessionManager();
   bool _cargando = false;
 
   @override
   void initState() {
     super.initState();
+    _torneoService = widget.torneoService ?? TorneoService();
     _cargarCampeonatos();
   }
 
@@ -42,6 +48,317 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
     }
   }
 
+  void _abrirDialogoCrearTorneo() {
+    final formKey = GlobalKey<FormState>();
+    final nombreController = TextEditingController();
+    int limiteJugadores = 14;
+    int topGoleadoresMax = 10;
+    bool tienePuntoInvisible = true;
+    bool guardando = false;
+    String? errorMessage;
+
+    showDialog(
+      context: context,
+      barrierDismissible: !guardando,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (_, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              actionsPadding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.emoji_events, color: AppColors.primary, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Nuevo Torneo',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 480,
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (errorMessage != null) ...[
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            margin: const EdgeInsets.only(bottom: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red.shade300),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    errorMessage!,
+                                    style: TextStyle(color: Colors.red.shade900, fontSize: 13),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        // 1. Nombre del torneo (obligatorio)
+                        const Text(
+                          'Nombre del Torneo *',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          key: const Key('input_nombre_torneo'),
+                          controller: nombreController,
+                          enabled: !guardando,
+                          decoration: InputDecoration(
+                            hintText: 'Ej. Torneo Apertura 2026',
+                            prefixIcon: const Icon(Icons.title, size: 20),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'El nombre del torneo es obligatorio';
+                            }
+                            if (val.trim().length < 3) {
+                              return 'El nombre debe tener al menos 3 caracteres';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 18),
+
+                        // 2. Cupo de jugadores (slider/selector 10 a 25)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Cupo de jugadores por equipo:',
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryLight,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '$limiteJugadores jugadores',
+                                style: const TextStyle(
+                                  color: AppColors.primaryDark,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Slider(
+                          key: const Key('slider_cupo_jugadores'),
+                          value: limiteJugadores.toDouble(),
+                          min: 10,
+                          max: 25,
+                          divisions: 15,
+                          label: '$limiteJugadores',
+                          activeColor: AppColors.primary,
+                          onChanged: guardando
+                              ? null
+                              : (val) {
+                                  setDialogState(() {
+                                    limiteJugadores = val.round();
+                                  });
+                                },
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: const [
+                            Text('Mín. 10', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                            Text('Por defecto: 14', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                            Text('Máx. 25', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+
+                        // 3. Top de goleadores (5, 10, 15)
+                        const Text(
+                          'Top de Goleadores (tabla pública):',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: SegmentedButton<int>(
+                            key: const Key('segmented_top_goleadores'),
+                            segments: const [
+                              ButtonSegment(value: 5, label: Text('Top 5')),
+                              ButtonSegment(value: 10, label: Text('Top 10')),
+                              ButtonSegment(value: 15, label: Text('Top 15')),
+                            ],
+                            selected: {topGoleadoresMax},
+                            onSelectionChanged: guardando
+                                ? null
+                                : (newSelection) {
+                                    setDialogState(() {
+                                      topGoleadoresMax = newSelection.first;
+                                    });
+                                  },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 4. Switch de Ventaja Deportiva (Punto Invisible)
+                        Card(
+                          elevation: 0,
+                          color: Colors.grey.shade50,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: BorderSide(color: Colors.grey.shade200),
+                          ),
+                          child: SwitchListTile(
+                            key: const Key('switch_punto_invisible'),
+                            title: const Text(
+                              'Ventaja Deportiva (Punto Invisible)',
+                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                            ),
+                            subtitle: const Text(
+                              'Aplica ventaja reglamentaria al mejor clasificado en instancias finales',
+                              style: TextStyle(fontSize: 11),
+                            ),
+                            value: tienePuntoInvisible,
+                            activeThumbColor: AppColors.primary,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                            onChanged: guardando
+                                ? null
+                                : (val) {
+                                    setDialogState(() {
+                                      tienePuntoInvisible = val;
+                                    });
+                                  },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  key: const Key('btn_cancelar_creacion_torneo'),
+                  onPressed: guardando ? null : () => Navigator.pop(dialogCtx),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  key: const Key('btn_guardar_torneo'),
+                  onPressed: guardando
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) return;
+
+                          setDialogState(() {
+                            guardando = true;
+                            errorMessage = null;
+                          });
+
+                          try {
+                            final nombre = nombreController.text.trim();
+                            final res = await _torneoService.crearTorneo(
+                              nombre: nombre,
+                              limiteJugadores: limiteJugadores,
+                              tienePuntoInvisible: tienePuntoInvisible,
+                              topGoleadoresMax: topGoleadoresMax,
+                              token: _sessionManager.token,
+                            );
+
+                            final rawTorneo = res['torneo'] is Map<String, dynamic>
+                                ? res['torneo'] as Map<String, dynamic>
+                                : res;
+
+                            final nuevoModel = TorneoModel.fromJson(rawTorneo);
+                            final nuevoCampeonato = Campeonato(
+                              id: nuevoModel.id,
+                              nombre: nuevoModel.nombre,
+                              slug: nuevoModel.slug,
+                              activo: true,
+                              publicado: true,
+                              totalEquipos: 0,
+                              totalPartidos: 0,
+                            );
+
+                            // Registrar y activar torneo en el contexto
+                            _sessionManager.registrarNuevoTorneo(nuevoCampeonato);
+                            TorneoConfigService().setLocalConfig(nuevoModel);
+
+                            if (dialogCtx.mounted) {
+                              Navigator.pop(dialogCtx);
+                            }
+                            if (!mounted) return;
+                            widget.onCampeonatoChanged?.call();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Torneo "$nombre" creado y activado exitosamente.',
+                                ),
+                                backgroundColor: Colors.green.shade700,
+                              ),
+                            );
+                          } catch (e) {
+                            setDialogState(() {
+                              guardando = false;
+                              errorMessage = e.toString().replaceFirst('Exception: ', '');
+                            });
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: guardando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Crear Torneo'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _abrirSelectorModal() {
     if (!_sessionManager.canChangeCampeonato) return;
 
@@ -50,15 +367,15 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(ctx).size.height * 0.75,
-          ),
+        return Material(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          clipBehavior: Clip.antiAlias,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.75,
+            ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,6 +416,33 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
                 'Elige el campeonato a consultar (hasta 20 torneos independientes):',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
+              if (_sessionManager.isSuperAdmin) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    key: const Key('btn_crear_nuevo_torneo'),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _abrirDialogoCrearTorneo();
+                    },
+                    icon: const Icon(Icons.add_circle_outline, size: 20),
+                    label: const Text(
+                      '+ Crear Nuevo Torneo',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               Flexible(
                 child: ListenableBuilder(
@@ -206,8 +550,9 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
               ),
             ],
           ),
-        );
-      },
+        ),
+      );
+    },
     );
   }
 

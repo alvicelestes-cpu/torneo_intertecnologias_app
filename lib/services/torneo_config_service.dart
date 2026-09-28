@@ -139,4 +139,54 @@ class TorneoConfigService extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// Registra un nuevo torneo en el backend (solo SUPERADMIN) y lo establece como activo localmente
+  Future<TorneoModel> crearTorneo({
+    required String token,
+    required String nombre,
+    String? slug,
+    int? organizacionId,
+    int limiteJugadores = 14,
+    bool tienePuntoInvisible = true,
+    int topGoleadoresMax = 10,
+  }) async {
+    _cargando = true;
+    _ultimoError = null;
+    notifyListeners();
+
+    final payload = <String, dynamic>{
+      'nombre': nombre.trim(),
+      if (slug != null && slug.trim().isNotEmpty) 'slug': slug.trim(),
+      if (organizacionId != null && organizacionId > 0) 'organizacionId': organizacionId,
+      'limiteJugadores': limiteJugadores,
+      'tienePuntoInvisible': tienePuntoInvisible,
+      'topGoleadoresMax': topGoleadoresMax,
+    };
+
+    try {
+      final response = await _apiClient.post(
+        ApiConstants.torneoCrear,
+        headers: ApiConstants.defaultHeaders(token: token),
+        body: payload,
+      );
+
+      if (response is Map<String, dynamic>) {
+        if (response.containsKey('torneo') && response['torneo'] is Map<String, dynamic>) {
+          _config = TorneoModel.fromJson(response['torneo'] as Map<String, dynamic>);
+        } else {
+          _config = TorneoModel.fromJson(response);
+        }
+        notifyListeners();
+        return _config;
+      }
+
+      throw const AppException('Respuesta inesperada al crear el torneo.');
+    } catch (e) {
+      _ultimoError = e.toString();
+      rethrow;
+    } finally {
+      _cargando = false;
+      notifyListeners();
+    }
+  }
 }

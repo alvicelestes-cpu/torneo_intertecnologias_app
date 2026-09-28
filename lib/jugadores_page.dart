@@ -62,6 +62,8 @@ class _JugadoresPageState extends State<JugadoresPage> {
     setState(() {
       cargando = true;
       error = null;
+      jugadores = [];
+      equiposMap = {};
     });
 
     try {

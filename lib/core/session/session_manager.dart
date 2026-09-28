@@ -201,6 +201,21 @@ class SessionManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Registra un nuevo torneo en la lista y lo selecciona automáticamente como activo
+  void registrarNuevoTorneo(Campeonato nuevo) {
+    final list = List<Campeonato>.from(_campeonatos);
+    final idx = list.indexWhere((c) => c.id == nuevo.id);
+    if (idx >= 0) {
+      list[idx] = nuevo;
+    } else {
+      list.add(nuevo);
+    }
+    _campeonatos = list;
+    _selectedCampeonato = nuevo;
+    _persistCampeonatoId(nuevo.id);
+    notifyListeners();
+  }
+
   void selectCampeonatoById(int id) {
     if (!canChangeCampeonato) return;
     if (_selectedCampeonato?.id == id) return;
@@ -236,6 +251,8 @@ class SessionManager extends ChangeNotifier {
 
   void clearSession() {
     _currentUser = null;
+    _selectedCampeonato = null;
+    _persistedCampeonatoId = null;
     _campeonatos = [];
     notifyListeners();
   }

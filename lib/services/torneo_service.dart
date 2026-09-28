@@ -15,8 +15,25 @@ class TorneoService {
       : _apiClient = apiClient ?? ApiClient(),
         _jugadoresService = jugadoresService ?? JugadoresService(apiClient: apiClient);
 
-  /// Obtiene la lista de todos los campeonatos activos (multitorneo)
+  /// Obtiene la lista de todos los torneos activos (multitorneo) con conteos de equipos y partidos
   Future<List<Campeonato>> getCampeonatos({String? token}) async {
+    try {
+      final responseListar = await _apiClient.get(
+        ApiConstants.torneoListar,
+        token: token,
+      );
+
+      if (responseListar is List && responseListar.isNotEmpty) {
+        return responseListar
+            .map((item) => Campeonato.fromJson(
+                  item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item),
+                ))
+            .toList();
+      }
+    } catch (_) {
+      // Fallback a campeonatos legacy si el endpoint listar no responde
+    }
+
     final response = await _apiClient.get(
       ApiConstants.campeonatos,
       token: token,
@@ -31,6 +48,56 @@ class TorneoService {
     }
 
     throw const AppException('La respuesta de campeonatos no tiene el formato esperado.');
+  }
+
+  /// Obtiene la lista directa de torneos activos desde /api/torneo/listar
+  Future<List<Campeonato>> getTorneosActivos({String? token}) async {
+    final response = await _apiClient.get(
+      ApiConstants.torneoListar,
+      token: token,
+    );
+
+    if (response is List) {
+      return response
+          .map((item) => Campeonato.fromJson(
+                item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item),
+              ))
+          .toList();
+    }
+
+    throw const AppException('La respuesta de torneos no tiene el formato esperado.');
+  }
+
+  /// Registra un nuevo torneo en el backend protegido para SUPERADMIN (/api/torneo/crear)
+  Future<Map<String, dynamic>> crearTorneo({
+    required String nombre,
+    String? slug,
+    int? organizacionId,
+    int limiteJugadores = 14,
+    bool tienePuntoInvisible = true,
+    int topGoleadoresMax = 10,
+    String? token,
+  }) async {
+    final payload = <String, dynamic>{
+      'nombre': nombre.trim(),
+      if (slug != null && slug.trim().isNotEmpty) 'slug': slug.trim(),
+      if (organizacionId != null && organizacionId > 0) 'organizacionId': organizacionId,
+      'limiteJugadores': limiteJugadores,
+      'tienePuntoInvisible': tienePuntoInvisible,
+      'topGoleadoresMax': topGoleadoresMax,
+    };
+
+    final response = await _apiClient.post(
+      ApiConstants.torneoCrear,
+      body: payload,
+      token: token,
+    );
+
+    if (response is Map<String, dynamic>) {
+      return response;
+    }
+
+    throw const AppException('Respuesta inesperada al crear el nuevo torneo.');
   }
 
   /// Obtiene el detalle de un campeonato específico

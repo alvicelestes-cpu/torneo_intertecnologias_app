@@ -59,6 +59,7 @@ class _EquiposPageState extends State<EquiposPage> {
     setState(() {
       cargando = true;
       error = null;
+      equipos = [];
     });
 
     try {
