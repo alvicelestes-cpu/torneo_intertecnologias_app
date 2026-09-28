@@ -210,6 +210,17 @@ class _JugadoresPageState extends State<JugadoresPage> {
   }
 
   Future<void> _abrirSelectorDescargaCarnets() async {
+    if (!_esAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Acceso restringido: Solo administradores autorizados pueden descargar carnets.'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     if (jugadores.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -453,9 +464,10 @@ class _JugadoresPageState extends State<JugadoresPage> {
                                   ),
                                 ],
                               ),
-                              FilledButton.icon(
-                                key: const Key('btn_descargar_carnets_banner'),
-                                style: FilledButton.styleFrom(
+                              if (_esAdmin)
+                                FilledButton.icon(
+                                  key: const Key('btn_descargar_carnets_banner'),
+                                  style: FilledButton.styleFrom(
                                   backgroundColor: Colors.white,
                                   foregroundColor: const Color(0xFF0F766E),
                                   elevation: 2,

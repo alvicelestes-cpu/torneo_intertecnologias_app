@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:torneo_intertecnologias_app/core/session/session_manager.dart';
 import 'package:torneo_intertecnologias_app/jugadores_equipo_page.dart';
 import 'package:torneo_intertecnologias_app/jugadores_page.dart';
+import 'package:torneo_intertecnologias_app/models/auth_user.dart';
 import 'package:torneo_intertecnologias_app/models/equipo.dart';
 import 'package:torneo_intertecnologias_app/models/goleador.dart';
 import 'package:torneo_intertecnologias_app/models/jugador.dart';
@@ -15,6 +18,11 @@ import 'package:torneo_intertecnologias_app/widgets/public_team_card.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    SessionManager().clearSession();
+  });
 
   group('CarnetsPdfService - Colores reglamentarios por edad', () {
     test('>= 40 años retorna verde (#226C2A)', () {
@@ -39,6 +47,80 @@ void main() {
       final customFallback = PdfColor.fromHex('#112233');
       expect(CarnetsPdfService.obtenerColorPorEdad(null, fallbackColor: customFallback), equals(customFallback));
       expect(CarnetsPdfService.obtenerColorPorEdad(null), isNotNull);
+    });
+  });
+
+  group('CarnetsPdfService - Roles y Permisos de Administrador', () {
+    test('Usuario sin sesión / anónimo no tiene permiso de administrador', () {
+      SessionManager().clearSession();
+      expect(CarnetsPdfService.tienePermisoAdministrador(), isFalse);
+    });
+
+    test('Usuario con rol VISITANTE no tiene permiso de administrador', () {
+      SessionManager().setSession(const AuthUser(
+        token: 'token-visitante',
+        usuario: 'visitante',
+        rol: 'VISITANTE',
+        campeonatoId: 1,
+      ));
+      expect(CarnetsPdfService.tienePermisoAdministrador(), isFalse);
+    });
+
+    test('Usuario con rol ADMIN tiene permiso de administrador', () {
+      SessionManager().setSession(const AuthUser(
+        token: 'token-admin',
+        usuario: 'admin',
+        rol: 'ADMIN',
+        campeonatoId: 1,
+      ));
+      expect(CarnetsPdfService.tienePermisoAdministrador(), isTrue);
+    });
+
+    test('Usuario con rol SUPERADMIN tiene permiso de administrador', () {
+      SessionManager().setSession(const AuthUser(
+        token: 'token-superadmin',
+        usuario: 'superadmin',
+        rol: 'SUPERADMIN',
+        campeonatoId: 1,
+      ));
+      expect(CarnetsPdfService.tienePermisoAdministrador(), isTrue);
+    });
+
+    test('Usuario con rol ADMINISTRADOR tiene permiso de administrador', () {
+      SessionManager().setSession(const AuthUser(
+        token: 'token-administrador',
+        usuario: 'administrador',
+        rol: 'ADMINISTRADOR',
+        campeonatoId: 1,
+      ));
+      expect(CarnetsPdfService.tienePermisoAdministrador(), isTrue);
+    });
+
+    testWidgets('Bloquea la invocación de descargarCarnetsConFeedback para usuario no autenticado y muestra advertencia', (tester) async {
+      SessionManager().clearSession();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => CarnetsPdfService.descargarCarnetsConFeedback(
+                  context: context,
+                  equipo: const Equipo(id: 1, nombre: 'GREMIO HFC', sigla: 'GH'),
+                  jugadores: const [],
+                ),
+                child: const Text('Descargar'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Descargar'));
+      await tester.pump();
+
+      // Debe mostrar advertencia amigable de acceso restringido
+      expect(find.text('Acceso restringido: Solo administradores autorizados pueden descargar carnets.'), findsOneWidget);
     });
   });
 
@@ -167,22 +249,22 @@ void main() {
   });
 
   group('PublicTeamCard - Integración de botón de Carnets', () {
+    const testEquipo = Equipo(
+      id: 5,
+      nombre: 'CEMENTEROS',
+      sigla: 'CEM',
+      colorPrincipal: '#1E3A8A',
+      cantidadJugadores: 14,
+    );
+
     testWidgets('Muestra botón "🪪 Carnets" cuando onCarnets está definido y dispara callback', (tester) async {
       bool carnetsPressed = false;
-
-      const equipo = Equipo(
-        id: 5,
-        nombre: 'CEMENTEROS',
-        sigla: 'CEM',
-        colorPrincipal: '#1E3A8A',
-        cantidadJugadores: 14,
-      );
 
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: PublicTeamCard(
-              equipo: equipo,
+              equipo: testEquipo,
               onTap: () {},
               onCarnets: () {
                 carnetsPressed = true;
@@ -201,9 +283,26 @@ void main() {
       await tester.pump();
       expect(carnetsPressed, isTrue);
     });
+
+    testWidgets('Oculta botón "🪪 Carnets" cuando onCarnets es null (usuario no administrador)', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: PublicTeamCard(
+              equipo: testEquipo,
+              onTap: null,
+              onCarnets: null,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('btn_carnets_equipo_5')), findsNothing);
+      expect(find.text('🪪 Carnets'), findsNothing);
+    });
   });
 
-  group('Vistas de Jugadores - Botón destacado de Descargar Carnets', () {
+  group('Vistas de Jugadores - Visibilidad condicional del botón de Carnets por rol', () {
     const testEquipo = Equipo(
       id: 1,
       nombre: 'GREMIO HFC',
@@ -232,7 +331,41 @@ void main() {
       ),
     ];
 
-    testWidgets('JugadoresEquipoPage muestra el botón destacado "🪪 Descargar Carnets (PDF)" en el banner', (tester) async {
+    testWidgets('JugadoresEquipoPage oculta el botón de carnets para usuario anónimo / visitante', (tester) async {
+      SessionManager().clearSession();
+
+      final mockEquipos = MockEquiposService(
+        mockEquipos: [testEquipo],
+        mockJugadores: testJugadores,
+      );
+      final mockTorneo = MockTorneoService();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: JugadoresEquipoPage(
+            equipoId: 1,
+            equipoNombre: 'GREMIO HFC',
+            equiposService: mockEquipos,
+            torneoService: mockTorneo,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // No debe mostrar el botón de descarga en el banner
+      expect(find.byKey(const Key('btn_descargar_carnets_equipo')), findsNothing);
+      expect(find.text('🪪 Descargar Carnets (PDF)'), findsNothing);
+    });
+
+    testWidgets('JugadoresEquipoPage muestra el botón destacado para usuario ADMIN autenticado', (tester) async {
+      SessionManager().setSession(const AuthUser(
+        token: 'token-admin-valido',
+        usuario: 'admin_test',
+        rol: 'ADMIN',
+        campeonatoId: 1,
+      ));
+
       final mockEquipos = MockEquiposService(
         mockEquipos: [testEquipo],
         mockJugadores: testJugadores,
@@ -257,7 +390,9 @@ void main() {
       expect(find.text('🪪 Descargar Carnets (PDF)'), findsOneWidget);
     });
 
-    testWidgets('JugadoresPage muestra el botón destacado "🪪 Descargar Carnets (PDF)" en el banner', (tester) async {
+    testWidgets('JugadoresPage oculta el botón de carnets para usuario anónimo / visitante', (tester) async {
+      SessionManager().clearSession();
+
       final mockJugadores = MockJugadoresService(mockJugadores: testJugadores);
       final mockEquipos = MockEquiposService(mockEquipos: [testEquipo]);
       final mockTorneo = MockTorneoService();
@@ -274,7 +409,35 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Debe mostrar el botón de descarga en la cabecera
+      // No debe mostrar el botón de descarga en la cabecera
+      expect(find.byKey(const Key('btn_descargar_carnets_banner')), findsNothing);
+      expect(find.text('🪪 Descargar Carnets (PDF)'), findsNothing);
+    });
+
+    testWidgets('JugadoresPage muestra el botón destacado para usuario ADMIN autenticado', (tester) async {
+      SessionManager().setSession(const AuthUser(
+        token: 'token-admin-valido',
+        usuario: 'admin_test',
+        rol: 'ADMIN',
+        campeonatoId: 1,
+      ));
+
+      final mockJugadores = MockJugadoresService(mockJugadores: testJugadores);
+      final mockEquipos = MockEquiposService(mockEquipos: [testEquipo]);
+      final mockTorneo = MockTorneoService();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: JugadoresPage(
+            jugadoresService: mockJugadores,
+            equiposService: mockEquipos,
+            torneoService: mockTorneo,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
       expect(find.byKey(const Key('btn_descargar_carnets_banner')), findsOneWidget);
       expect(find.text('🪪 Descargar Carnets (PDF)'), findsOneWidget);
     });

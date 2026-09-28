@@ -523,6 +523,13 @@ class CarnetsPdfService {
     return null;
   }
 
+  /// Comprueba si el usuario autenticado tiene permisos de administración
+  /// (ADMIN, SUPERADMIN o ADMINISTRADOR) para generar, descargar o imprimir carnets.
+  static bool tienePermisoAdministrador({SessionManager? sessionManager}) {
+    final session = sessionManager ?? SessionManager();
+    return session.hasAdminAccess;
+  }
+
   /// Flujo interactivo: Genera y descarga el documento de carnets en el dispositivo / navegador.
   /// Muestra un modal de carga durante el proceso y notifica con un SnackBar al finalizar.
   static Future<void> descargarCarnetsConFeedback({
@@ -530,7 +537,20 @@ class CarnetsPdfService {
     required Equipo equipo,
     required List<Jugador> jugadores,
     String? torneoNombre,
+    bool verificarPermisos = true,
   }) async {
+    // 0. Comprobación de seguridad: Solo administradores autorizados
+    if (verificarPermisos && !tienePermisoAdministrador()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Acceso restringido: Solo administradores autorizados pueden descargar carnets.'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     // 1. Mostrar diálogo de progreso
     showDialog<void>(
       context: context,
@@ -639,7 +659,20 @@ class CarnetsPdfService {
     required Equipo equipo,
     required List<Jugador> jugadores,
     String? torneoNombre,
+    bool verificarPermisos = true,
   }) async {
+    // 0. Comprobación de seguridad: Solo administradores autorizados
+    if (verificarPermisos && !tienePermisoAdministrador()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Acceso restringido: Solo administradores autorizados pueden imprimir carnets.'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final filename = getFilename(equipo.nombre);
 
     await Printing.layoutPdf(

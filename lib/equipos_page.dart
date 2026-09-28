@@ -144,6 +144,17 @@ class _EquiposPageState extends State<EquiposPage> {
   }
 
   Future<void> _descargarCarnetsEquipo(Equipo equipo) async {
+    if (!_esAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Acceso restringido: Solo administradores autorizados pueden descargar carnets.'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     try {
       List<Jugador> jugadoresEquipo = [];
       try {
@@ -842,7 +853,7 @@ class _EquiposPageState extends State<EquiposPage> {
                                       child: PublicTeamCard(
                                         equipo: equipo,
                                         onTap: () => _abrirPlantilla(equipo),
-                                        onCarnets: () => _descargarCarnetsEquipo(equipo),
+                                        onCarnets: _esAdmin ? () => _descargarCarnetsEquipo(equipo) : null,
                                         onEdit: _esAdmin ? () => _abrirEditarEquipo(equipo) : null,
                                       ),
                                     ),
@@ -867,7 +878,7 @@ class _EquiposPageState extends State<EquiposPage> {
                             return PublicTeamCard(
                               equipo: equipo,
                               onTap: () => _abrirPlantilla(equipo),
-                              onCarnets: () => _descargarCarnetsEquipo(equipo),
+                              onCarnets: _esAdmin ? () => _descargarCarnetsEquipo(equipo) : null,
                               onEdit: _esAdmin ? () => _abrirEditarEquipo(equipo) : null,
                             );
                           },
