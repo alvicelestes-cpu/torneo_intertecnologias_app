@@ -1,6 +1,7 @@
 import '../core/constants/api_constants.dart';
 import '../core/errors/app_exception.dart';
 import '../core/network/api_client.dart';
+import '../core/session/session_manager.dart';
 import '../models/equipo.dart';
 import '../models/jugador.dart';
 
@@ -72,5 +73,45 @@ class EquiposService {
       body: data,
       token: token,
     );
+  }
+
+  /// Crea un nuevo equipo asociado al torneo activo
+  Future<Equipo> crearEquipo({
+    required String nombre,
+    String? sigla,
+    String? colorPrincipal,
+    String? logo,
+    int? campeonatoId,
+    int? torneoId,
+    String? token,
+  }) async {
+    final session = SessionManager();
+    final resolvedTorneoId = torneoId ?? campeonatoId ?? session.selectedCampeonatoId;
+
+    final payload = <String, dynamic>{
+      'nombre': nombre.trim(),
+      if (sigla != null && sigla.trim().isNotEmpty) 'sigla': sigla.trim(),
+      'colorPrincipal': (colorPrincipal != null && colorPrincipal.trim().isNotEmpty)
+          ? colorPrincipal.trim()
+          : '#0d6efd',
+      if (logo != null && logo.trim().isNotEmpty) 'logo': logo.trim(),
+      'campeonatoId': resolvedTorneoId,
+      'torneoId': resolvedTorneoId,
+    };
+
+    final response = await _apiClient.post(
+      ApiConstants.equipos,
+      body: payload,
+      token: token ?? (session.token.isNotEmpty ? session.token : null),
+    );
+
+    if (response is Map<String, dynamic>) {
+      if (response['equipo'] is Map) {
+        return Equipo.fromJson(Map<String, dynamic>.from(response['equipo'] as Map));
+      }
+      return Equipo.fromJson(response);
+    }
+
+    throw const AppException('Respuesta inesperada al crear el equipo.');
   }
 }

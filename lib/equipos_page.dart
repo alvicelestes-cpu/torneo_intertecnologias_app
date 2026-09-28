@@ -1,8 +1,10 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
+import 'core/utils/mobile_image_picker.dart';
 import 'core/utils/ui_helpers.dart';
 import 'models/equipo.dart';
 import 'models/jugador.dart';
@@ -20,10 +22,14 @@ import 'jugadores_equipo_page.dart';
 
 class EquiposPage extends StatefulWidget {
   final String? token;
+  final EquiposService? equiposService;
+  final JugadoresService? jugadoresService;
 
   const EquiposPage({
     super.key,
     this.token,
+    this.equiposService,
+    this.jugadoresService,
   });
 
   @override
@@ -31,8 +37,8 @@ class EquiposPage extends StatefulWidget {
 }
 
 class _EquiposPageState extends State<EquiposPage> {
-  final EquiposService _equiposService = EquiposService();
-  final JugadoresService _jugadoresService = JugadoresService();
+  late final EquiposService _equiposService;
+  late final JugadoresService _jugadoresService;
 
   bool cargando = true;
   String? error;
@@ -41,6 +47,8 @@ class _EquiposPageState extends State<EquiposPage> {
   @override
   void initState() {
     super.initState();
+    _equiposService = widget.equiposService ?? EquiposService();
+    _jugadoresService = widget.jugadoresService ?? JugadoresService();
     SessionManager().addListener(_onSessionChanged);
     cargarEquipos();
   }
@@ -147,6 +155,441 @@ class _EquiposPageState extends State<EquiposPage> {
     }
   }
 
+  void _abrirCrearEquipo() {
+    final formKey = GlobalKey<FormState>();
+    final nombreCtrl = TextEditingController();
+    final siglaCtrl = TextEditingController();
+    final logoUrlCtrl = TextEditingController();
+
+    String colorSeleccionado = '#0D47A1';
+    Uint8List? escudoBytes;
+    String? escudoDataUri;
+    bool guardando = false;
+    String? errorCreacion;
+
+    final coloresPaleta = [
+      '#0D47A1', // Azul Noche
+      '#1565C0', // Azul Real
+      '#00897B', // Turquesa
+      '#2E7D32', // Verde
+      '#C62828', // Rojo
+      '#E65100', // Naranja
+      '#6A1B9A', // Púrpura
+      '#37474F', // Gris Pizarra
+      '#F9A825', // Dorado
+      '#212121', // Negro Grafito
+    ];
+
+    Color hexToColor(String hex) {
+      final clean = hex.replaceAll('#', '');
+      if (clean.length == 6) {
+        return Color(int.parse('FF$clean', radix: 16));
+      }
+      return const Color(0xFF0D47A1);
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: !guardando,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final colorWidget = hexToColor(colorSeleccionado);
+            final nombreActual = nombreCtrl.text.trim();
+            final siglaActual = siglaCtrl.text.trim();
+            final previewTexto = siglaActual.isNotEmpty
+                ? siglaActual
+                : (nombreActual.isNotEmpty
+                    ? (nombreActual.length > 3 ? nombreActual.substring(0, 3).toUpperCase() : nombreActual.toUpperCase())
+                    : 'EQP');
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              actionsPadding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.shield, color: AppColors.primary, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Nuevo Equipo',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 480,
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (errorCreacion != null) ...[
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            margin: const EdgeInsets.only(bottom: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red.shade300),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    errorCreacion!,
+                                    style: TextStyle(color: Colors.red.shade900, fontSize: 13),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        // Contexto del torneo activo
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.emoji_events, size: 18, color: AppColors.primary),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Torneo: ${SessionManager().selectedCampeonatoNombre}',
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryDark,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Previsualización de escudo y color
+                        Center(
+                          child: Column(
+                            children: [
+                              Container(
+                                width: 72,
+                                height: 72,
+                                decoration: BoxDecoration(
+                                  color: colorWidget,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 3),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 6,
+                                      offset: Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: escudoBytes != null
+                                    ? Image.memory(escudoBytes!, fit: BoxFit.cover)
+                                    : (logoUrlCtrl.text.trim().isNotEmpty
+                                        ? Image.network(
+                                            logoUrlCtrl.text.trim(),
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, _, _) => Center(
+                                              child: Text(
+                                                previewTexto,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 18,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        : Center(
+                                            child: Text(
+                                              previewTexto,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                              ),
+                                            ),
+                                          )),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Vista previa del escudo',
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 1. Nombre del equipo (obligatorio)
+                        const Text(
+                          'Nombre del Equipo *',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          key: const Key('input_nombre_equipo'),
+                          controller: nombreCtrl,
+                          enabled: !guardando,
+                          decoration: InputDecoration(
+                            hintText: 'Ej. Deportivo Inter',
+                            prefixIcon: const Icon(Icons.shield_outlined, size: 20),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'El nombre del equipo es obligatorio';
+                            }
+                            if (val.trim().length < 3) {
+                              return 'El nombre debe tener al menos 3 caracteres';
+                            }
+                            return null;
+                          },
+                          onChanged: (val) {
+                            if (siglaCtrl.text.isEmpty || siglaCtrl.text.length <= 4) {
+                              final words = val.trim().split(RegExp(r'\s+'));
+                              if (words.length >= 2) {
+                                siglaCtrl.text = words.map((w) => w.isNotEmpty ? w[0] : '').take(4).join().toUpperCase();
+                              } else if (val.trim().length >= 3) {
+                                siglaCtrl.text = val.trim().substring(0, 3).toUpperCase();
+                              }
+                            }
+                            setDialogState(() {});
+                          },
+                        ),
+                        const SizedBox(height: 14),
+
+                        // 2. Código corto / Abreviatura (ej. PRU27)
+                        const Text(
+                          'Código Corto / Sigla (ej. PRU27)',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          key: const Key('input_sigla_equipo'),
+                          controller: siglaCtrl,
+                          enabled: !guardando,
+                          textCapitalization: TextCapitalization.characters,
+                          maxLength: 6,
+                          decoration: InputDecoration(
+                            hintText: 'Ej. DEP o PRU27',
+                            counterText: '',
+                            prefixIcon: const Icon(Icons.short_text, size: 20),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onChanged: (_) => setDialogState(() {}),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // 3. Color distintivo (paleta predefinida)
+                        const Text(
+                          'Color Distintivo:',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: coloresPaleta.map((hex) {
+                            final colorItem = hexToColor(hex);
+                            final isSelected = colorSeleccionado.toUpperCase() == hex.toUpperCase();
+
+                            return InkWell(
+                              key: Key('color_picker_$hex'),
+                              onTap: guardando
+                                  ? null
+                                  : () {
+                                      setDialogState(() {
+                                        colorSeleccionado = hex;
+                                      });
+                                    },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: colorItem,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isSelected ? Colors.black : Colors.black12,
+                                    width: isSelected ? 2.5 : 1,
+                                  ),
+                                ),
+                                child: isSelected
+                                    ? const Icon(Icons.check, color: Colors.white, size: 18)
+                                    : null,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 4. Subida o selección de escudo/logo (opcional con valor por defecto)
+                        const Text(
+                          'Escudo / Logo (opcional):',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            ElevatedButton.icon(
+                              key: const Key('btn_subir_escudo_equipo'),
+                              onPressed: guardando
+                                  ? null
+                                  : () async {
+                                      try {
+                                        final picked = await MobileImagePicker.pickImage();
+                                        if (picked != null) {
+                                          setDialogState(() {
+                                            escudoBytes = picked.bytes;
+                                            escudoDataUri = picked.dataUri;
+                                          });
+                                        }
+                                      } catch (_) {}
+                                    },
+                              icon: const Icon(Icons.upload, size: 18),
+                              label: const Text('Subir Imagen'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryLight,
+                                foregroundColor: AppColors.primaryDark,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                            if (escudoBytes != null) ...[
+                              const SizedBox(width: 8),
+                              TextButton(
+                                onPressed: () {
+                                  setDialogState(() {
+                                    escudoBytes = null;
+                                    escudoDataUri = null;
+                                  });
+                                },
+                                child: const Text('Quitar', style: TextStyle(color: Colors.red)),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: logoUrlCtrl,
+                          enabled: !guardando,
+                          decoration: InputDecoration(
+                            hintText: 'O ingresa URL de imagen (https://...)',
+                            prefixIcon: const Icon(Icons.link, size: 20),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onChanged: (_) => setDialogState(() {}),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  key: const Key('btn_cancelar_crear_equipo'),
+                  onPressed: guardando ? null : () => Navigator.pop(dialogCtx),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  key: const Key('btn_guardar_nuevo_equipo'),
+                  onPressed: guardando
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) return;
+
+                          setDialogState(() {
+                            guardando = true;
+                            errorCreacion = null;
+                          });
+
+                          try {
+                            final nombre = nombreCtrl.text.trim();
+                            final sigla = siglaCtrl.text.trim();
+                            final logoFinal = escudoDataUri ?? (logoUrlCtrl.text.trim().isNotEmpty ? logoUrlCtrl.text.trim() : null);
+
+                            await _equiposService.crearEquipo(
+                              nombre: nombre,
+                              sigla: sigla.isNotEmpty ? sigla : null,
+                              colorPrincipal: colorSeleccionado,
+                              logo: logoFinal,
+                              campeonatoId: SessionManager().selectedCampeonatoId,
+                              token: widget.token,
+                            );
+
+                            if (dialogCtx.mounted) {
+                              Navigator.pop(dialogCtx);
+                            }
+
+                            if (!mounted) return;
+                            await cargarEquipos();
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Equipo "$nombre" creado exitosamente en ${SessionManager().selectedCampeonatoNombre}.',
+                                ),
+                                backgroundColor: Colors.green.shade700,
+                              ),
+                            );
+                          } catch (e) {
+                            setDialogState(() {
+                              guardando = false;
+                              errorCreacion = e.toString().replaceFirst('Exception: ', '').replaceFirst('AppException: ', '');
+                            });
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: guardando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Crear Equipo'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _abrirEditarEquipo(Equipo equipo) async {
     final actualizado = await Navigator.push<bool>(
       context,
@@ -190,9 +633,34 @@ class _EquiposPageState extends State<EquiposPage> {
             }
 
             if (equipos.isEmpty) {
-              return const AppEmptyView(
-                message: 'No hay equipos registrados.',
-                icon: Icons.groups_outlined,
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const AppEmptyView(
+                        message: 'No hay equipos registrados en este torneo.',
+                        icon: Icons.groups_outlined,
+                      ),
+                      if (_esAdmin) ...[
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          key: const Key('btn_crear_primer_equipo'),
+                          onPressed: _abrirCrearEquipo,
+                          icon: const Icon(Icons.add_circle_outline),
+                          label: const Text('Crear Primer Equipo'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               );
             }
 
@@ -284,6 +752,27 @@ class _EquiposPageState extends State<EquiposPage> {
                                 ],
                               ),
                             ),
+                            if (_esAdmin) ...[
+                              const SizedBox(width: 10),
+                              ElevatedButton.icon(
+                                key: const Key('btn_crear_equipo_banner'),
+                                onPressed: _abrirCrearEquipo,
+                                icon: const Icon(Icons.add_circle_outline, size: 18),
+                                label: Text(isMobile ? 'Crear' : 'Crear Equipo'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: AppColors.primary,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: isMobile ? 10 : 16,
+                                    vertical: 10,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  elevation: 2,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -348,14 +837,34 @@ class _EquiposPageState extends State<EquiposPage> {
         ),
       ),
       floatingActionButton: _esAdmin
-          ? FloatingActionButton.extended(
-              backgroundColor: AppColors.primary,
-              onPressed: _abrirInscripcion,
-              icon: const Icon(Icons.person_add, color: Colors.white),
-              label: const Text(
-                'Inscribir Jugador',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-              ),
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                FloatingActionButton.extended(
+                  heroTag: 'fab_crear_equipo',
+                  key: const Key('btn_crear_equipo_fab'),
+                  backgroundColor: AppColors.primary,
+                  onPressed: _abrirCrearEquipo,
+                  icon: const Icon(Icons.group_add, color: Colors.white),
+                  label: const Text(
+                    'Crear Equipo',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                FloatingActionButton.extended(
+                  heroTag: 'fab_inscribir_jugador',
+                  key: const Key('btn_inscribir_jugador_fab'),
+                  backgroundColor: const Color(0xFF0F766E),
+                  onPressed: _abrirInscripcion,
+                  icon: const Icon(Icons.person_add, color: Colors.white),
+                  label: const Text(
+                    'Inscribir Jugador',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+              ],
             )
           : null,
     );
