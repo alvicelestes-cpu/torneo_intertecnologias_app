@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdf/pdf.dart';
 import 'package:torneo_intertecnologias_app/jugadores_equipo_page.dart';
 import 'package:torneo_intertecnologias_app/jugadores_page.dart';
 import 'package:torneo_intertecnologias_app/models/equipo.dart';
@@ -14,6 +15,32 @@ import 'package:torneo_intertecnologias_app/widgets/public_team_card.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('CarnetsPdfService - Colores reglamentarios por edad', () {
+    test('>= 40 años retorna verde (#226C2A)', () {
+      expect(CarnetsPdfService.obtenerColorPorEdad(40), equals(PdfColor.fromHex('#226C2A')));
+      expect(CarnetsPdfService.obtenerColorPorEdad(46), equals(PdfColor.fromHex('#226C2A')));
+      expect(CarnetsPdfService.obtenerColorPorEdad(60), equals(PdfColor.fromHex('#226C2A')));
+    });
+
+    test('35 a 39 años retorna naranja / terracota (#B84500)', () {
+      expect(CarnetsPdfService.obtenerColorPorEdad(35), equals(PdfColor.fromHex('#B84500')));
+      expect(CarnetsPdfService.obtenerColorPorEdad(37), equals(PdfColor.fromHex('#B84500')));
+      expect(CarnetsPdfService.obtenerColorPorEdad(39), equals(PdfColor.fromHex('#B84500')));
+    });
+
+    test('< 35 años (18 a 34 años) retorna azul (#0D57AA)', () {
+      expect(CarnetsPdfService.obtenerColorPorEdad(34), equals(PdfColor.fromHex('#0D57AA')));
+      expect(CarnetsPdfService.obtenerColorPorEdad(25), equals(PdfColor.fromHex('#0D57AA')));
+      expect(CarnetsPdfService.obtenerColorPorEdad(18), equals(PdfColor.fromHex('#0D57AA')));
+    });
+
+    test('Edad null retorna fallbackColor si se provee o neutro institucional', () {
+      final customFallback = PdfColor.fromHex('#112233');
+      expect(CarnetsPdfService.obtenerColorPorEdad(null, fallbackColor: customFallback), equals(customFallback));
+      expect(CarnetsPdfService.obtenerColorPorEdad(null), isNotNull);
+    });
+  });
 
   group('CarnetsPdfService - Nombres de archivo', () {
     test('Genera nombre de archivo limpio y en mayúsculas con prefijo Carnets_', () {

@@ -8,6 +8,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../core/constants/app_colors.dart';
 import '../core/session/session_manager.dart';
 import '../core/utils/date_utils.dart';
 import '../core/utils/image_utils.dart';
@@ -20,6 +21,24 @@ import 'torneo_config_service.dart';
 /// de los Carnets Oficiales de Jugadores por Equipo.
 class CarnetsPdfService {
   CarnetsPdfService._();
+
+  /// Obtiene el color reglamentario del carnet según la edad del jugador:
+  /// - Edad >= 40 años: Verde (#226C2A / Mayores de 40 años)
+  /// - Edad >= 35 y Edad <= 39 años: Naranja / Terracota (#B84500 / Entre 35 y 39 años)
+  /// - Edad < 35 años (18 a 34 años): Azul (#0D57AA / De 18 a 34 años)
+  /// - Edad no disponible / null: Neutro (#546E7A o color del equipo)
+  static PdfColor obtenerColorPorEdad(int? edad, {PdfColor? fallbackColor}) {
+    if (edad == null) {
+      return fallbackColor ?? PdfColor.fromInt(AppColors.carnetNeutro.toARGB32());
+    }
+    if (edad >= 40) {
+      return PdfColor.fromHex('#226C2A');
+    }
+    if (edad >= 35 && edad <= 39) {
+      return PdfColor.fromHex('#B84500');
+    }
+    return PdfColor.fromHex('#0D57AA');
+  }
 
   /// Genera el nombre de archivo estandarizado para el PDF del equipo.
   /// Ejemplo: Carnets_GREMIO_HFC.pdf
@@ -76,9 +95,8 @@ class CarnetsPdfService {
     final logoImage = await _cargarEscudoEquipo(equipo);
     final fotosJugadores = await _cargarFotosJugadores(jugadoresProcesados);
 
-    // 5. Colores del club
+    // 5. Color base del club
     final teamColor = PdfColor.fromInt(equipo.color.toARGB32());
-    final pillBg = _calcularColorPastel(teamColor);
 
     // 6. Construir documento y paginar en grupos de 8 carnets
     final doc = pw.Document(theme: theme);
@@ -131,7 +149,6 @@ class CarnetsPdfService {
                     jugador: j,
                     torneoNombre: torneo,
                     teamColor: teamColor,
-                    pillBgColor: pillBg,
                     logoImage: logoImage,
                     playerPhoto: fotosJugadores[j.id],
                   );
@@ -152,15 +169,18 @@ class CarnetsPdfService {
     required Jugador jugador,
     required String torneoNombre,
     required PdfColor teamColor,
-    required PdfColor pillBgColor,
     required pw.MemoryImage? logoImage,
     required pw.MemoryImage? playerPhoto,
   }) {
+    final edad = jugador.edad;
+    final carnetColor = obtenerColorPorEdad(edad, fallbackColor: teamColor);
+    final pillBgColor = _calcularColorPastel(carnetColor);
+
     final fechaNac = AppDateUtils.formatDate(
       jugador.fechaNacimiento,
       defaultText: 'Sin fecha',
     );
-    final edadTxt = jugador.edad != null ? '${jugador.edad} años' : '--';
+    final edadTxt = edad != null ? '$edad años' : '--';
 
     return pw.Container(
       width: 257.8,
@@ -168,7 +188,7 @@ class CarnetsPdfService {
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-        border: pw.Border.all(color: teamColor, width: 1.0),
+        border: pw.Border.all(color: carnetColor, width: 1.0),
       ),
       child: pw.ClipRRect(
         horizontalRadius: 6,
@@ -179,7 +199,7 @@ class CarnetsPdfService {
             // ==================== ENCABEZADO ====================
             pw.Container(
               height: 58,
-              color: teamColor,
+              color: carnetColor,
               padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -203,7 +223,7 @@ class CarnetsPdfService {
                                   ? equipo.sigla.toUpperCase()
                                   : equipo.iniciales.toUpperCase(),
                               style: pw.TextStyle(
-                                color: teamColor,
+                                color: carnetColor,
                                 fontSize: 11,
                                 fontWeight: pw.FontWeight.bold,
                               ),
@@ -346,7 +366,7 @@ class CarnetsPdfService {
                           pw.Text(
                             torneoNombre.toUpperCase(),
                             style: pw.TextStyle(
-                              color: teamColor,
+                              color: carnetColor,
                               fontSize: 6.5,
                               fontWeight: pw.FontWeight.bold,
                             ),
