@@ -8,6 +8,7 @@ import 'package:torneo_intertecnologias_app/core/session/session_manager.dart';
 import 'package:torneo_intertecnologias_app/jornadas_page.dart';
 import 'package:torneo_intertecnologias_app/models/auth_user.dart';
 import 'package:torneo_intertecnologias_app/models/campeonato.dart';
+import 'package:torneo_intertecnologias_app/services/equipos_service.dart';
 import 'package:torneo_intertecnologias_app/services/jornadas_service.dart';
 import 'package:torneo_intertecnologias_app/services/partidos_service.dart';
 import 'package:torneo_intertecnologias_app/services/torneo_service.dart';
@@ -17,6 +18,8 @@ class MockFixtureHttpClient extends http.BaseClient {
   String? lastMethod;
   String? lastBody;
   Map<String, String>? lastHeaders;
+  Uri? lastPostUri;
+  String? lastPostBody;
 
   List<Map<String, dynamic>> partidosDb = [
     {
@@ -56,6 +59,10 @@ class MockFixtureHttpClient extends http.BaseClient {
     lastHeaders = request.headers;
     if (request is http.Request) {
       lastBody = request.body;
+    }
+    if (request.method == 'POST') {
+      lastPostUri = request.url;
+      lastPostBody = lastBody;
     }
 
     // POST /api/partidos/generar-fixture
@@ -165,6 +172,21 @@ class MockFixtureHttpClient extends http.BaseClient {
       );
     }
 
+    // GET /api/equipos
+    if (request.method == 'GET' && request.url.path.contains('/equipos')) {
+      final equipos = [
+        {'id': 1, 'nombre': 'Sistemas FC', 'sigla': 'SIS', 'grupo': 'A'},
+        {'id': 2, 'nombre': 'Electrónica United', 'sigla': 'ELE', 'grupo': 'A'},
+        {'id': 3, 'nombre': 'Redes CF', 'sigla': 'RED', 'grupo': 'A'},
+        {'id': 4, 'nombre': 'Mecatrónica SC', 'sigla': 'MEC', 'grupo': 'A'},
+      ];
+      return http.StreamedResponse(
+        Stream.value(utf8.encode(jsonEncode(equipos))),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    }
+
     return http.StreamedResponse(
       Stream.value(utf8.encode('[]')),
       200,
@@ -180,6 +202,7 @@ void main() {
   late JornadasService jornadasService;
   late PartidosService partidosService;
   late TorneoService torneoService;
+  late EquiposService equiposService;
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -188,6 +211,7 @@ void main() {
     jornadasService = JornadasService(apiClient: apiClient);
     partidosService = PartidosService(apiClient: apiClient);
     torneoService = TorneoService(apiClient: apiClient);
+    equiposService = EquiposService(apiClient: apiClient);
 
     final session = SessionManager();
     session.clearSession();
@@ -365,4 +389,63 @@ void main() {
       expect(find.textContaining('generado exitosamente'), findsOneWidget);
     });
   });
+
+  group('4. Generación de Fixture para Primera Fase (Todos contra Todos)', () {
+    testWidgets('Muestra botones en jornada vacía y abre modal con equipos participantes', (tester) async {
+      final session = SessionManager();
+      session.setSession(const AuthUser(
+        token: 'admin-token',
+        usuario: 'admin_user',
+        rol: 'ADMIN',
+        campeonatoId: 1,
+      ));
+
+      mockClient.partidosDb.clear();
+
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(MaterialApp(
+        home: JornadasPage(
+          token: 'admin-token',
+          jornadasService: jornadasService,
+          partidosService: partidosService,
+          torneoService: torneoService,
+          equiposService: equiposService,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // Jornada 1 está abierta por defecto y sin partidos
+      expect(find.byKey(const Key('btn_generar_fixture_jornada_1')), findsOneWidget);
+      expect(find.byKey(const Key('btn_programar_partidos_jornada_1')), findsOneWidget);
+      expect(find.text('⚡⚡ Generar Fixture (Todos contra Todos)'), findsWidgets);
+
+      // Pulsar botón de generar fixture en la tarjeta de Jornada 1
+      await tester.tap(find.byKey(const Key('btn_generar_fixture_jornada_1')));
+      await tester.pumpAndSettle();
+
+      // Verificar que el modal se abrió con la sección de equipos participantes
+      expect(find.text('Generador de Fixture'), findsOneWidget);
+      expect(find.byKey(const Key('seccion_equipos_participantes_modal')), findsOneWidget);
+      expect(find.textContaining('Equipos participantes (4)'), findsOneWidget);
+      expect(find.text('Sistemas FC'), findsOneWidget);
+      expect(find.text('Electrónica United'), findsOneWidget);
+
+      // Confirmar y generar fixture de Primera Fase
+      await tester.tap(find.byKey(const Key('btn_confirmar_generar_fixture')));
+      await tester.pumpAndSettle();
+
+      // Se envió petición POST con fase 'PRIMERA_FASE'
+      expect(mockClient.lastPostUri?.path, contains('/generar-fixture'));
+      final body = jsonDecode(mockClient.lastPostBody!);
+      expect(body['fase'], 'PRIMERA_FASE');
+
+      // Se cerró modal y se mostró confirmación
+      expect(find.text('Generador de Fixture'), findsNothing);
+      expect(find.textContaining('generado exitosamente'), findsOneWidget);
+    });
+  });
 }
+

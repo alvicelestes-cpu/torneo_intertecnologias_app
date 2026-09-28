@@ -8,6 +8,7 @@ import 'core/utils/mobile_image_picker.dart';
 import 'core/utils/ui_helpers.dart';
 import 'models/equipo.dart';
 import 'models/jugador.dart';
+import 'services/carnets_pdf_service.dart';
 import 'services/equipos_service.dart';
 import 'services/jugadores_service.dart';
 import 'widgets/app_empty_view.dart';
@@ -140,6 +141,49 @@ class _EquiposPageState extends State<EquiposPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _descargarCarnetsEquipo(Equipo equipo) async {
+    try {
+      List<Jugador> jugadoresEquipo = [];
+      try {
+        jugadoresEquipo = await _equiposService.getJugadoresEquipo(
+          equipo.id,
+          token: widget.token,
+        );
+      } catch (_) {
+        jugadoresEquipo = [];
+      }
+
+      if (!mounted) return;
+
+      if (jugadoresEquipo.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('El equipo ${equipo.nombre} no tiene jugadores registrados.'),
+            backgroundColor: Colors.orange.shade800,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      await CarnetsPdfService.descargarCarnetsConFeedback(
+        context: context,
+        equipo: equipo,
+        jugadores: jugadoresEquipo,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al generar carnets: $e'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _abrirInscripcion() async {
@@ -798,6 +842,7 @@ class _EquiposPageState extends State<EquiposPage> {
                                       child: PublicTeamCard(
                                         equipo: equipo,
                                         onTap: () => _abrirPlantilla(equipo),
+                                        onCarnets: () => _descargarCarnetsEquipo(equipo),
                                         onEdit: _esAdmin ? () => _abrirEditarEquipo(equipo) : null,
                                       ),
                                     ),
@@ -822,6 +867,7 @@ class _EquiposPageState extends State<EquiposPage> {
                             return PublicTeamCard(
                               equipo: equipo,
                               onTap: () => _abrirPlantilla(equipo),
+                              onCarnets: () => _descargarCarnetsEquipo(equipo),
                               onEdit: _esAdmin ? () => _abrirEditarEquipo(equipo) : null,
                             );
                           },

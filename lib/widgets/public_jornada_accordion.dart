@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/session/session_manager.dart';
 import '../core/utils/date_utils.dart';
 import '../models/partido.dart';
 import 'public_partido_row.dart';
@@ -17,6 +18,8 @@ class PublicJornadaAccordion extends StatefulWidget {
   final String? mensajePendiente;
   final Widget? adminAction;
   final void Function(Partido partido)? onPartidoTap;
+  final VoidCallback? onGenerarFixture;
+  final VoidCallback? onProgramarPartidos;
 
   const PublicJornadaAccordion({
     super.key,
@@ -32,6 +35,8 @@ class PublicJornadaAccordion extends StatefulWidget {
     this.mensajePendiente,
     this.adminAction,
     this.onPartidoTap,
+    this.onGenerarFixture,
+    this.onProgramarPartidos,
   });
 
   @override
@@ -363,6 +368,52 @@ class _PublicJornadaAccordionState extends State<PublicJornadaAccordion> {
                               height: 1.4,
                             ),
                           ),
+                          if (SessionManager().hasAdminAccess &&
+                              (widget.onGenerarFixture != null || widget.onProgramarPartidos != null)) ...[
+                            const SizedBox(height: 16),
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 10,
+                              runSpacing: 8,
+                              children: [
+                                ElevatedButton.icon(
+                                  key: Key('btn_generar_fixture_jornada_${widget.numeroJornada}'),
+                                  onPressed: widget.onGenerarFixture ?? widget.onProgramarPartidos,
+                                  icon: const Icon(Icons.bolt, color: Color(0xFFF59E0B), size: 18),
+                                  label: const Text(
+                                    '⚡⚡ Generar Fixture (Todos contra Todos)',
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF0D233A),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      side: const BorderSide(color: Color(0xFFF59E0B), width: 1.2),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                ),
+                                OutlinedButton.icon(
+                                  key: Key('btn_programar_partidos_jornada_${widget.numeroJornada}'),
+                                  onPressed: widget.onProgramarPartidos ?? widget.onGenerarFixture,
+                                  icon: const Icon(Icons.add, size: 18),
+                                  label: const Text(
+                                    '+ Programar Partidos',
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF0072CE),
+                                    side: const BorderSide(color: Color(0xFF0072CE), width: 1.2),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     )

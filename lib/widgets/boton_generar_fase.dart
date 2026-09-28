@@ -5,6 +5,7 @@ import '../core/session/session_manager.dart';
 import '../core/utils/fixture_utils.dart';
 import '../models/partido.dart';
 import '../services/fases_service.dart';
+import '../services/partidos_service.dart';
 
 class BotonGenerarFase extends StatefulWidget {
   final String fase;
@@ -32,6 +33,8 @@ class _BotonGenerarFaseState extends State<BotonGenerarFase> {
 
   String get _tituloBoton {
     switch (widget.fase) {
+      case TournamentPhase.primeraFase:
+        return '⚡⚡ Generar Fixture (Todos contra Todos)';
       case TournamentPhase.segundaRonda:
         return '⚡ Generar Cuadrangulares (Grupos A y B)';
       case TournamentPhase.terceraRonda:
@@ -190,6 +193,9 @@ class _BotonGenerarFaseState extends State<BotonGenerarFase> {
 
     try {
       switch (widget.fase) {
+        case TournamentPhase.primeraFase:
+          await PartidosService().generarFixture(fase: 'PRIMERA_FASE');
+          break;
         case TournamentPhase.segundaRonda:
           await _fasesService.generarSegundaRonda();
           break;
@@ -235,7 +241,7 @@ class _BotonGenerarFaseState extends State<BotonGenerarFase> {
       return const SizedBox.shrink();
     }
 
-    if (widget.fase == TournamentPhase.primeraFase) {
+    if (widget.fase == TournamentPhase.primeraFase && widget.faseGenerada) {
       return const SizedBox.shrink();
     }
 

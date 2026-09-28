@@ -5,10 +5,12 @@ import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
 import 'core/utils/fixture_utils.dart';
 import 'core/utils/ui_helpers.dart';
+import 'models/equipo.dart';
 import 'models/jornada.dart';
 import 'models/partido.dart';
 import 'models/posicion.dart';
 import 'partido_detalle_page.dart';
+import 'services/equipos_service.dart';
 import 'services/jornadas_service.dart';
 import 'services/partidos_service.dart';
 import 'services/torneo_service.dart';
@@ -24,6 +26,7 @@ class JornadasPage extends StatefulWidget {
   final JornadasService? jornadasService;
   final PartidosService? partidosService;
   final TorneoService? torneoService;
+  final EquiposService? equiposService;
 
   const JornadasPage({
     super.key,
@@ -31,6 +34,7 @@ class JornadasPage extends StatefulWidget {
     this.jornadasService,
     this.partidosService,
     this.torneoService,
+    this.equiposService,
   });
 
   @override
@@ -41,6 +45,7 @@ class _JornadasPageState extends State<JornadasPage> {
   late final JornadasService _jornadasService;
   late final PartidosService _partidosService;
   late final TorneoService _torneoService;
+  late final EquiposService _equiposService;
 
   bool cargando = true;
   String? error;
@@ -57,6 +62,7 @@ class _JornadasPageState extends State<JornadasPage> {
     _jornadasService = widget.jornadasService ?? JornadasService();
     _partidosService = widget.partidosService ?? PartidosService();
     _torneoService = widget.torneoService ?? TorneoService();
+    _equiposService = widget.equiposService ?? EquiposService();
     SessionManager().addListener(_onSessionChanged);
     cargarJornadas();
   }
@@ -170,7 +176,7 @@ class _JornadasPageState extends State<JornadasPage> {
 
   String _mapFaseToBackend(String key) {
     final k = key.toUpperCase().trim();
-    if (k.contains('PRIMER')) return 'PRIMERA_FASE';
+    if (k.contains('PRIMER') || k.contains('REGULAR') || k.contains('TODOS')) return 'PRIMERA_FASE';
     if (k.contains('SEGUNDA') || k.contains('CUADRANGULAR')) return 'SEGUNDA_RONDA';
     if (k.contains('TERCERA') || k.contains('CUARTO')) return 'CUARTOS';
     if (k.contains('CUARTA') || k.contains('SEMI')) return 'SEMIFINAL';
@@ -198,6 +204,12 @@ class _JornadasPageState extends State<JornadasPage> {
     bool cargandoPreview = false;
     String? errorModal;
     List<dynamic>? partidosPreview;
+    List<Equipo> equiposTorneo = [];
+    try {
+      equiposTorneo = await _equiposService.getEquipos(token: widget.token);
+    } catch (_) {}
+
+    if (!mounted) return;
 
     await showDialog(
       context: context,
@@ -291,6 +303,84 @@ class _JornadasPageState extends State<JornadasPage> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Equipos participantes del torneo
+                      Container(
+                        key: const Key('seccion_equipos_participantes_modal'),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.shield_outlined, size: 16, color: AppColors.primary),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Equipos participantes (${equiposTorneo.length}):',
+                                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            if (equiposTorneo.isEmpty)
+                              const Text(
+                                'No se encontraron equipos registrados en este torneo. Debes registrar al menos 2 equipos para generar el fixture.',
+                                style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                              )
+                            else
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: equiposTorneo.map((e) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 16,
+                                          height: 16,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary.withAlpha(25),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              e.sigla.isNotEmpty
+                                                  ? e.sigla
+                                                  : (e.nombre.isNotEmpty ? e.nombre[0].toUpperCase() : '?'),
+                                              style: const TextStyle(
+                                                fontSize: 8.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.primary,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          e.nombre,
+                                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
                           ],
                         ),
                       ),
@@ -903,81 +993,107 @@ class _JornadasPageState extends State<JornadasPage> {
                     // Selector de Pestañas para las 5 Fases
                     _construirSelectorFases(),
 
-                    // Acción rápida si una fase específica no tiene partidos registrados
-                    if (faseSeleccionada != 'TODAS' && faseSinPartidos && _esAdmin) ...[
-                      Builder(
-                        builder: (context) {
-                          final nombreFase = _obtenerNombreFase(faseSeleccionada);
-                          final faseSlug = faseSeleccionada.toLowerCase().replaceAll(' ', '_');
+                    // Acción rápida si una fase específica o Primera Fase no tiene partidos registrados
+                    Builder(
+                      builder: (context) {
+                        final bool primeraFaseVacia = todosPartidos.isEmpty || !todosPartidos.any((p) {
+                          final f = p.fase?.toUpperCase().trim() ?? '';
+                          return f == 'PRIMERA_FASE' || (!f.contains('SEGUNDA') && !f.contains('CUADRANGULAR') && !f.contains('TERCERA') && !f.contains('CUARTO') && !f.contains('SEMI') && !f.contains('FINAL') && (p.jornada == null || p.jornada! <= 7));
+                        });
 
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFCBD5E1)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(6),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary.withAlpha(20),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: const Icon(Icons.bolt, color: AppColors.primary, size: 22),
+                        final bool debeMostrar = _esAdmin && (
+                          (faseSeleccionada != 'TODAS' && faseSinPartidos) ||
+                          (faseSeleccionada == 'TODAS' && primeraFaseVacia)
+                        );
+
+                        if (!debeMostrar) return const SizedBox.shrink();
+
+                        final faseObjetivo = (faseSeleccionada == 'TODAS' || faseSeleccionada == TournamentPhase.primeraFase)
+                            ? TournamentPhase.primeraFase
+                            : faseSeleccionada;
+                        final nombreFase = _obtenerNombreFase(faseObjetivo);
+                        final faseSlug = faseObjetivo.toLowerCase().replaceAll(' ', '_');
+                        final esPrimera = faseObjetivo == TournamentPhase.primeraFase || faseObjetivo == 'PRIMERA_FASE';
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFCBD5E1)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withAlpha(6),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withAlpha(20),
+                                      borderRadius: BorderRadius.circular(10),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Fase sin partidos: $nombreFase',
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          const Text(
-                                            'Genera los emparejamientos y fechas de esta fase automáticamente.',
-                                            style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton.icon(
-                                    key: Key('btn_generar_cruces_$faseSlug'),
-                                    onPressed: () => _abrirModalGenerarFixture(faseSeleccionada),
-                                    icon: const Icon(Icons.auto_awesome, size: 18),
-                                    label: Text('+ Generar Cruces de $nombreFase'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primary,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    child: const Icon(Icons.bolt, color: AppColors.primary, size: 22),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Fase sin partidos: $nombreFase',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          esPrimera
+                                              ? 'Genera el fixture completo de todos contra todos automáticamente.'
+                                              : 'Genera los emparejamientos y fechas de esta fase automáticamente.',
+                                          style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                                        ),
+                                      ],
                                     ),
                                   ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  key: Key('btn_generar_cruces_$faseSlug'),
+                                  onPressed: () => _abrirModalGenerarFixture(faseObjetivo),
+                                  icon: const Icon(Icons.auto_awesome, size: 18),
+                                  label: Text(
+                                    esPrimera
+                                        ? '⚡⚡ Generar Fixture (Todos contra Todos)'
+                                        : '+ Generar Cruces de $nombreFase',
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: esPrimera ? const Color(0xFF0D233A) : AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      side: esPrimera
+                                          ? const BorderSide(color: Color(0xFFF59E0B), width: 1.2)
+                                          : BorderSide.none,
+                                    ),
+                                    elevation: 2,
+                                  ),
                                 ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
 
                     // LISTA DE FASES Y JORNADAS EN ACORDEÓN (5 FASES)
                     ...seccionesVisibles.map((seccion) {
@@ -997,6 +1113,8 @@ class _JornadasPageState extends State<JornadasPage> {
                           onFaseGenerada: cargarJornadas,
                           onCustomGenerar: () => _abrirModalGenerarFixture(seccion.fase),
                         ),
+                        onGenerarFixture: () => _abrirModalGenerarFixture(seccion.fase),
+                        onProgramarPartidos: () => _abrirModalGenerarFixture(seccion.fase),
                         initiallyExpanded: seccion.id == seccionInicialId,
                         onPartidoTap: (partido) => _abrirPartido(partido.id),
                       );

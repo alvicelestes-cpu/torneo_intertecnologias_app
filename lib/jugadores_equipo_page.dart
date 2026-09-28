@@ -6,6 +6,7 @@ import 'core/session/session_manager.dart';
 import 'models/equipo.dart';
 import 'models/goleador.dart';
 import 'models/jugador.dart';
+import 'services/carnets_pdf_service.dart';
 import 'services/equipos_service.dart';
 import 'services/jugadores_service.dart';
 import 'services/torneo_config_service.dart';
@@ -27,12 +28,18 @@ class JugadoresEquipoPage extends StatefulWidget {
   final int equipoId;
   final String equipoNombre;
   final String? token;
+  final EquiposService? equiposService;
+  final JugadoresService? jugadoresService;
+  final TorneoService? torneoService;
 
   const JugadoresEquipoPage({
     super.key,
     required this.equipoId,
     required this.equipoNombre,
     this.token,
+    this.equiposService,
+    this.jugadoresService,
+    this.torneoService,
   });
 
   @override
@@ -40,9 +47,9 @@ class JugadoresEquipoPage extends StatefulWidget {
 }
 
 class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
-  final EquiposService _equiposService = EquiposService();
-  final JugadoresService _jugadoresService = JugadoresService();
-  final TorneoService _torneoService = TorneoService();
+  late final EquiposService _equiposService;
+  late final JugadoresService _jugadoresService;
+  late final TorneoService _torneoService;
 
   bool cargando = true;
   String? error;
@@ -53,6 +60,9 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
   @override
   void initState() {
     super.initState();
+    _equiposService = widget.equiposService ?? EquiposService();
+    _jugadoresService = widget.jugadoresService ?? JugadoresService();
+    _torneoService = widget.torneoService ?? TorneoService();
     cargarJugadores();
   }
 
@@ -218,6 +228,32 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
     if (actualizado == true && mounted) {
       cargarJugadores();
     }
+  }
+
+  Future<void> _descargarCarnets() async {
+    if (jugadores.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No hay jugadores registrados en ${widget.equipoNombre}.'),
+          backgroundColor: Colors.orange.shade800,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final eq = equipoInfo ??
+        Equipo(
+          id: widget.equipoId,
+          nombre: widget.equipoNombre,
+          sigla: '',
+        );
+
+    await CarnetsPdfService.descargarCarnetsConFeedback(
+      context: context,
+      equipo: eq,
+      jugadores: jugadores,
+    );
   }
 
   bool get _esAdmin {
@@ -485,34 +521,62 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                                   ),
                                 ],
                               ),
-                              if (_esAdmin) ...[
-                                const SizedBox(height: 14),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: FilledButton.icon(
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: jugadores.length >= _limiteJugadores
-                                          ? Colors.white24
-                                          : Colors.white,
-                                      foregroundColor: jugadores.length >= _limiteJugadores
-                                          ? Colors.white60
-                                          : const Color(0xFF0D233A),
-                                      elevation: 2,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
+                              const SizedBox(height: 14),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: Wrap(
+                                  spacing: 10,
+                                  runSpacing: 8,
+                                  alignment: WrapAlignment.end,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    FilledButton.icon(
+                                      key: const Key('btn_descargar_carnets_equipo'),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: const Color(0xFF0F766E),
+                                        elevation: 2,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 10,
+                                        ),
+                                      ),
+                                      onPressed: _descargarCarnets,
+                                      icon: const Icon(Icons.badge, size: 18, color: Color(0xFF0F766E)),
+                                      label: const Text(
+                                        '🪪 Descargar Carnets (PDF)',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
                                       ),
                                     ),
-                                    onPressed: _abrirInscripcion,
-                                    icon: const Icon(Icons.person_add, size: 18),
-                                    label: Text(
-                                      jugadores.length >= _limiteJugadores
-                                          ? 'Plantel Completo (${jugadores.length}/$_limiteJugadores)'
-                                          : '+ Inscribir Jugador',
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
+                                    if (_esAdmin)
+                                      FilledButton.icon(
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: jugadores.length >= _limiteJugadores
+                                              ? Colors.white24
+                                              : Colors.white,
+                                          foregroundColor: jugadores.length >= _limiteJugadores
+                                              ? Colors.white60
+                                              : const Color(0xFF0D233A),
+                                          elevation: 2,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                        ),
+                                        onPressed: _abrirInscripcion,
+                                        icon: const Icon(Icons.person_add, size: 18),
+                                        label: Text(
+                                          jugadores.length >= _limiteJugadores
+                                              ? 'Plantel Completo (${jugadores.length}/$_limiteJugadores)'
+                                              : '+ Inscribir Jugador',
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ],
                           ),
                         ),

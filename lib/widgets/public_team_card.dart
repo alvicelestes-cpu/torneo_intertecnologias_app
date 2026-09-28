@@ -11,12 +11,14 @@ class PublicTeamCard extends StatelessWidget {
   final Equipo equipo;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
+  final VoidCallback? onCarnets;
 
   const PublicTeamCard({
     super.key,
     required this.equipo,
     this.onTap,
     this.onEdit,
+    this.onCarnets,
   });
 
   @override
@@ -165,59 +167,92 @@ class PublicTeamCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // Botón inferior ancho "Ver jugadores" y botón "Escudo" si es admin
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 36,
-                          child: TextButton.icon(
-                            style: TextButton.styleFrom(
-                              backgroundColor: const Color(0xFFEFF6FF),
-                              foregroundColor: const Color(0xFF1565C0),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                  // Botón inferior: "Ver jugadores", "🪪 Carnets" y "Escudo" si es admin
+                  SizedBox(
+                    width: double.infinity,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            height: 36,
+                            child: TextButton.icon(
+                              style: TextButton.styleFrom(
+                                backgroundColor: const Color(0xFFEFF6FF),
+                                foregroundColor: const Color(0xFF1565C0),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
                               ),
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                            ),
-                            onPressed: onTap,
-                            icon: const Icon(Icons.person, size: 17),
-                            label: const Text(
-                              'Ver jugadores',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                              onPressed: onTap,
+                              icon: const Icon(Icons.person, size: 16),
+                              label: const Text(
+                                'Ver jugadores',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.5,
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                          if (onCarnets != null) ...[
+                            const SizedBox(width: 6),
+                            SizedBox(
+                              height: 36,
+                              child: OutlinedButton.icon(
+                                key: Key('btn_carnets_equipo_${equipo.id}'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF0F766E),
+                                  side: const BorderSide(color: Color(0xFF99F6E4)),
+                                  backgroundColor: const Color(0xFFF0FDFA),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                ),
+                                onPressed: onCarnets,
+                                icon: const Icon(Icons.badge_outlined, size: 16),
+                                label: const Text(
+                                  '🪪 Carnets',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (onEdit != null) ...[
+                            const SizedBox(width: 6),
+                            SizedBox(
+                              height: 36,
+                              child: OutlinedButton.icon(
+                                key: Key('btn_escudo_equipo_${equipo.id}'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF0D233A),
+                                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                ),
+                                onPressed: onEdit,
+                                icon: const Icon(Icons.shield_outlined, size: 16),
+                                label: const Text(
+                                  'Escudo',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      if (onEdit != null) ...[
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          height: 36,
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF0D233A),
-                              side: const BorderSide(color: Color(0xFFCBD5E1)),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                            ),
-                            onPressed: onEdit,
-                            icon: const Icon(Icons.shield_outlined, size: 16),
-                            label: const Text(
-                              'Escudo',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
                 ],
               ),
