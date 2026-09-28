@@ -218,4 +218,19 @@ class TorneoService {
 
     throw const AppException('La respuesta de estadísticas no tiene el formato esperado.');
   }
+
+  /// Ejecuta la migración de aislamiento y reparación de datos cruzados entre torneos (ADMIN/SUPERADMIN)
+  Future<Map<String, dynamic>> repararAislamientoTorneos({String? token}) async {
+    final response = await _apiClient.post(
+      ApiConstants.torneoRepararDatos,
+      body: {},
+      token: token,
+    );
+
+    if (response is Map<String, dynamic>) {
+      return response;
+    }
+
+    throw const AppException('Respuesta inesperada al reparar el aislamiento de torneos.');
+  }
 }

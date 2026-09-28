@@ -15,6 +15,7 @@ class ApiConstants {
   static const String torneoConfig = '$baseUrl/api/torneo/config';
   static const String torneoCrear = '$baseUrl/api/torneo/crear';
   static const String torneoListar = '$baseUrl/api/torneo/listar';
+  static const String torneoRepararDatos = '$baseUrl/api/torneo/reparar-datos';
   static String torneoPorSlug(String slug) => '$baseUrl/api/torneo/por-slug/$slug';
 
   // Auth
