@@ -51,10 +51,19 @@ class SessionManager extends ChangeNotifier {
       _currentUser?.campeonatoId ??
       1;
 
-  String get selectedCampeonatoNombre =>
-      _selectedCampeonato?.nombre ??
-      _currentUser?.campeonato ??
-      'Torneo Intertecnologías';
+  String get selectedCampeonatoNombre {
+    if (_selectedCampeonato != null && _selectedCampeonato!.nombre.trim().isNotEmpty) {
+      return _selectedCampeonato!.nombre.trim();
+    }
+    final configNombre = TorneoConfigService().nombreTorneo.trim();
+    if (configNombre.isNotEmpty && configNombre.toLowerCase() != 'torneo') {
+      return configNombre;
+    }
+    if (_currentUser?.campeonato != null && _currentUser!.campeonato!.trim().isNotEmpty) {
+      return _currentUser!.campeonato!.trim();
+    }
+    return configNombre.isNotEmpty ? configNombre : 'Torneo Intertecnologías';
+  }
 
   String get selectedCampeonatoSlug =>
       _selectedCampeonato?.slug.isNotEmpty == true

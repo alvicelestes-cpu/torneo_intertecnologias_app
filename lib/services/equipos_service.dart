@@ -1,18 +1,35 @@
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:http/http.dart' as http;
+
 import '../core/constants/api_constants.dart';
 import '../core/errors/app_exception.dart';
 import '../core/network/api_client.dart';
 import '../core/session/session_manager.dart';
 import '../models/equipo.dart';
 import '../models/jugador.dart';
+import '../models/resumen_importacion.dart';
 
 class EquiposService {
   final ApiClient _apiClient;
   EquiposService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
 
-  Future<List<Equipo>> getEquipos({String? token}) async {
+  Future<List<Equipo>> getEquipos({
+    String? token,
+    int? campeonatoId,
+    int? torneoId,
+  }) async {
+    final resolvedId = torneoId ?? campeonatoId ?? SessionManager().selectedCampeonatoId;
+    final query = resolvedId > 0 ? '?campeonatoId=$resolvedId' : '';
     final response = await _apiClient.get(
-      ApiConstants.equipos,
+      '${ApiConstants.equipos}$query',
       token: token,
+      headers: resolvedId > 0
+          ? {
+              'X-Campeonato-Id': resolvedId.toString(),
+              'X-Torneo-Id': resolvedId.toString(),
+            }
+          : null,
     );
 
     if (response is List) {
@@ -26,10 +43,23 @@ class EquiposService {
     throw const AppException('La respuesta del servidor no tiene el formato esperado.');
   }
 
-  Future<List<Jugador>> getJugadoresEquipo(int equipoId, {String? token}) async {
+  Future<List<Jugador>> getJugadoresEquipo(
+    int equipoId, {
+    String? token,
+    int? campeonatoId,
+    int? torneoId,
+  }) async {
+    final resolvedId = torneoId ?? campeonatoId ?? SessionManager().selectedCampeonatoId;
+    final query = resolvedId > 0 ? '?campeonatoId=$resolvedId' : '';
     final response = await _apiClient.get(
-      ApiConstants.equipoJugadores(equipoId),
+      '${ApiConstants.equipoJugadores(equipoId)}$query',
       token: token,
+      headers: resolvedId > 0
+          ? {
+              'X-Campeonato-Id': resolvedId.toString(),
+              'X-Torneo-Id': resolvedId.toString(),
+            }
+          : null,
     );
 
     if (response is List) {
@@ -113,5 +143,122 @@ class EquiposService {
     }
 
     throw const AppException('Respuesta inesperada al crear el equipo.');
+  }
+
+  /// Importa masivamente una planilla de equipos y jugadores vía POST /api/equipos/importar-planilla
+  Future<ResumenImportacion> importarPlanilla({
+    Uint8List? archivoBytes,
+    String? nombreArchivo,
+    String? urlGoogleDrive,
+    int? campeonatoId,
+    int? torneoId,
+    String? token,
+  }) async {
+    final session = SessionManager();
+    final effectiveToken = (token != null && token.isNotEmpty)
+        ? token
+        : session.token;
+    final resolvedTorneoId = torneoId ?? campeonatoId ?? session.selectedCampeonatoId;
+
+    final uri = Uri.parse(ApiConstants.importarPlanilla).replace(
+      queryParameters: resolvedTorneoId > 0
+          ? {'campeonatoId': resolvedTorneoId.toString()}
+          : null,
+    );
+
+    final request = http.MultipartRequest('POST', uri);
+
+    final headers = ApiConstants.defaultHeaders(
+      token: effectiveToken,
+      campeonatoId: resolvedTorneoId,
+      torneoId: resolvedTorneoId,
+      torneoSlug: session.selectedCampeonatoSlug,
+    );
+    headers.remove('Content-Type');
+    request.headers.addAll(headers);
+
+    if (resolvedTorneoId > 0) {
+      request.fields['campeonatoId'] = resolvedTorneoId.toString();
+      request.fields['torneoId'] = resolvedTorneoId.toString();
+    }
+
+    if (urlGoogleDrive != null && urlGoogleDrive.trim().isNotEmpty) {
+      request.fields['urlGoogleDrive'] = urlGoogleDrive.trim();
+      request.fields['enlaceDrive'] = urlGoogleDrive.trim();
+    }
+
+    if (archivoBytes != null && archivoBytes.isNotEmpty) {
+      final filename = (nombreArchivo != null && nombreArchivo.trim().isNotEmpty)
+          ? nombreArchivo.trim()
+          : 'planilla.xlsx';
+      final multipartFile = http.MultipartFile.fromBytes(
+        'archivo',
+        archivoBytes,
+        filename: filename,
+      );
+      request.files.add(multipartFile);
+    }
+
+    try {
+      final streamedResponse = await _apiClient.client.send(request).timeout(const Duration(seconds: 45));
+      final responseBody = await streamedResponse.stream.bytesToString();
+      final statusCode = streamedResponse.statusCode;
+
+      dynamic decoded;
+      try {
+        decoded = jsonDecode(responseBody);
+      } catch (_) {
+        decoded = null;
+      }
+
+      if (statusCode >= 200 && statusCode < 300) {
+        if (decoded is Map<String, dynamic>) {
+          return ResumenImportacion.fromJson(decoded);
+        }
+        return ResumenImportacion(
+          exito: true,
+          mensaje: 'Planilla procesada exitosamente.',
+          torneoId: resolvedTorneoId,
+        );
+      }
+
+      final errorMsg = decoded is Map && decoded['mensaje'] != null
+          ? decoded['mensaje'].toString()
+          : 'Error al procesar la planilla (Código $statusCode).';
+      final alertas = decoded is Map && decoded['alertas'] is List
+          ? (decoded['alertas'] as List).map((e) => e.toString()).toList()
+          : <String>[];
+
+      return ResumenImportacion(
+        exito: false,
+        mensaje: errorMsg,
+        torneoId: resolvedTorneoId,
+        alertas: alertas,
+      );
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw AppException('Error de conexión al importar la planilla: $e');
+    }
+  }
+
+  /// Descarga la plantilla oficial en formato bytes (.xlsx o .csv)
+  Future<Uint8List> descargarPlantillaPlanilla({String? token}) async {
+    try {
+      final bytes = await _apiClient.getBytes(
+        ApiConstants.plantillaPlanilla,
+        token: token,
+      );
+      return bytes;
+    } catch (_) {
+      // Fallback CSV modelo con codificación UTF-8 BOM para abrir directamente en Excel
+      const csvHeader =
+          'Nombre del Equipo,Nombre Completo,Documento / Identificación,Fecha de Nacimiento (YYYY-MM-DD),Dorsal,URL Foto (Google Drive o Web)\n'
+          'Los Galácticos,Juan Carlos Pérez Gómez,1045678901,1990-05-14,10,https://drive.google.com/file/d/1EjemploGoogleDriveFotoA/view?usp=sharing\n'
+          'Los Galácticos,Andrés Felipe Gómez Meza,1045678902,1984-11-20,7,\n'
+          'Atlético San Juan,Carlos Eduardo Rivera Ruiz,1045678903,1998-03-08,1,https://images.unsplash.com/photo-1534528741775-53994a69daeb\n';
+      final bom = [0xEF, 0xBB, 0xBF];
+      final utf8Bytes = utf8.encode(csvHeader);
+      return Uint8List.fromList([...bom, ...utf8Bytes]);
+    }
   }
 }

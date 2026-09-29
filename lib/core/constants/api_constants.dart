@@ -23,6 +23,8 @@ class ApiConstants {
 
   // Equipos
   static const String equipos = '$baseUrl/api/equipos';
+  static const String importarPlanilla = '$baseUrl/api/equipos/importar-planilla';
+  static const String plantillaPlanilla = '$baseUrl/api/equipos/plantilla-planilla';
   static String equipoDetalle(int equipoId) =>
       '$baseUrl/api/equipos/$equipoId';
   static String equipoJugadores(int equipoId) =>

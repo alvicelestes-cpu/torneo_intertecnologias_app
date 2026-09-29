@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../constants/api_constants.dart';
@@ -19,6 +20,8 @@ class ApiClient {
   final http.Client _client;
   ApiClient._internal() : _client = http.Client();
   ApiClient._withClient(this._client);
+
+  http.Client get client => _client;
 
   static const Duration timeout = Duration(seconds: 25);
 
@@ -99,6 +102,35 @@ class ApiClient {
           .timeout(timeout);
 
       return _handleResponse(response);
+    } on SocketException {
+      throw const NetworkException('No hay conexión con el servidor. Verifique su red.');
+    } on TimeoutException {
+      throw const NetworkException('El servidor tardó demasiado en responder.');
+    } on AppException {
+      rethrow;
+    } catch (e) {
+      throw NetworkException('Error de conexión: $e');
+    }
+  }
+
+  Future<Uint8List> getBytes(
+    String url, {
+    String? token,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final uri = _buildUri(url);
+      final response = await _client
+          .get(
+            uri,
+            headers: _buildHeaders(token: token, extraHeaders: headers),
+          )
+          .timeout(timeout);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return response.bodyBytes;
+      }
+      throw AppException('Error al descargar archivo (Código ${response.statusCode})');
     } on SocketException {
       throw const NetworkException('No hay conexión con el servidor. Verifique su red.');
     } on TimeoutException {

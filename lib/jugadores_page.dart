@@ -77,16 +77,25 @@ class _JugadoresPageState extends State<JugadoresPage> {
     });
 
     try {
+      final currentCampeonatoId = SessionManager().selectedCampeonatoId;
       final resultados = await Future.wait([
-        _jugadoresService.getJugadores(token: widget.token),
+        _jugadoresService.getJugadores(
+          token: widget.token,
+          campeonatoId: currentCampeonatoId,
+        ),
         _torneoService
             .getGoleadores(
               token: widget.token,
-              campeonatoId: SessionManager().selectedCampeonatoId,
+              campeonatoId: currentCampeonatoId,
               cargarFotos: false,
             )
             .catchError((_) => <Goleador>[]),
-        _equiposService.getEquipos(token: widget.token).catchError((_) => <Equipo>[]),
+        _equiposService
+            .getEquipos(
+              token: widget.token,
+              campeonatoId: currentCampeonatoId,
+            )
+            .catchError((_) => <Equipo>[]),
       ]);
 
       final listaJugadores = resultados[0] as List<Jugador>;
@@ -247,6 +256,7 @@ class _JugadoresPageState extends State<JugadoresPage> {
         context: context,
         equipo: eq,
         jugadores: jugadoresDelEquipo,
+        torneoNombre: SessionManager().selectedCampeonatoNombre,
       );
       return;
     }
@@ -338,6 +348,7 @@ class _JugadoresPageState extends State<JugadoresPage> {
                           context: context,
                           equipo: eq,
                           jugadores: jugadoresDelEquipo,
+                          torneoNombre: SessionManager().selectedCampeonatoNombre,
                         );
                       },
                     );

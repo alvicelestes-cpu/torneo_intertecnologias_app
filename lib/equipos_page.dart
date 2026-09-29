@@ -20,6 +20,7 @@ import 'widgets/public_team_card.dart';
 import 'crear_jugador_page.dart';
 import 'editar_equipo_page.dart';
 import 'jugadores_equipo_page.dart';
+import 'widgets/importar_planilla_modal.dart';
 
 class EquiposPage extends StatefulWidget {
   final String? token;
@@ -161,6 +162,7 @@ class _EquiposPageState extends State<EquiposPage> {
         jugadoresEquipo = await _equiposService.getJugadoresEquipo(
           equipo.id,
           token: widget.token,
+          campeonatoId: SessionManager().selectedCampeonatoId,
         );
       } catch (_) {
         jugadoresEquipo = [];
@@ -183,6 +185,7 @@ class _EquiposPageState extends State<EquiposPage> {
         context: context,
         equipo: equipo,
         jugadores: jugadoresEquipo,
+        torneoNombre: SessionManager().selectedCampeonatoNombre,
       );
     } catch (e) {
       if (mounted) {
@@ -206,6 +209,32 @@ class _EquiposPageState extends State<EquiposPage> {
     );
 
     if (nuevoRegistrado == true && mounted) {
+      cargarEquipos();
+    }
+  }
+
+  Future<void> _abrirModalImportarPlanilla() async {
+    if (!_esAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Acceso restringido: Solo administradores pueden importar planillas.'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final resultado = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => ImportarPlanillaModal(
+        token: widget.token,
+        equiposService: _equiposService,
+      ),
+    );
+
+    if (resultado == true && mounted) {
       cargarEquipos();
     }
   }
@@ -700,17 +729,36 @@ class _EquiposPageState extends State<EquiposPage> {
                       ),
                       if (_esAdmin) ...[
                         const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          key: const Key('btn_crear_primer_equipo'),
-                          onPressed: _abrirCrearEquipo,
-                          icon: const Icon(Icons.add_circle_outline),
-                          label: const Text('Crear Primer Equipo'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 10,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            ElevatedButton.icon(
+                              key: const Key('btn_importar_planilla_vacio'),
+                              onPressed: _abrirModalImportarPlanilla,
+                              icon: const Icon(Icons.file_upload_outlined),
+                              label: const Text('Importar Planilla'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0F766E),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              key: const Key('btn_crear_primer_equipo'),
+                              onPressed: _abrirCrearEquipo,
+                              icon: const Icon(Icons.add_circle_outline),
+                              label: const Text('Crear Primer Equipo'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ],
@@ -808,7 +856,26 @@ class _EquiposPageState extends State<EquiposPage> {
                               ),
                             ),
                             if (_esAdmin) ...[
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 8),
+                              ElevatedButton.icon(
+                                key: const Key('btn_importar_planilla_banner'),
+                                onPressed: _abrirModalImportarPlanilla,
+                                icon: const Icon(Icons.file_upload_outlined, size: 18),
+                                label: Text(isMobile ? 'Importar' : 'Importar Planilla'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0F766E),
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: isMobile ? 10 : 14,
+                                    vertical: 10,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  elevation: 2,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
                               ElevatedButton.icon(
                                 key: const Key('btn_crear_equipo_banner'),
                                 onPressed: _abrirCrearEquipo,
@@ -899,6 +966,18 @@ class _EquiposPageState extends State<EquiposPage> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 FloatingActionButton.extended(
+                  heroTag: 'fab_importar_planilla',
+                  key: const Key('btn_importar_planilla_fab'),
+                  backgroundColor: const Color(0xFF0F766E),
+                  onPressed: _abrirModalImportarPlanilla,
+                  icon: const Icon(Icons.file_upload, color: Colors.white),
+                  label: const Text(
+                    'Importar Planilla',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                FloatingActionButton.extended(
                   heroTag: 'fab_crear_equipo',
                   key: const Key('btn_crear_equipo_fab'),
                   backgroundColor: AppColors.primary,
@@ -913,7 +992,7 @@ class _EquiposPageState extends State<EquiposPage> {
                 FloatingActionButton.extended(
                   heroTag: 'fab_inscribir_jugador',
                   key: const Key('btn_inscribir_jugador_fab'),
-                  backgroundColor: const Color(0xFF0F766E),
+                  backgroundColor: const Color(0xFF1E3A8A),
                   onPressed: _abrirInscripcion,
                   icon: const Icon(Icons.person_add, color: Colors.white),
                   label: const Text(

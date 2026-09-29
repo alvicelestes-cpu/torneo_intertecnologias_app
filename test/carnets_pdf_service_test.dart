@@ -454,10 +454,10 @@ class MockEquiposService extends EquiposService {
   });
 
   @override
-  Future<List<Equipo>> getEquipos({String? token, int? campeonatoId}) async => mockEquipos;
+  Future<List<Equipo>> getEquipos({String? token, int? campeonatoId, int? torneoId}) async => mockEquipos;
 
   @override
-  Future<List<Jugador>> getJugadoresEquipo(int equipoId, {String? token}) async => mockJugadores;
+  Future<List<Jugador>> getJugadoresEquipo(int equipoId, {String? token, int? campeonatoId, int? torneoId}) async => mockJugadores;
 }
 
 class MockJugadoresService extends JugadoresService {
@@ -466,7 +466,7 @@ class MockJugadoresService extends JugadoresService {
   MockJugadoresService({this.mockJugadores = const []});
 
   @override
-  Future<List<Jugador>> getJugadores({String? token}) async => mockJugadores;
+  Future<List<Jugador>> getJugadores({String? token, int? campeonatoId, int? torneoId}) async => mockJugadores;
 
   @override
   Future<Jugador> getJugadorById(int id, {String? token}) async {

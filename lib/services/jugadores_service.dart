@@ -1,16 +1,29 @@
 import '../core/constants/api_constants.dart';
 import '../core/errors/app_exception.dart';
 import '../core/network/api_client.dart';
+import '../core/session/session_manager.dart';
 import '../models/jugador.dart';
 
 class JugadoresService {
   final ApiClient _apiClient;
   JugadoresService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
 
-  Future<List<Jugador>> getJugadores({String? token}) async {
+  Future<List<Jugador>> getJugadores({
+    String? token,
+    int? campeonatoId,
+    int? torneoId,
+  }) async {
+    final resolvedId = torneoId ?? campeonatoId ?? SessionManager().selectedCampeonatoId;
+    final query = resolvedId > 0 ? '?campeonatoId=$resolvedId' : '';
     final response = await _apiClient.get(
-      ApiConstants.jugadores,
+      '${ApiConstants.jugadores}$query',
       token: token,
+      headers: resolvedId > 0
+          ? {
+              'X-Campeonato-Id': resolvedId.toString(),
+              'X-Torneo-Id': resolvedId.toString(),
+            }
+          : null,
     );
 
     if (response is List) {
