@@ -21,6 +21,48 @@ class ImportarPlanillaModal extends StatefulWidget {
     this.torneoNombre,
   });
 
+  /// Extrae el ID de la hoja de cálculo de Google Sheets.
+  /// Soporta URLs completas (https://docs.google.com/spreadsheets/d/ID/...)
+  /// y también IDs directos pegados por el usuario.
+  static String? extraerGoogleSheetId(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return null;
+
+    // 1. Si el usuario ingresó directamente el ID de la hoja
+    final idRegex = RegExp(r'^[a-zA-Z0-9_-]{20,100}$');
+    if (idRegex.hasMatch(trimmed)) {
+      return trimmed;
+    }
+
+    // 2. Si es una URL completa de Google Sheets
+    final sheetUrlRegex = RegExp(
+      r'docs\.google\.com/spreadsheets(?:/u/\d+)?/d/([a-zA-Z0-9_-]+)',
+      caseSensitive: false,
+    );
+    final match = sheetUrlRegex.firstMatch(trimmed);
+    if (match != null && match.groupCount >= 1) {
+      final id = match.group(1);
+      if (id != null && id.length >= 15) {
+        return id;
+      }
+    }
+
+    // 3. Si es un enlace de Google Drive
+    final driveUrlRegex = RegExp(
+      r'drive\.google\.com/(?:file/d/|open\?id=|uc\?(?:export=[^&]+&)?id=)([a-zA-Z0-9_-]+)',
+      caseSensitive: false,
+    );
+    final driveMatch = driveUrlRegex.firstMatch(trimmed);
+    if (driveMatch != null && driveMatch.groupCount >= 1) {
+      final id = driveMatch.group(1);
+      if (id != null && id.length >= 15) {
+        return id;
+      }
+    }
+
+    return null;
+  }
+
   @override
   State<ImportarPlanillaModal> createState() => _ImportarPlanillaModalState();
 }
@@ -128,6 +170,8 @@ class _ImportarPlanillaModalState extends State<ImportarPlanillaModal> {
     });
 
     try {
+      String? urlParaImportar;
+
       if (_opcionSeleccionada == 0) {
         if (_archivoBytes == null || _archivoBytes!.isEmpty) {
           setState(() {
@@ -137,20 +181,32 @@ class _ImportarPlanillaModalState extends State<ImportarPlanillaModal> {
           return;
         }
       } else {
-        final url = _driveUrlController.text.trim();
-        if (url.isEmpty) {
+        final rawInput = _driveUrlController.text.trim();
+        if (rawInput.isEmpty) {
           setState(() {
             _errorMensaje = 'Por favor ingresa el enlace compartido de Google Drive o Sheets.';
             _procesando = false;
           });
           return;
         }
+
+        final sheetId = ImportarPlanillaModal.extraerGoogleSheetId(rawInput);
+        if (sheetId == null) {
+          setState(() {
+            _errorMensaje = 'El enlace ingresado no es válido. Asegúrate de incluir la URL completa de Google Sheets';
+            _procesando = false;
+          });
+          return;
+        }
+
+        // Construir URL canónica de Google Sheets
+        urlParaImportar = 'https://docs.google.com/spreadsheets/d/$sheetId/edit';
       }
 
       final resumen = await _equiposService.importarPlanilla(
         archivoBytes: _opcionSeleccionada == 0 ? _archivoBytes : null,
         nombreArchivo: _opcionSeleccionada == 0 ? _nombreArchivo : null,
-        urlGoogleDrive: _opcionSeleccionada == 1 ? _driveUrlController.text.trim() : null,
+        urlGoogleDrive: _opcionSeleccionada == 1 ? urlParaImportar : null,
         campeonatoId: _resolvedTorneoId,
         torneoId: _resolvedTorneoId,
         token: widget.token,
@@ -173,9 +229,14 @@ class _ImportarPlanillaModalState extends State<ImportarPlanillaModal> {
       }
     } catch (e) {
       if (mounted) {
+        final errStr = e.toString();
+        String errorUser = 'Error al procesar la importación: $e';
+        if (errStr.contains('401') || errStr.contains('403') || errStr.contains('500') || errStr.contains('permiso')) {
+          errorUser = "No se pudo acceder a la hoja. Verifica que tenga permisos de lectura públicos ('Cualquier persona con el enlace')";
+        }
         setState(() {
           _procesando = false;
-          _errorMensaje = 'Error al procesar la importación: $e';
+          _errorMensaje = errorUser;
         });
       }
     }

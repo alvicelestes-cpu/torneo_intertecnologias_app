@@ -22,6 +22,10 @@ class MockImportHttpClient extends http.BaseClient {
   String? lastMethod;
   Map<String, String>? lastHeaders;
   String? lastBody;
+  int statusCode;
+  String? customResponseBody;
+
+  MockImportHttpClient({this.statusCode = 200, this.customResponseBody});
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -30,7 +34,22 @@ class MockImportHttpClient extends http.BaseClient {
     lastHeaders = request.headers;
 
     if (request.url.path.contains('/api/equipos/importar-planilla')) {
-      final jsonResponse = jsonEncode({
+      if (statusCode != 200) {
+        final errJson = customResponseBody ??
+            jsonEncode({
+              'exito': false,
+              'mensaje': statusCode == 500
+                  ? 'Internal Server Error: Database failure'
+                  : 'No se pudo acceder a la hoja. Verifica que tenga permisos de lectura públicos (\'Cualquier persona con el enlace\')',
+            });
+        return http.StreamedResponse(
+          Stream.value(utf8.encode(errJson)),
+          statusCode,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }
+      final jsonResponse = customResponseBody ??
+          jsonEncode({
         'exito': true,
         'mensaje': 'Planilla procesada con éxito.',
         'torneoId': 2,
@@ -406,5 +425,155 @@ void main() {
       expect(find.text('Observaciones / Filas Omitidas (2)'), findsOneWidget);
       expect(find.byKey(const Key('btn_cerrar_resumen_importacion')), findsOneWidget);
     });
+
+    testWidgets('Muestra error claro si la URL no es válida', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: ImportarPlanillaModal(
+              torneoId: 2,
+              torneoNombre: 'Torneo Clausura',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Cambiar a opción Google Drive
+      await tester.tap(find.text('Google Drive / Sheets'));
+      await tester.pumpAndSettle();
+
+      // Ingresar URL inválida
+      await tester.enterText(
+        find.byKey(const Key('input_enlace_google_drive')),
+        'https://google.com/invalid-link',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('btn_ejecutar_importacion')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('El enlace ingresado no es válido. Asegúrate de incluir la URL completa de Google Sheets'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Acepta ID directo pegado por el usuario y ejecuta importación exitosamente', (tester) async {
+      final mockClient = MockImportHttpClient();
+      final apiClient = ApiClient(client: mockClient);
+      final equiposService = EquiposService(apiClient: apiClient);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ImportarPlanillaModal(
+              torneoId: 2,
+              torneoNombre: 'Torneo Secundario 2026',
+              equiposService: equiposService,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Cambiar a opción Google Drive
+      await tester.tap(find.text('Google Drive / Sheets'));
+      await tester.pumpAndSettle();
+
+      // Pegar ID directo
+      await tester.enterText(
+        find.byKey(const Key('input_enlace_google_drive')),
+        '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('btn_ejecutar_importacion')));
+      await tester.pumpAndSettle();
+
+      // Debe importar exitosamente
+      expect(find.text('¡Importación Completada!'), findsOneWidget);
+      expect(find.text('Equipos Nuevos'), findsOneWidget);
+    });
+
+    testWidgets('Muestra mensaje amigable si el servidor falla con error 401/403 o 500 de permisos', (tester) async {
+      final mockClient = MockImportHttpClient(
+        statusCode: 500,
+        customResponseBody: jsonEncode({
+          'exito': false,
+          'mensaje': 'Internal Server Error',
+        }),
+      );
+      final apiClient = ApiClient(client: mockClient);
+      final equiposService = EquiposService(apiClient: apiClient);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ImportarPlanillaModal(
+              torneoId: 2,
+              torneoNombre: 'Torneo Secundario 2026',
+              equiposService: equiposService,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Google Drive / Sheets'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('input_enlace_google_drive')),
+        'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('btn_ejecutar_importacion')));
+      await tester.pumpAndSettle();
+
+      // Debe mostrar el mensaje amigable en lugar de un error interno 500
+      expect(
+        find.text("No se pudo acceder a la hoja. Verifica que tenga permisos de lectura públicos ('Cualquier persona con el enlace')"),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('5. ImportarPlanillaModal.extraerGoogleSheetId Unit Tests', () {
+    test('Extrae ID desde URL completa estándar con edit y gid', () {
+      const url = 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit#gid=0';
+      final id = ImportarPlanillaModal.extraerGoogleSheetId(url);
+      expect(id, '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms');
+    });
+
+    test('Extrae ID desde URL con multi-cuenta /u/0/', () {
+      const url = 'https://docs.google.com/spreadsheets/u/0/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/export?format=csv';
+      final id = ImportarPlanillaModal.extraerGoogleSheetId(url);
+      expect(id, '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms');
+    });
+
+    test('Extrae ID directo pegado por el usuario', () {
+      const rawId = '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms';
+      final id = ImportarPlanillaModal.extraerGoogleSheetId(rawId);
+      expect(id, '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms');
+    });
+
+    test('Extrae ID desde enlace de Google Drive con /file/d/ o open?id=', () {
+      const driveUrl1 = 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/view?usp=sharing';
+      expect(ImportarPlanillaModal.extraerGoogleSheetId(driveUrl1), '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms');
+
+      const driveUrl2 = 'https://drive.google.com/open?id=1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms';
+      expect(ImportarPlanillaModal.extraerGoogleSheetId(driveUrl2), '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms');
+    });
+
+    test('Retorna null para enlaces o cadenas inválidas', () {
+      expect(ImportarPlanillaModal.extraerGoogleSheetId(''), isNull);
+      expect(ImportarPlanillaModal.extraerGoogleSheetId('   '), isNull);
+      expect(ImportarPlanillaModal.extraerGoogleSheetId('https://google.com'), isNull);
+      expect(ImportarPlanillaModal.extraerGoogleSheetId('https://example.com/planilla.xlsx'), isNull);
+      expect(ImportarPlanillaModal.extraerGoogleSheetId('short_id'), isNull);
+    });
   });
 }
+

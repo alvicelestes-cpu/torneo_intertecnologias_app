@@ -268,9 +268,17 @@ class EquiposService {
         );
       }
 
-      final errorMsg = decoded is Map && decoded['mensaje'] != null
-          ? decoded['mensaje'].toString()
-          : 'Error al procesar la planilla (Código $statusCode).';
+      String errorMsg = 'Error al procesar la planilla (Código $statusCode).';
+      if (decoded is Map && decoded['mensaje'] != null && decoded['mensaje'].toString().trim().isNotEmpty) {
+        final serverMsg = decoded['mensaje'].toString().trim();
+        if (statusCode == 500 || serverMsg.toLowerCase().contains('internal server error') || serverMsg.toLowerCase().contains('error interno')) {
+          errorMsg = "No se pudo acceder a la hoja. Verifica que tenga permisos de lectura públicos ('Cualquier persona con el enlace')";
+        } else {
+          errorMsg = serverMsg;
+        }
+      } else if (statusCode == 401 || statusCode == 403 || statusCode == 500) {
+        errorMsg = "No se pudo acceder a la hoja. Verifica que tenga permisos de lectura públicos ('Cualquier persona con el enlace')";
+      }
       final alertas = decoded is Map && decoded['alertas'] is List
           ? (decoded['alertas'] as List).map((e) => e.toString()).toList()
           : <String>[];
