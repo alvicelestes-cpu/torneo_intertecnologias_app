@@ -210,6 +210,17 @@ class _JugadoresPageState extends State<JugadoresPage> {
   }
 
   Future<void> _confirmarEliminarJugador(Jugador jugador) async {
+    if (!_esAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Acceso restringido: Se requieren permisos de administrador para eliminar jugadores.'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -593,7 +604,7 @@ class _JugadoresPageState extends State<JugadoresPage> {
                           group: group,
                           jugadores: list,
                           onVerFicha: _abrirFicha,
-                          onEliminar: _confirmarEliminarJugador,
+                          onEliminar: _esAdmin ? _confirmarEliminarJugador : null,
                         );
 
                       }),

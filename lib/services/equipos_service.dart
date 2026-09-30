@@ -105,7 +105,7 @@ class EquiposService {
     );
   }
 
-  /// Elimina un equipo y opcionalmente pasa contexto de torneo/campeonato
+  /// Elimina un equipo y opcionalmente pasa contexto de torneo/campeonato (Requiere Admin)
   Future<void> eliminarEquipo(
     int id, {
     String? token,
@@ -113,11 +113,25 @@ class EquiposService {
     int? torneoId,
   }) async {
     final session = SessionManager();
+    final effectiveToken = (token != null && token.isNotEmpty)
+        ? token
+        : session.token;
+
+    final bool esAdmin = (token != null && token.isNotEmpty && session.currentUser == null)
+        ? true
+        : session.hasAdminAccess;
+
+    if (effectiveToken.isEmpty || !esAdmin) {
+      throw const AuthException(
+        'Acceso restringido: Se requiere una sesión activa con permisos de Administrador para eliminar equipos.',
+      );
+    }
+
     final resolvedId = torneoId ?? campeonatoId ?? session.selectedCampeonatoId;
     final query = resolvedId > 0 ? '?campeonatoId=$resolvedId' : '';
     await _apiClient.delete(
       '${ApiConstants.equipoDetalle(id)}$query',
-      token: token ?? (session.token.isNotEmpty ? session.token : null),
+      token: effectiveToken,
       headers: resolvedId > 0
           ? {
               'X-Campeonato-Id': resolvedId.toString(),
@@ -134,6 +148,7 @@ class EquiposService {
     int? torneoId,
   }) =>
       eliminarEquipo(id, token: token, campeonatoId: campeonatoId, torneoId: torneoId);
+
 
 
   /// Crea un nuevo equipo asociado al torneo activo

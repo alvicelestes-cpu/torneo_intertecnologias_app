@@ -144,7 +144,21 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
     }
   }
 
+  bool get _esAdmin {
+    final session = SessionManager();
+    final tieneTokenValido = (widget.token != null && widget.token!.isNotEmpty) || session.token.isNotEmpty;
+    return tieneTokenValido && session.hasAdminAccess;
+  }
+
   Future<void> _confirmarEliminarJugador() async {
+    if (!_esAdmin) {
+      UiHelpers.showError(
+        context,
+        'Acceso restringido: Se requieren permisos de administrador para eliminar jugadores.',
+      );
+      return;
+    }
+
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -256,12 +270,13 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            key: const Key('btn_eliminar_jugador_appbar'),
-            icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626)),
-            tooltip: 'Eliminar jugador',
-            onPressed: _confirmarEliminarJugador,
-          ),
+          if (_esAdmin)
+            IconButton(
+              key: const Key('btn_eliminar_jugador_appbar'),
+              icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626)),
+              tooltip: 'Eliminar jugador',
+              onPressed: _confirmarEliminarJugador,
+            ),
         ],
       ),
 
@@ -486,26 +501,28 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 48,
-                  child: FilledButton.icon(
-                    key: const Key('btn_eliminar_jugador'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFDC2626),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                if (_esAdmin) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 48,
+                    child: FilledButton.icon(
+                      key: const Key('btn_eliminar_jugador'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFDC2626),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: _confirmarEliminarJugador,
+                      icon: const Icon(Icons.delete_outline, size: 20),
+                      label: const Text(
+                        'ELIMINAR JUGADOR',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                     ),
-                    onPressed: _confirmarEliminarJugador,
-                    icon: const Icon(Icons.delete_outline, size: 20),
-                    label: const Text(
-                      'ELIMINAR JUGADOR',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 20),
               ],
             ),

@@ -289,7 +289,21 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
     }
   }
 
+  bool get _esAdmin {
+    final session = SessionManager();
+    final tieneTokenValido = (widget.token.isNotEmpty) || session.token.isNotEmpty;
+    return tieneTokenValido && session.hasAdminAccess;
+  }
+
   Future<void> eliminarJugador() async {
+    if (!_esAdmin) {
+      UiHelpers.showError(
+        context,
+        'Acceso restringido: Se requieren permisos de administrador para eliminar jugadores.',
+      );
+      return;
+    }
+
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -734,28 +748,30 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: OutlinedButton.icon(
-                          key: const Key('btn_eliminar_jugador_editar'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFFDC2626),
-                            side: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
-                            backgroundColor: const Color(0xFFFEF2F2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                      if (_esAdmin) ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: OutlinedButton.icon(
+                            key: const Key('btn_eliminar_jugador_editar'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFDC2626),
+                              side: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
+                              backgroundColor: const Color(0xFFFEF2F2),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed: guardando ? null : eliminarJugador,
+                            icon: const Icon(Icons.delete_outline, size: 20),
+                            label: const Text(
+                              'ELIMINAR JUGADOR',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                             ),
                           ),
-                          onPressed: guardando ? null : eliminarJugador,
-                          icon: const Icon(Icons.delete_outline, size: 20),
-                          label: const Text(
-                            'ELIMINAR JUGADOR',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                          ),
                         ),
-                      ),
+                      ],
                       const SizedBox(height: 20),
 
                     ],

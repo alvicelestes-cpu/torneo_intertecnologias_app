@@ -691,6 +691,17 @@ class _EquiposPageState extends State<EquiposPage> {
   }
 
   Future<void> _confirmarEliminarEquipo(Equipo equipo) async {
+    if (!_esAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Acceso restringido: Se requieren permisos de administrador para eliminar equipos.'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -1026,7 +1037,7 @@ class _EquiposPageState extends State<EquiposPage> {
                                         onTap: () => _abrirPlantilla(equipo),
                                         onCarnets: _esAdmin ? () => _descargarCarnetsEquipo(equipo) : null,
                                         onEdit: _esAdmin ? () => _abrirEditarEquipo(equipo) : null,
-                                        onDelete: () => _confirmarEliminarEquipo(equipo),
+                                        onDelete: _esAdmin ? () => _confirmarEliminarEquipo(equipo) : null,
                                       ),
                                     ),
                                   ),
@@ -1052,7 +1063,7 @@ class _EquiposPageState extends State<EquiposPage> {
                               onTap: () => _abrirPlantilla(equipo),
                               onCarnets: _esAdmin ? () => _descargarCarnetsEquipo(equipo) : null,
                               onEdit: _esAdmin ? () => _abrirEditarEquipo(equipo) : null,
-                              onDelete: () => _confirmarEliminarEquipo(equipo),
+                              onDelete: _esAdmin ? () => _confirmarEliminarEquipo(equipo) : null,
                             );
                           },
                         );
