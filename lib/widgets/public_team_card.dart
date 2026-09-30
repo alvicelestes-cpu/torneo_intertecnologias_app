@@ -12,6 +12,7 @@ class PublicTeamCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onCarnets;
+  final VoidCallback? onDelete;
 
   const PublicTeamCard({
     super.key,
@@ -19,6 +20,7 @@ class PublicTeamCard extends StatelessWidget {
     this.onTap,
     this.onEdit,
     this.onCarnets,
+    this.onDelete,
   });
 
   @override
@@ -113,15 +115,26 @@ class PublicTeamCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      if (onEdit != null)
+                      if (onEdit != null) ...[
                         IconButton(
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           icon: const Icon(Icons.edit_outlined, size: 20, color: Color(0xFF64748B)),
                           tooltip: 'Editar escudo y equipo',
                           onPressed: onEdit,
+                        ),
+                        if (onDelete != null) const SizedBox(width: 4),
+                      ],
+                      if (onDelete != null)
+                        IconButton(
+                          key: Key('btn_eliminar_equipo_${equipo.id}'),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFDC2626)),
+                          tooltip: 'Eliminar equipo',
+                          onPressed: onDelete,
                         )
-                      else
+                      else if (onEdit == null)
                         const Icon(
                           Icons.chevron_right,
                           color: Color(0xFF94A3B8),
@@ -129,6 +142,7 @@ class PublicTeamCard extends StatelessWidget {
                         ),
                     ],
                   ),
+
                   const SizedBox(height: 14),
 
                   // Capacidad: "$cant/14 jugadores" a la izquierda y porcentaje "XX%" a la derecha
@@ -250,8 +264,37 @@ class PublicTeamCard extends StatelessWidget {
                               ),
                             ),
                           ],
+                          if (onDelete != null) ...[
+                            const SizedBox(width: 6),
+                            SizedBox(
+                              height: 36,
+                              child: OutlinedButton.icon(
+                                key: Key('btn_eliminar_equipo_bottom_${equipo.id}'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFDC2626),
+                                  side: const BorderSide(color: Color(0xFFFCA5A5)),
+                                  backgroundColor: const Color(0xFFFEF2F2),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                ),
+                                onPressed: onDelete,
+                                icon: const Icon(Icons.delete_outline, size: 16, color: Color(0xFFDC2626)),
+                                label: const Text(
+                                  'Eliminar',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11.5,
+                                    color: Color(0xFFDC2626),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
+
                     ),
                   ),
                 ],

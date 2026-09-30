@@ -180,7 +180,9 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
           jugador: jugador.toJson(),
           equipoNombre: widget.equipoNombre,
           token: widget.token,
+          jugadoresService: _jugadoresService,
         ),
+
       ),
     );
 
@@ -188,6 +190,88 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
       cargarJugadores();
     }
   }
+
+  Future<void> _confirmarEliminarJugador(Jugador jugador) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.delete_forever, color: Color(0xFFDC2626), size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Eliminar Jugador',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          '¿Deseas eliminar a este jugador del plantel?',
+          style: TextStyle(fontSize: 14, color: Color(0xFF334155)),
+        ),
+        actions: [
+          TextButton(
+            key: const Key('btn_cancelar_eliminar_jugador'),
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            key: const Key('btn_confirmar_eliminar_jugador'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !mounted) return;
+
+    try {
+      // 1. Eliminar en el almacenamiento / backend
+      await _jugadoresService.eliminarJugador(
+        jugador.id,
+        token: widget.token,
+        campeonatoId: SessionManager().selectedCampeonatoId,
+      );
+
+      // 2. Remover de la lista local inmediatamente para recalcular total de inscritos y carnets
+      if (mounted) {
+        setState(() {
+          jugadores.removeWhere((j) => j.id == jugador.id);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Jugador "${jugador.nombreCompleto}" eliminado del plantel.'),
+            backgroundColor: Colors.green.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+
+      // 3. Sincronizar con el backend
+      await cargarJugadores();
+    } on AppException catch (e) {
+      if (mounted) UiHelpers.showError(context, e.message);
+    } catch (e) {
+      if (mounted) UiHelpers.showError(context, 'No se pudo eliminar al jugador: $e');
+    }
+  }
+
 
   Future<void> _abrirInscripcion() async {
     if (jugadores.length >= _limiteJugadores) {
@@ -610,7 +694,9 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                           group: group,
                           jugadores: list,
                           onVerFicha: _abrirFicha,
+                          onEliminar: _confirmarEliminarJugador,
                         );
+
                       }),
                       const SizedBox(height: 16),
                     ],

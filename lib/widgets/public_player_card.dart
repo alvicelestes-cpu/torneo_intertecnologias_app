@@ -11,11 +11,13 @@ import 'team_logo_avatar.dart';
 class PublicPlayerCard extends StatelessWidget {
   final Jugador jugador;
   final void Function(Jugador jugador)? onVerFicha;
+  final void Function(Jugador jugador)? onEliminar;
 
   const PublicPlayerCard({
     super.key,
     required this.jugador,
     this.onVerFicha,
+    this.onEliminar,
   });
 
   @override
@@ -130,9 +132,21 @@ class PublicPlayerCard extends StatelessWidget {
                     ),
                   ),
                 ],
+                if (onEliminar != null) ...[
+                  const SizedBox(width: 4),
+                  IconButton(
+                    key: Key('btn_eliminar_jugador_${jugador.id}'),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: const Icon(Icons.delete_outline, size: 18, color: Colors.white),
+                    tooltip: 'Eliminar jugador',
+                    onPressed: () => onEliminar!(jugador),
+                  ),
+                ],
               ],
             ),
           ),
+
 
           // 2. CUERPO DEL CARNET (FOTO + DATOS + ESTADÍSTICAS)
           Expanded(
@@ -253,34 +267,70 @@ class PublicPlayerCard extends StatelessWidget {
                           ],
                         ),
 
-                        // BOTÓN "VER FICHA"
+                        // BOTONES "VER FICHA" Y "ELIMINAR"
                         SizedBox(
                           height: 28,
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: carnetColor,
-                              side: BorderSide(
-                                color: carnetColor,
-                                width: 1.2,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  key: Key('btn_ver_ficha_${jugador.id}'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: carnetColor,
+                                    side: BorderSide(
+                                      color: carnetColor,
+                                      width: 1.2,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                  ),
+                                  onPressed: onVerFicha != null
+                                      ? () => onVerFicha!(jugador)
+                                      : null,
+                                  child: const Text(
+                                    'Ver ficha',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              padding: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                            ),
-                            onPressed: onVerFicha != null
-                                ? () => onVerFicha!(jugador)
-                                : null,
-                            child: const Text(
-                              'Ver ficha',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
+                              if (onEliminar != null) ...[
+                                const SizedBox(width: 6),
+                                SizedBox(
+                                  height: 28,
+                                  child: OutlinedButton.icon(
+                                    key: Key('btn_eliminar_carnet_${jugador.id}'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: const Color(0xFFDC2626),
+                                      side: const BorderSide(color: Color(0xFFDC2626), width: 1.2),
+                                      backgroundColor: const Color(0xFFFEF2F2),
+                                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                    ),
+                                    onPressed: () => onEliminar!(jugador),
+                                    icon: const Icon(Icons.delete_outline, size: 14, color: Color(0xFFDC2626)),
+                                    label: const Text(
+                                      'Eliminar',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFDC2626),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
+
                       ],
                     ),
                   ),

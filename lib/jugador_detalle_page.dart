@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/constants/app_colors.dart';
+import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
 import 'core/utils/date_utils.dart';
 import 'core/utils/ui_helpers.dart';
@@ -15,12 +16,14 @@ class JugadorDetallePage extends StatefulWidget {
   final Map<String, dynamic> jugador;
   final String equipoNombre;
   final String? token;
+  final JugadoresService? jugadoresService;
 
   const JugadorDetallePage({
     super.key,
     required this.jugador,
     required this.equipoNombre,
     this.token,
+    this.jugadoresService,
   });
 
   @override
@@ -29,14 +32,16 @@ class JugadorDetallePage extends StatefulWidget {
 
 class _JugadorDetallePageState extends State<JugadorDetallePage> {
   late Jugador jugador;
-  final JugadoresService _jugadoresService = JugadoresService();
+  late final JugadoresService _jugadoresService;
 
   @override
   void initState() {
     super.initState();
+    _jugadoresService = widget.jugadoresService ?? JugadoresService();
     jugador = Jugador.fromJson(widget.jugador);
     _cargarDetallesCompletos();
   }
+
 
   Future<void> _cargarDetallesCompletos() async {
     if (jugador.id <= 0) return;
@@ -139,6 +144,81 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
     }
   }
 
+  Future<void> _confirmarEliminarJugador() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.delete_forever, color: Color(0xFFDC2626), size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Eliminar Jugador',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          '¿Deseas eliminar a este jugador del plantel?',
+          style: TextStyle(fontSize: 14, color: Color(0xFF334155)),
+        ),
+        actions: [
+          TextButton(
+            key: const Key('btn_cancelar_eliminar_jugador'),
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            key: const Key('btn_confirmar_eliminar_jugador'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !mounted) return;
+
+    try {
+      await _jugadoresService.eliminarJugador(
+        jugador.id,
+        token: widget.token ?? (SessionManager().token.isNotEmpty ? SessionManager().token : null),
+        campeonatoId: SessionManager().selectedCampeonatoId,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Jugador "${jugador.nombreCompleto}" eliminado del plantel.'),
+            backgroundColor: Colors.green.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
+    } on AppException catch (e) {
+      if (mounted) UiHelpers.showError(context, e.message);
+    } catch (e) {
+      if (mounted) UiHelpers.showError(context, 'No se pudo eliminar al jugador: $e');
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final nombreCompleto = jugador.nombreCompleto.isNotEmpty
@@ -175,7 +255,16 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
           ],
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            key: const Key('btn_eliminar_jugador_appbar'),
+            icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626)),
+            tooltip: 'Eliminar jugador',
+            onPressed: _confirmarEliminarJugador,
+          ),
+        ],
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Center(
@@ -397,9 +486,30 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
                     ),
                   ),
                 ],
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 48,
+                  child: FilledButton.icon(
+                    key: const Key('btn_eliminar_jugador'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFDC2626),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: _confirmarEliminarJugador,
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                    label: const Text(
+                      'ELIMINAR JUGADOR',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 20),
               ],
             ),
+
           ),
         ),
       ),

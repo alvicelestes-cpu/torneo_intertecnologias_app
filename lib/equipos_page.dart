@@ -690,11 +690,115 @@ class _EquiposPageState extends State<EquiposPage> {
     }
   }
 
+  Future<void> _confirmarEliminarEquipo(Equipo equipo) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.delete_forever, color: Color(0xFFDC2626), size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Eliminar Equipo',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          '¿Estás seguro de que deseas eliminar este equipo? Se borrarán también todos sus jugadores inscritos.',
+          style: TextStyle(fontSize: 14, color: Color(0xFF334155)),
+        ),
+        actions: [
+          TextButton(
+            key: const Key('btn_cancelar_eliminar_equipo'),
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            key: const Key('btn_confirmar_eliminar_equipo'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !mounted) return;
+
+    try {
+      // 1. Intentar eliminar jugadores vinculados para asegurar consistencia
+      try {
+        final jugadoresEquipo = await _equiposService.getJugadoresEquipo(
+          equipo.id,
+          token: widget.token,
+          campeonatoId: SessionManager().selectedCampeonatoId,
+        );
+        for (final j in jugadoresEquipo) {
+          try {
+            await _jugadoresService.eliminarJugador(
+              j.id,
+              token: widget.token,
+              campeonatoId: SessionManager().selectedCampeonatoId,
+            );
+          } catch (_) {
+            // Continuar con la eliminación del equipo
+          }
+        }
+      } catch (_) {
+        // Continuar con la eliminación del equipo
+      }
+
+      // 2. Eliminar el equipo en el servidor
+      await _equiposService.eliminarEquipo(
+        equipo.id,
+        token: widget.token,
+        campeonatoId: SessionManager().selectedCampeonatoId,
+      );
+
+      // 3. Actualizar la vista inmediatamente
+      if (mounted) {
+        setState(() {
+          equipos.removeWhere((e) => e.id == equipo.id);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Equipo "${equipo.nombre}" eliminado exitosamente.'),
+            backgroundColor: Colors.green.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+
+      // 4. Sincronizar con el backend
+      await cargarEquipos();
+    } on AppException catch (e) {
+      if (mounted) UiHelpers.showError(context, e.message);
+    } catch (e) {
+      if (mounted) UiHelpers.showError(context, 'No se pudo eliminar el equipo: $e');
+    }
+  }
+
   bool get _esAdmin {
     final session = SessionManager();
     final tieneTokenValido = (widget.token != null && widget.token!.isNotEmpty) || session.token.isNotEmpty;
     return tieneTokenValido && session.hasAdminAccess;
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -922,6 +1026,7 @@ class _EquiposPageState extends State<EquiposPage> {
                                         onTap: () => _abrirPlantilla(equipo),
                                         onCarnets: _esAdmin ? () => _descargarCarnetsEquipo(equipo) : null,
                                         onEdit: _esAdmin ? () => _abrirEditarEquipo(equipo) : null,
+                                        onDelete: () => _confirmarEliminarEquipo(equipo),
                                       ),
                                     ),
                                   ),
@@ -947,9 +1052,11 @@ class _EquiposPageState extends State<EquiposPage> {
                               onTap: () => _abrirPlantilla(equipo),
                               onCarnets: _esAdmin ? () => _descargarCarnetsEquipo(equipo) : null,
                               onEdit: _esAdmin ? () => _abrirEditarEquipo(equipo) : null,
+                              onDelete: () => _confirmarEliminarEquipo(equipo),
                             );
                           },
                         );
+
                       },
                     ),
                     const SizedBox(height: 20),

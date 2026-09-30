@@ -105,6 +105,37 @@ class EquiposService {
     );
   }
 
+  /// Elimina un equipo y opcionalmente pasa contexto de torneo/campeonato
+  Future<void> eliminarEquipo(
+    int id, {
+    String? token,
+    int? campeonatoId,
+    int? torneoId,
+  }) async {
+    final session = SessionManager();
+    final resolvedId = torneoId ?? campeonatoId ?? session.selectedCampeonatoId;
+    final query = resolvedId > 0 ? '?campeonatoId=$resolvedId' : '';
+    await _apiClient.delete(
+      '${ApiConstants.equipoDetalle(id)}$query',
+      token: token ?? (session.token.isNotEmpty ? session.token : null),
+      headers: resolvedId > 0
+          ? {
+              'X-Campeonato-Id': resolvedId.toString(),
+              'X-Torneo-Id': resolvedId.toString(),
+            }
+          : null,
+    );
+  }
+
+  Future<void> deleteEquipo(
+    int id, {
+    String? token,
+    int? campeonatoId,
+    int? torneoId,
+  }) =>
+      eliminarEquipo(id, token: token, campeonatoId: campeonatoId, torneoId: torneoId);
+
+
   /// Crea un nuevo equipo asociado al torneo activo
   Future<Equipo> crearEquipo({
     required String nombre,

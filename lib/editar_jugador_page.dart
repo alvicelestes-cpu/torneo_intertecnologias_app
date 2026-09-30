@@ -289,6 +289,81 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
     }
   }
 
+  Future<void> eliminarJugador() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.delete_forever, color: Color(0xFFDC2626), size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Eliminar Jugador',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          '¿Deseas eliminar a este jugador del plantel?',
+          style: TextStyle(fontSize: 14, color: Color(0xFF334155)),
+        ),
+        actions: [
+          TextButton(
+            key: const Key('btn_cancelar_eliminar_jugador'),
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            key: const Key('btn_confirmar_eliminar_jugador'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !mounted) return;
+
+    setState(() => guardando = true);
+    try {
+      await _jugadoresService.eliminarJugador(
+        widget.jugadorId,
+        token: widget.token,
+        campeonatoId: SessionManager().selectedCampeonatoId,
+      );
+
+      if (mounted) {
+        UiHelpers.showSuccess(context, 'Jugador eliminado del plantel exitosamente.');
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
+      }
+    } on AppException catch (e) {
+      if (mounted) UiHelpers.showError(context, e.message);
+    } catch (e) {
+      if (mounted) UiHelpers.showError(context, 'No se pudo eliminar al jugador: $e');
+    } finally {
+      if (mounted) setState(() => guardando = false);
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -659,7 +734,30 @@ class _EditarJugadorPageState extends State<EditarJugadorPage> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          key: const Key('btn_eliminar_jugador_editar'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFDC2626),
+                            side: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
+                            backgroundColor: const Color(0xFFFEF2F2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: guardando ? null : eliminarJugador,
+                          icon: const Icon(Icons.delete_outline, size: 20),
+                          label: const Text(
+                            'ELIMINAR JUGADOR',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 20),
+
                     ],
                   ),
                 ),

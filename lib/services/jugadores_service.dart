@@ -92,4 +92,35 @@ class JugadoresService {
 
     throw const AppException('No se pudo crear el jugador.');
   }
+
+  /// Elimina un jugador del sistema y del torneo activo
+  Future<void> eliminarJugador(
+    int id, {
+    String? token,
+    int? campeonatoId,
+    int? torneoId,
+  }) async {
+    final session = SessionManager();
+    final resolvedId = torneoId ?? campeonatoId ?? session.selectedCampeonatoId;
+    final query = resolvedId > 0 ? '?campeonatoId=$resolvedId' : '';
+    await _apiClient.delete(
+      '${ApiConstants.jugadorDetalle(id)}$query',
+      token: token ?? (session.token.isNotEmpty ? session.token : null),
+      headers: resolvedId > 0
+          ? {
+              'X-Campeonato-Id': resolvedId.toString(),
+              'X-Torneo-Id': resolvedId.toString(),
+            }
+          : null,
+    );
+  }
+
+  Future<void> deleteJugador(
+    int id, {
+    String? token,
+    int? campeonatoId,
+    int? torneoId,
+  }) =>
+      eliminarJugador(id, token: token, campeonatoId: campeonatoId, torneoId: torneoId);
 }
+

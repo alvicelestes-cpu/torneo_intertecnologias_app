@@ -12,6 +12,7 @@ class PublicAgeGroupSection extends StatelessWidget {
   final List<Jugador> jugadores;
   final IconData icono;
   final void Function(Jugador jugador)? onVerFicha;
+  final void Function(Jugador jugador)? onEliminar;
 
   const PublicAgeGroupSection({
     super.key,
@@ -22,6 +23,7 @@ class PublicAgeGroupSection extends StatelessWidget {
     required this.jugadores,
     this.icono = Icons.sports_soccer,
     this.onVerFicha,
+    this.onEliminar,
   });
 
   factory PublicAgeGroupSection.fromGroup({
@@ -29,6 +31,7 @@ class PublicAgeGroupSection extends StatelessWidget {
     required AgeGroup group,
     required List<Jugador> jugadores,
     void Function(Jugador jugador)? onVerFicha,
+    void Function(Jugador jugador)? onEliminar,
   }) {
     return PublicAgeGroupSection(
       key: key,
@@ -39,8 +42,10 @@ class PublicAgeGroupSection extends StatelessWidget {
       jugadores: jugadores,
       icono: Icons.sports_soccer,
       onVerFicha: onVerFicha,
+      onEliminar: onEliminar,
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +189,9 @@ class PublicAgeGroupSection extends StatelessWidget {
                 return PublicPlayerCard(
                   jugador: jugadores[index],
                   onVerFicha: onVerFicha,
+                  onEliminar: onEliminar,
                 );
+
               },
             );
           },
