@@ -77,6 +77,7 @@ class _PartidosPageState extends State<PartidosPage> {
       final sections = FixtureUtils.buildTournamentSections(
         partidos: list,
         posiciones: posList,
+        torneoSlug: SessionManager().selectedCampeonatoSlug,
       );
       if (mounted) {
         setState(() {

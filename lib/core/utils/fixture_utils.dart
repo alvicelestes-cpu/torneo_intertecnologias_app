@@ -1,3 +1,4 @@
+import '../session/session_manager.dart';
 import '../../models/jornada.dart';
 import '../../models/partido.dart';
 import '../../models/posicion.dart';
@@ -70,10 +71,20 @@ class FixtureUtils {
     required List<Partido> partidos,
     List<Jornada> jornadas = const [],
     List<Posicion> posiciones = const [],
+    String? torneoSlug,
+    bool? mostrarFasesEliminatoriasVacias,
   }) {
     final sections = <FixtureSection>[];
 
-    // 1. PRIMERA FASE: Jornadas 1 a 7
+    final currentSlug = (torneoSlug != null && torneoSlug.isNotEmpty)
+        ? torneoSlug.toLowerCase().trim()
+        : SessionManager().selectedCampeonatoSlug.toLowerCase().trim();
+
+    final esBanquita = currentSlug == 'torneo-demo';
+    final bool incluirEliminatoriasVacias =
+        mostrarFasesEliminatoriasVacias ?? (!esBanquita);
+
+    // 1. PRIMERA FASE
     final Map<int, List<Partido>> partidosPrimeraFase = {};
     for (final p in partidos) {
       final f = p.fase?.toUpperCase().trim() ?? '';
@@ -85,20 +96,31 @@ class FixtureUtils {
           f.contains('SEMI') ||
           f.contains('QUINTA') ||
           f.contains('FINAL') ||
-          f.contains('TERCER') ||
-          (p.jornada != null && p.jornada! > 7);
+          f.contains('TERCER');
 
-      if (!isFaseEliminatoria) {
+      if (f == 'PRIMERA_FASE' || !isFaseEliminatoria) {
         final j = (p.jornada != null && p.jornada! > 0) ? p.jornada! : 1;
         partidosPrimeraFase.putIfAbsent(j, () => []).add(p);
       }
     }
 
-    final Set<int> numJornadas = {
-      1, 2, 3, 4, 5, 6, 7,
-      ...jornadas.where((j) => j.numero > 0 && j.numero <= 7).map((j) => j.numero),
-      ...partidosPrimeraFase.keys.where((j) => j <= 7),
-    };
+    final Set<int> numJornadas = <int>{};
+    for (final k in partidosPrimeraFase.keys) {
+      if (k > 0) numJornadas.add(k);
+    }
+    for (final j in jornadas) {
+      if (j.numero > 0) numJornadas.add(j.numero);
+    }
+
+    final esIntertecnologias = currentSlug == 'intertecnologias' ||
+        (!esBanquita && partidos.isEmpty && numJornadas.isEmpty);
+
+    // Para Intertecnologías (o pruebas sin slug específico con lista vacía),
+    // garantizar las 7 jornadas fijas de su Primera Fase reglamentaria
+    if (esIntertecnologias) {
+      numJornadas.addAll({1, 2, 3, 4, 5, 6, 7});
+    }
+
     final sortedJornadas = numJornadas.toList()..sort();
 
     for (final numJ in sortedJornadas) {
@@ -117,13 +139,10 @@ class FixtureUtils {
     // 2. SEGUNDA RONDA (Cuadrangulares)
     final matchesSegundaRonda = partidos.where((p) {
       final f = p.fase?.toUpperCase().trim() ?? '';
-      return f.contains('SEGUNDA') ||
-          f.contains('CUADRANGULAR') ||
-          (p.jornada == 8 || p.jornada == 99 && !f.contains('TERCERA') && !f.contains('CUARTO') && !f.contains('SEMI') && !f.contains('FINAL'));
+      return f.contains('SEGUNDA') || f.contains('CUADRANGULAR');
     }).toList();
 
     if (matchesSegundaRonda.isNotEmpty) {
-      // Si el backend ya guardó partidos reales de Cuadrangulares
       final matchesGrupoA = matchesSegundaRonda.where((p) {
         final ll = p.llave?.toUpperCase().trim() ?? '';
         return ll.contains('A') || !ll.contains('B');
@@ -163,7 +182,7 @@ class FixtureUtils {
           esPendiente: false,
         ));
       }
-    } else {
+    } else if (incluirEliminatoriasVacias) {
       sections.add(const FixtureSection(
         id: 'segunda_ronda',
         fase: TournamentPhase.segundaRonda,
@@ -180,8 +199,7 @@ class FixtureUtils {
     // 3. TERCERA RONDA (Cuartos de Final)
     final matchesTerceraRonda = partidos.where((p) {
       final f = p.fase?.toUpperCase().trim() ?? '';
-      return f.contains('TERCERA') ||
-          (f.contains('CUARTO') && !f.contains('SEMI') && !f.contains('FINAL'));
+      return f.contains('TERCERA') || f.contains('CUARTO');
     }).toList();
 
     if (matchesTerceraRonda.isNotEmpty) {
@@ -194,7 +212,7 @@ class FixtureUtils {
         partidos: matchesTerceraRonda,
         esPendiente: false,
       ));
-    } else {
+    } else if (incluirEliminatoriasVacias) {
       sections.add(const FixtureSection(
         id: 'cuartos_de_final',
         fase: TournamentPhase.terceraRonda,
@@ -211,7 +229,7 @@ class FixtureUtils {
     // 4. CUARTA RONDA (Semifinales)
     final matchesCuartaRonda = partidos.where((p) {
       final f = p.fase?.toUpperCase().trim() ?? '';
-      return f.contains('CUARTA') || (f.contains('SEMI') && !f.contains('FINAL'));
+      return f.contains('CUARTA') || f.contains('SEMI');
     }).toList();
 
     if (matchesCuartaRonda.isNotEmpty) {
@@ -224,7 +242,7 @@ class FixtureUtils {
         partidos: matchesCuartaRonda,
         esPendiente: false,
       ));
-    } else {
+    } else if (incluirEliminatoriasVacias) {
       sections.add(const FixtureSection(
         id: 'semifinal',
         fase: TournamentPhase.cuartaRonda,
@@ -242,7 +260,7 @@ class FixtureUtils {
     final matchesQuintaRonda = partidos.where((p) {
       final f = p.fase?.toUpperCase().trim() ?? '';
       return f.contains('QUINTA') ||
-          (f.contains('FINAL') && !f.contains('SEMI')) ||
+          (f.contains('FINAL') && !f.contains('SEMI') && !f.contains('CUARTO')) ||
           f.contains('TERCER');
     }).toList();
 
@@ -256,7 +274,7 @@ class FixtureUtils {
         partidos: matchesQuintaRonda,
         esPendiente: false,
       ));
-    } else {
+    } else if (incluirEliminatoriasVacias) {
       sections.add(const FixtureSection(
         id: 'gran_final',
         fase: TournamentPhase.quintaRonda,

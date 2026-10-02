@@ -59,14 +59,12 @@ class _BotonGenerarFaseState extends State<BotonGenerarFase> {
                   !f.contains('TERCERA') &&
                   !f.contains('CUARTO') &&
                   !f.contains('SEMI') &&
-                  !f.contains('FINAL') &&
-                  (p.jornada == null || p.jornada! <= 7));
+                  !f.contains('FINAL'));
         }).toList();
 
-        final tieneJ7 = partidosPF.any((p) => p.jornada == 7);
         final todosFinalizados = partidosPF.isNotEmpty && partidosPF.every((p) => p.esFinalizado);
 
-        if (!tieneJ7 || !todosFinalizados) {
+        if (!todosFinalizados) {
           return (false, 'Aún hay partidos pendientes por disputar en la fase previa.');
         }
         return (true, null);
@@ -74,7 +72,7 @@ class _BotonGenerarFaseState extends State<BotonGenerarFase> {
       case TournamentPhase.terceraRonda:
         final partidosSR = widget.todosLosPartidos.where((p) {
           final f = p.fase?.toUpperCase().trim() ?? '';
-          return f.contains('SEGUNDA') || f.contains('CUADRANGULAR') || p.jornada == 8;
+          return f.contains('SEGUNDA') || f.contains('CUADRANGULAR');
         }).toList();
 
         if (partidosSR.isEmpty || !partidosSR.every((p) => p.esFinalizado)) {

@@ -104,6 +104,7 @@ class _JornadasPageState extends State<JornadasPage> {
         partidos: listaPartidos,
         jornadas: resJornadas.jornadas,
         posiciones: listaPosiciones,
+        torneoSlug: SessionManager().selectedCampeonatoSlug,
       );
 
       // Ordenar jornadas ascendente
@@ -998,7 +999,7 @@ class _JornadasPageState extends State<JornadasPage> {
                       builder: (context) {
                         final bool primeraFaseVacia = todosPartidos.isEmpty || !todosPartidos.any((p) {
                           final f = p.fase?.toUpperCase().trim() ?? '';
-                          return f == 'PRIMERA_FASE' || (!f.contains('SEGUNDA') && !f.contains('CUADRANGULAR') && !f.contains('TERCERA') && !f.contains('CUARTO') && !f.contains('SEMI') && !f.contains('FINAL') && (p.jornada == null || p.jornada! <= 7));
+                          return f == 'PRIMERA_FASE' || (!f.contains('SEGUNDA') && !f.contains('CUADRANGULAR') && !f.contains('TERCERA') && !f.contains('CUARTO') && !f.contains('SEMI') && !f.contains('FINAL'));
                         });
 
                         final bool debeMostrar = _esAdmin && (
