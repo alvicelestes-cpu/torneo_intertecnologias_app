@@ -273,8 +273,13 @@ class SessionManager extends ChangeNotifier {
         _selectedCampeonato = match;
         _persistCampeonatoId(match.id);
       } else {
-        _selectedCampeonato = disponibles.first;
-        _persistCampeonatoId(disponibles.first.id);
+        final c1 = disponibles.cast<Campeonato?>().firstWhere(
+              (c) => c?.id == 1,
+              orElse: () => null,
+            );
+        final defaultTarget = c1 ?? disponibles.first;
+        _selectedCampeonato = defaultTarget;
+        _persistCampeonatoId(defaultTarget.id);
       }
     } else {
       // VISITANTE ANÓNIMO (Portal Público):
@@ -289,8 +294,13 @@ class SessionManager extends ChangeNotifier {
         _selectedCampeonato = match;
         _persistCampeonatoId(match.id);
       } else {
-        _selectedCampeonato = disponibles.first;
-        _persistCampeonatoId(disponibles.first.id);
+        final c1 = disponibles.cast<Campeonato?>().firstWhere(
+              (c) => c?.id == 1 && c?.estaPublicado == true,
+              orElse: () => null,
+            );
+        final defaultTarget = c1 ?? disponibles.first;
+        _selectedCampeonato = defaultTarget;
+        _persistCampeonatoId(defaultTarget.id);
       }
     }
 
@@ -318,6 +328,25 @@ class SessionManager extends ChangeNotifier {
     _selectedCampeonato = nuevo;
     _persistCampeonatoId(nuevo.id);
     notifyListeners();
+  }
+
+  /// Elimina/desactiva un campeonato de la lista en memoria (solo aplicable a torneos != 1)
+  void removerCampeonato(int id) {
+    if (id == 1) return; // NUNCA eliminar o desactivar torneo ID 1
+    _campeonatos = _campeonatos.where((c) => c.id != id).toList();
+    if (_selectedCampeonato?.id == id) {
+      final campeonatoPrincipal = _campeonatos.cast<Campeonato?>().firstWhere(
+            (c) => c?.id == 1,
+            orElse: () => null,
+          );
+      if (campeonatoPrincipal != null) {
+        selectCampeonato(campeonatoPrincipal);
+      } else {
+        selectCampeonatoById(1);
+      }
+    } else {
+      notifyListeners();
+    }
   }
 
   void selectCampeonatoById(int id) {

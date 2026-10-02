@@ -76,12 +76,12 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
     _cargarCampeonatos();
   }
 
-  Future<void> _cargarCampeonatos() async {
-    if (_sessionManager.campeonatos.isNotEmpty) return;
+  Future<void> _cargarCampeonatos({bool force = false}) async {
+    if (!force && _sessionManager.campeonatos.isNotEmpty) return;
 
     setState(() => _cargando = true);
     try {
-      final list = await _torneoService.getCampeonatos();
+      final list = await _torneoService.getCampeonatos(token: _sessionManager.token);
       if (mounted) {
         _sessionManager.setCampeonatos(list);
       }
@@ -89,6 +89,123 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
       // Ignorar fallo de red silencioso para no bloquear el inicio
     } finally {
       if (mounted) setState(() => _cargando = false);
+    }
+  }
+
+  Future<void> _confirmarEliminarTorneo(Campeonato c) async {
+    if (c.id == 1 || !_sessionManager.isSuperAdmin) return;
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 22),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Eliminar Torneo',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¿Estás seguro de que deseas eliminar el torneo "${c.nombre}"?',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Esta acción desactivará el torneo y ya no estará disponible en el selector.',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            key: const Key('btn_cancelar_eliminar_torneo'),
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            key: Key('btn_confirmar_eliminar_torneo_${c.id}'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    final eraSeleccionado = _sessionManager.selectedCampeonatoId == c.id;
+
+    try {
+      await _torneoService.desactivarCampeonato(c.id, token: _sessionManager.token);
+
+      // Desactivar y remover localmente de inmediato (si era el seleccionado, transiciona al objeto real ID 1)
+      _sessionManager.removerCampeonato(c.id);
+
+      if (eraSeleccionado) {
+        final slugReal = _sessionManager.selectedCampeonatoSlug;
+        setBrowserUrl('/t/$slugReal');
+        widget.onCampeonatoChanged?.call();
+      }
+
+      // Sincronizar lista con el backend para que el desactivado desaparezca definitivamente
+      await _cargarCampeonatos(force: true);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Torneo "${c.nombre}" eliminado exitosamente.'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green.shade700,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        final errorMsg = e.toString().replaceFirst('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Error al eliminar el torneo: $errorMsg'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
     }
   }
 
@@ -594,6 +711,13 @@ class _CampeonatoSelectorBarState extends State<CampeonatoSelectorBar> {
                                 tooltip: 'Copiar enlace de este torneo',
                                 onPressed: () => _copiarEnlaceTorneo(c.slug, c.nombre),
                               ),
+                              if (isSuperAdmin && c.id != 1)
+                                IconButton(
+                                  key: Key('btn_eliminar_torneo_${c.id}'),
+                                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                  tooltip: 'Eliminar torneo',
+                                  onPressed: () => _confirmarEliminarTorneo(c),
+                                ),
                               if (isSelected)
                                 const Icon(Icons.check_circle, color: AppColors.primary),
                             ],

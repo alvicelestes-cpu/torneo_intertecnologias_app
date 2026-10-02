@@ -128,6 +128,17 @@ class TorneoService {
     throw const AppException('No se pudo obtener el detalle del campeonato.');
   }
 
+  /// Desactiva (elimina lógicamente) un campeonato por su ID (protegido para SUPERADMIN)
+  Future<dynamic> desactivarCampeonato(int id, {String? token}) async {
+    if (id == 1) {
+      throw const AppException('El campeonato principal ID 1 no puede ser desactivado.');
+    }
+    return await _apiClient.delete(
+      ApiConstants.campeonatoDetalle(id),
+      token: token,
+    );
+  }
+
   String _buildUrl(String endpoint, int? campeonatoId) {
     if (campeonatoId == null) return endpoint;
     final uri = Uri.parse(endpoint);

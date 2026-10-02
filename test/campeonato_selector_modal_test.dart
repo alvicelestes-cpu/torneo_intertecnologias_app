@@ -14,9 +14,11 @@ class MockTorneoHttpClient extends http.BaseClient {
   Uri? lastUri;
   String? lastMethod;
   String? lastBody;
+  final List<http.BaseRequest> requests = [];
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    requests.add(request);
     lastUri = request.url;
     lastMethod = request.method;
     if (request is http.Request) {
@@ -263,6 +265,192 @@ void main() {
       expect(session.selectedCampeonatoId, equals(2));
       expect(session.selectedCampeonatoNombre, equals('Copa Campeones 2026'));
       expect(session.campeonatos.any((c) => c.id == 2), isTrue);
+    });
+  });
+
+  group('Eliminación / Desactivación de Torneos en el Selector', () {
+    testWidgets('Visitante anónimo NO ve la papelera roja de eliminación', (tester) async {
+      final session = SessionManager();
+      session.clearSession();
+      session.setCampeonatos([
+        const Campeonato(id: 1, nombre: 'Torneo Intertecnologías 2026', slug: 'intertecnologias', activo: true, publicado: true),
+        const Campeonato(id: 2, nombre: 'Torneo Secundario 2026', slug: 'torneo-secundario', activo: true, publicado: true),
+      ]);
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(CampeonatoSelectorBar));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('btn_eliminar_torneo_1')), findsNothing);
+      expect(find.byKey(const Key('btn_eliminar_torneo_2')), findsNothing);
+    });
+
+    testWidgets('SUPERADMIN NO ve botón eliminar para campeonato ID 1 pero SÍ para campeonato ID 2', (tester) async {
+      final session = SessionManager();
+      session.setSession(const AuthUser(
+        token: 'super-token',
+        usuario: 'superadmin_user',
+        rol: 'SUPERADMIN',
+        campeonatoId: 1,
+      ));
+      session.setCampeonatos([
+        const Campeonato(id: 1, nombre: 'Torneo Intertecnologías 2026', slug: 'intertecnologias', activo: true, publicado: true),
+        const Campeonato(id: 2, nombre: 'Torneo Secundario 2026', slug: 'torneo-secundario', activo: true, publicado: true),
+      ]);
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(CampeonatoSelectorBar));
+      await tester.pumpAndSettle();
+
+      // Torneo ID 1 NUNCA muestra botón eliminar
+      expect(find.byKey(const Key('btn_eliminar_torneo_1')), findsNothing);
+
+      // Torneo ID 2 SÍ muestra botón eliminar con papelera
+      expect(find.byKey(const Key('btn_eliminar_torneo_2')), findsOneWidget);
+    });
+
+    testWidgets('Diálogo de confirmación muestra nombre y cancela sin llamar DELETE', (tester) async {
+      final session = SessionManager();
+      session.setSession(const AuthUser(
+        token: 'super-token',
+        usuario: 'superadmin_user',
+        rol: 'SUPERADMIN',
+        campeonatoId: 1,
+      ));
+      session.setCampeonatos([
+        const Campeonato(id: 1, nombre: 'Torneo Intertecnologías 2026', slug: 'intertecnologias', activo: true, publicado: true),
+        const Campeonato(id: 2, nombre: 'Torneo Secundario 2026', slug: 'torneo-secundario', activo: true, publicado: true),
+      ]);
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(CampeonatoSelectorBar));
+      await tester.pumpAndSettle();
+
+      // Tocar papelera de torneo 2
+      await tester.tap(find.byKey(const Key('btn_eliminar_torneo_2')));
+      await tester.pumpAndSettle();
+
+      // Verificar diálogo de confirmación con nombre claro
+      expect(find.text('Eliminar Torneo'), findsOneWidget);
+      expect(
+        find.text('¿Estás seguro de que deseas eliminar el torneo "Torneo Secundario 2026"?'),
+        findsOneWidget,
+      );
+
+      // Tocar Cancelar
+      await tester.tap(find.byKey(const Key('btn_cancelar_eliminar_torneo')));
+      await tester.pumpAndSettle();
+
+      // No debe haberse llamado DELETE
+      expect(mockClient.requests.any((r) => r.method == 'DELETE'), isFalse);
+      expect(session.campeonatos.any((c) => c.id == 2), isTrue);
+    });
+
+    testWidgets('Confirmar eliminación llama DELETE /api/campeonatos/2 y selecciona de forma segura torneo ID 1', (tester) async {
+      final session = SessionManager();
+      session.setSession(const AuthUser(
+        token: 'super-token',
+        usuario: 'superadmin_user',
+        rol: 'SUPERADMIN',
+        campeonatoId: 1,
+      ));
+      session.setCampeonatos([
+        const Campeonato(id: 1, nombre: 'Torneo Intertecnologías 2026', slug: 'intertecnologias', activo: true, publicado: true),
+        const Campeonato(id: 2, nombre: 'Torneo Secundario 2026', slug: 'torneo-secundario', activo: true, publicado: true),
+      ]);
+
+      // Seleccionar torneo 2 para verificar regla 15
+      session.selectCampeonatoById(2);
+      expect(session.selectedCampeonatoId, equals(2));
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(CampeonatoSelectorBar));
+      await tester.pumpAndSettle();
+
+      // Tocar papelera de torneo 2
+      await tester.tap(find.byKey(const Key('btn_eliminar_torneo_2')));
+      await tester.pumpAndSettle();
+
+      // Confirmar eliminación
+      await tester.tap(find.byKey(const Key('btn_confirmar_eliminar_torneo_2')));
+      await tester.pumpAndSettle();
+
+      // Verificar petición DELETE
+      expect(
+        mockClient.requests.any((r) => r.method == 'DELETE' && r.url.path.endsWith('/api/campeonatos/2')),
+        isTrue,
+      );
+
+      // Verificar que torneo 2 desapareció y torneo ID 1 quedó seleccionado
+      expect(session.campeonatos.any((c) => c.id == 2), isFalse);
+      expect(session.selectedCampeonatoId, equals(1));
+      expect(session.selectedCampeonatoNombre, equals('Torneo Intertecnologías 2026'));
+
+      // Verificar SnackBar de éxito
+      expect(find.text('Torneo "Torneo Secundario 2026" eliminado exitosamente.'), findsOneWidget);
+    });
+
+    test('removerCampeonato(1) no hace absolutamente nada y conserva el torneo principal', () {
+      final session = SessionManager();
+      const slugReal = 'torneo-intertecnologias-2026-backend-oficial';
+      const c1 = Campeonato(
+        id: 1,
+        nombre: 'Torneo Intertecnologías 2026',
+        slug: slugReal,
+        activo: true,
+        publicado: true,
+      );
+      session.setCampeonatos([c1]);
+      session.selectCampeonato(c1);
+
+      session.removerCampeonato(1);
+
+      expect(session.campeonatos.length, equals(1));
+      expect(session.campeonatos.first.id, equals(1));
+      expect(session.selectedCampeonatoId, equals(1));
+      expect(session.selectedCampeonatoSlug, equals(slugReal));
+      expect(session.selectedCampeonato, equals(c1));
+    });
+
+    test('Al eliminar el torneo seleccionado se conserva exactamente el slug real del backend para ID 1 sin valores hardcodeados', () {
+      final session = SessionManager();
+      const slugRealBackend = 'mi-slug-unico-del-backend-torneo-1';
+      const c1 = Campeonato(
+        id: 1,
+        nombre: 'Torneo Principal Oficial',
+        slug: slugRealBackend,
+        activo: true,
+        publicado: true,
+      );
+      const c2 = Campeonato(
+        id: 2,
+        nombre: 'Torneo Secundario 2026',
+        slug: 'torneo-secundario',
+        activo: true,
+        publicado: true,
+      );
+      session.setCampeonatos([c1, c2]);
+      session.selectCampeonato(c2);
+      expect(session.selectedCampeonatoId, equals(2));
+
+      // Eliminar torneo 2
+      session.removerCampeonato(2);
+
+      // Debe haber vuelto al objeto real ID 1 existente en _campeonatos cargado desde backend
+      expect(session.selectedCampeonatoId, equals(1));
+      expect(session.selectedCampeonato, equals(c1));
+      expect(session.selectedCampeonatoNombre, equals('Torneo Principal Oficial'));
+      expect(session.selectedCampeonatoSlug, equals(slugRealBackend));
+      expect(session.selectedCampeonatoSlug, isNot(equals('intertecnologias')));
+      expect(session.selectedCampeonatoSlug, isNot(equals('campeonato-1')));
     });
   });
 }
