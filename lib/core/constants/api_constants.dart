@@ -1,8 +1,10 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const String baseUrl =
-      'https://torneointertecnologias-production-7ae9.up.railway.app';
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://torneointertecnologias-production-7ae9.up.railway.app',
+  );
 
   // Campeonatos (Multitorneo)
   static const String campeonatos = '$baseUrl/api/campeonatos';
@@ -26,6 +28,9 @@ class ApiConstants {
   static const String equipos = '$baseUrl/api/equipos';
   static const String importarPlanilla = '$baseUrl/api/equipos/importar-planilla';
   static const String plantillaPlanilla = '$baseUrl/api/equipos/plantilla-planilla';
+  static const String importacionesHistorial = '$baseUrl/api/equipos/importaciones';
+  static String importacionDetalle(int id) =>
+      '$baseUrl/api/equipos/importaciones/$id';
   static String equipoDetalle(int equipoId) =>
       '$baseUrl/api/equipos/$equipoId';
   static String equipoJugadores(int equipoId) =>

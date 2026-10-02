@@ -6,12 +6,14 @@ import 'package:printing/printing.dart';
 import '../core/session/session_manager.dart';
 import '../models/resumen_importacion.dart';
 import '../services/equipos_service.dart';
+import 'importar_planilla_historial_view.dart';
 
 class ImportarPlanillaModal extends StatefulWidget {
   final String? token;
   final EquiposService? equiposService;
   final int? torneoId;
   final String? torneoNombre;
+  final int initialTabIndex;
 
   const ImportarPlanillaModal({
     super.key,
@@ -19,6 +21,7 @@ class ImportarPlanillaModal extends StatefulWidget {
     this.equiposService,
     this.torneoId,
     this.torneoNombre,
+    this.initialTabIndex = 0,
   });
 
   /// Extrae el ID de la hoja de cálculo de Google Sheets.
@@ -69,6 +72,7 @@ class ImportarPlanillaModal extends StatefulWidget {
 
 class _ImportarPlanillaModalState extends State<ImportarPlanillaModal> {
   late final EquiposService _equiposService;
+  late int _activeTab;
 
   int _opcionSeleccionada = 0; // 0: Archivo Local, 1: Enlace Google Drive / Sheets
   Uint8List? _archivoBytes;
@@ -83,6 +87,7 @@ class _ImportarPlanillaModalState extends State<ImportarPlanillaModal> {
   @override
   void initState() {
     super.initState();
+    _activeTab = widget.initialTabIndex;
     _equiposService = widget.equiposService ?? EquiposService();
   }
 
@@ -251,16 +256,173 @@ class _ImportarPlanillaModalState extends State<ImportarPlanillaModal> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       insetPadding: EdgeInsets.symmetric(
         horizontal: isMobile ? 16 : 40,
-        vertical: 24,
+        vertical: 16,
       ),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 620),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: _resumenFinal != null && _resumenFinal!.exito
-              ? _construirVistaExito(context)
-              : _construirFormularioImportacion(context, theme, isMobile),
+        constraints: BoxConstraints(
+          maxWidth: _activeTab == 1 ? 750 : 620,
+          maxHeight: MediaQuery.of(context).size.height * 0.95,
         ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _construirEncabezado(context),
+              const SizedBox(height: 8),
+              _construirTabSelector(),
+              const SizedBox(height: 10),
+              if (_activeTab == 1)
+                ImportarPlanillaHistorialView(
+                  torneoId: _resolvedTorneoId,
+                  torneoNombre: _resolvedTorneoNombre,
+                  token: widget.token,
+                  equiposService: _equiposService,
+                )
+              else if (_resumenFinal != null && _resumenFinal!.exito)
+                _construirVistaExito(context)
+              else
+                _construirFormularioImportacion(context, theme, isMobile),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _construirEncabezado(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F766E).withAlpha(25),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(
+            Icons.cloud_upload_outlined,
+            color: Color(0xFF0F766E),
+            size: 26,
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Importar Planilla Masiva',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Torneo: $_resolvedTorneoNombre',
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.close, color: Color(0xFF94A3B8)),
+          onPressed: _procesando ? null : () => Navigator.of(context).pop(),
+        ),
+      ],
+    );
+  }
+
+  Widget _construirTabSelector() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              key: const Key('tab_importar_planilla'),
+              onTap: _procesando ? null : () => setState(() => _activeTab = 0),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: _activeTab == 0 ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: _activeTab == 0
+                      ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4, offset: const Offset(0, 1))]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.upload_file_rounded,
+                      size: 16,
+                      color: _activeTab == 0 ? const Color(0xFF0F766E) : Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Importar Planilla',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: _activeTab == 0 ? FontWeight.bold : FontWeight.w500,
+                        color: _activeTab == 0 ? const Color(0xFF0F766E) : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: InkWell(
+              key: const Key('tab_historial_importaciones'),
+              onTap: _procesando ? null : () => setState(() => _activeTab = 1),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: _activeTab == 1 ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: _activeTab == 1
+                      ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4, offset: const Offset(0, 1))]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.history_rounded,
+                      size: 16,
+                      color: _activeTab == 1 ? const Color(0xFF0F766E) : Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Historial',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: _activeTab == 1 ? FontWeight.bold : FontWeight.w500,
+                        color: _activeTab == 1 ? const Color(0xFF0F766E) : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -274,58 +436,6 @@ class _ImportarPlanillaModalState extends State<ImportarPlanillaModal> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ==================== ENCABEZADO ====================
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F766E).withAlpha(25),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.cloud_upload_outlined,
-                color: Color(0xFF0F766E),
-                size: 26,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Importar Planilla Masiva',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Torneo: $_resolvedTorneoNombre',
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      color: Color(0xFF64748B),
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close, color: Color(0xFF94A3B8)),
-              onPressed: _procesando ? null : () => Navigator.of(context).pop(),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 16),
-        const Divider(height: 1),
-        const SizedBox(height: 16),
 
         // ==================== DESCARGA PLANTILLA MODELO ====================
         Container(
@@ -372,7 +482,7 @@ class _ImportarPlanillaModalState extends State<ImportarPlanillaModal> {
           ),
         ),
 
-        const SizedBox(height: 18),
+        const SizedBox(height: 10),
 
         // ==================== SELECTOR DE MÉTODO ====================
         Row(
@@ -395,7 +505,7 @@ class _ImportarPlanillaModalState extends State<ImportarPlanillaModal> {
           ],
         ),
 
-        const SizedBox(height: 18),
+        const SizedBox(height: 10),
 
         // ==================== CUERPO SEGÚN MÉTODO ====================
         if (_opcionSeleccionada == 0) ...[
@@ -592,7 +702,7 @@ class _ImportarPlanillaModalState extends State<ImportarPlanillaModal> {
           ),
         ],
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
 
         // ==================== BOTONES DE ACCIÓN ====================
         Row(
@@ -795,19 +905,43 @@ class _ImportarPlanillaModalState extends State<ImportarPlanillaModal> {
         ],
 
         const SizedBox(height: 22),
-        ElevatedButton(
-          key: const Key('btn_cerrar_resumen_importacion'),
-          onPressed: () => Navigator.of(context).pop(true), // Retorna true para recargar equipos
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF0F766E),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          child: const Text(
-            'Aceptar y Ver Equipos',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                key: const Key('btn_ver_historial_exito'),
+                onPressed: () {
+                  setState(() {
+                    _resumenFinal = null;
+                    _activeTab = 1;
+                  });
+                },
+                icon: const Icon(Icons.history_rounded, size: 18),
+                label: const Text('Ver en Historial'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                key: const Key('btn_cerrar_resumen_importacion'),
+                onPressed: () => Navigator.of(context).pop(true), // Retorna true para recargar equipos
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F766E),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text(
+                  'Aceptar y Ver Equipos',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

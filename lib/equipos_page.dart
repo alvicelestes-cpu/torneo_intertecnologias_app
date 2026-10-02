@@ -213,7 +213,7 @@ class _EquiposPageState extends State<EquiposPage> {
     }
   }
 
-  Future<void> _abrirModalImportarPlanilla() async {
+  Future<void> _abrirModalImportarPlanilla({int initialTabIndex = 0}) async {
     if (!_esAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -231,6 +231,7 @@ class _EquiposPageState extends State<EquiposPage> {
       builder: (dialogCtx) => ImportarPlanillaModal(
         token: widget.token,
         equiposService: _equiposService,
+        initialTabIndex: initialTabIndex,
       ),
     );
 

@@ -7,6 +7,7 @@ import '../core/errors/app_exception.dart';
 import '../core/network/api_client.dart';
 import '../core/session/session_manager.dart';
 import '../models/equipo.dart';
+import '../models/importacion_historial_item.dart';
 import '../models/jugador.dart';
 import '../models/resumen_importacion.dart';
 
@@ -313,6 +314,106 @@ class EquiposService {
       final bom = [0xEF, 0xBB, 0xBF];
       final utf8Bytes = utf8.encode(csvHeader);
       return Uint8List.fromList([...bom, ...utf8Bytes]);
+    }
+  }
+
+  /// Obtiene el historial de importaciones del torneo activo vía GET /api/equipos/importaciones
+  Future<List<ImportacionHistorialItem>> obtenerHistorialImportaciones({
+    int? campeonatoId,
+    int? torneoId,
+    String? token,
+    int pagina = 1,
+    int limite = 50,
+  }) async {
+    final session = SessionManager();
+    final effectiveToken = (token != null && token.isNotEmpty) ? token : session.token;
+    final resolvedTorneoId = torneoId ?? campeonatoId ?? session.selectedCampeonatoId;
+
+    final queryParams = <String, String>{
+      'pagina': pagina.toString(),
+      'limite': limite.toString(),
+    };
+    if (resolvedTorneoId > 0) {
+      queryParams['campeonatoId'] = resolvedTorneoId.toString();
+    }
+
+    final uri = Uri.parse(ApiConstants.importacionesHistorial).replace(
+      queryParameters: queryParams,
+    );
+
+    final headers = ApiConstants.defaultHeaders(
+      token: effectiveToken,
+      campeonatoId: resolvedTorneoId,
+      torneoId: resolvedTorneoId,
+      torneoSlug: session.selectedCampeonatoSlug,
+    );
+
+    try {
+      final response = await _apiClient.get(
+        uri.toString(),
+        token: effectiveToken,
+        headers: headers,
+      );
+
+      if (response is Map<String, dynamic> && response['items'] is List) {
+        return (response['items'] as List)
+            .map((item) => ImportacionHistorialItem.fromJson(
+                  item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item),
+                ))
+            .toList();
+      } else if (response is List) {
+        return response
+            .map((item) => ImportacionHistorialItem.fromJson(
+                  item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item),
+                ))
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Obtiene el detalle completo de una importación vía GET /api/equipos/importaciones/{id}
+  Future<ImportacionHistorialItem?> obtenerDetalleImportacion({
+    required int id,
+    int? campeonatoId,
+    int? torneoId,
+    String? token,
+  }) async {
+    final session = SessionManager();
+    final effectiveToken = (token != null && token.isNotEmpty) ? token : session.token;
+    final resolvedTorneoId = torneoId ?? campeonatoId ?? session.selectedCampeonatoId;
+
+    final queryParams = <String, String>{};
+    if (resolvedTorneoId > 0) {
+      queryParams['campeonatoId'] = resolvedTorneoId.toString();
+    }
+
+    final uri = Uri.parse(ApiConstants.importacionDetalle(id)).replace(
+      queryParameters: queryParams.isNotEmpty ? queryParams : null,
+    );
+
+    final headers = ApiConstants.defaultHeaders(
+      token: effectiveToken,
+      campeonatoId: resolvedTorneoId,
+      torneoId: resolvedTorneoId,
+      torneoSlug: session.selectedCampeonatoSlug,
+    );
+
+    try {
+      final response = await _apiClient.get(
+        uri.toString(),
+        token: effectiveToken,
+        headers: headers,
+      );
+
+      if (response is Map<String, dynamic>) {
+        return ImportacionHistorialItem.fromJson(response);
+      }
+      return null;
+    } catch (_) {
+      return null;
     }
   }
 }
