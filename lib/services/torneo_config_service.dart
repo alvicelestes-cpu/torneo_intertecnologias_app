@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../core/constants/api_constants.dart';
 import '../core/errors/app_exception.dart';
@@ -153,7 +152,7 @@ class TorneoConfigService extends ChangeNotifier {
           token: token,
           torneoId: torneoId,
         ),
-        body: jsonEncode(payload),
+        body: payload,
       );
 
       if (response is Map<String, dynamic>) {
