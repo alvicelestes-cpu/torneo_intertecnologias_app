@@ -22,8 +22,10 @@ class TorneoConfigService extends ChangeNotifier {
   bool get tienePuntoInvisible => _config.tienePuntoInvisible;
   int get topGoleadoresMax => _config.topGoleadoresMax;
   String get nombreTorneo => _config.nombre;
+  bool get tieneCategoriasEdad => _config.tieneCategoriasEdad;
   bool get cargando => _cargando;
   String? get ultimoError => _ultimoError;
+
 
   void setLocalConfig(TorneoModel nuevaConfig) {
     _config = nuevaConfig;

@@ -12,18 +12,22 @@ class PublicPlayerCard extends StatelessWidget {
   final Jugador jugador;
   final void Function(Jugador jugador)? onVerFicha;
   final void Function(Jugador jugador)? onEliminar;
+  final Color? carnetColor;
 
   const PublicPlayerCard({
     super.key,
     required this.jugador,
     this.onVerFicha,
     this.onEliminar,
+    this.carnetColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final edad = jugador.edad;
-    final carnetColor = getColorByAge(edad);
+    final carnetColor = this.carnetColor ?? getColorByAge(edad);
+
+
 
     final sigla = (jugador.equipoSigla != null && jugador.equipoSigla!.trim().isNotEmpty)
         ? jugador.equipoSigla!.trim()

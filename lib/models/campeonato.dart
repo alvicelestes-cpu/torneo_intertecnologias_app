@@ -72,6 +72,17 @@ class Campeonato {
   bool get estaActivo => activo && estado.toUpperCase() == 'ACTIVO';
   bool get estaPublicado => estaActivo && publicado;
 
+  /// Determina si este campeonato maneja categorías de edad.
+  /// Únicamente el Torneo Banquita Los Altos actual (ID 2 o slug exacto 'torneo-demo') no tiene categorías de edad.
+  bool get tieneCategoriasEdad {
+    if (id == 2) return false;
+    final s = slug.toLowerCase().trim();
+    if (s == 'torneo-demo') return false;
+    return true;
+  }
+
+
+
   Campeonato copyWith({
     int? id,
     String? nombre,

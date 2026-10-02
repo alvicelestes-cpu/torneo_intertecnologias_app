@@ -5,6 +5,7 @@ import '../../models/campeonato.dart';
 import '../../models/torneo_model.dart';
 import '../../services/torneo_config_service.dart';
 import '../../services/torneo_service.dart';
+import '../utils/player_sort_utils.dart';
 
 class SessionManager extends ChangeNotifier {
   static final SessionManager _instance = SessionManager._internal();
@@ -69,6 +70,15 @@ class SessionManager extends ChangeNotifier {
       _selectedCampeonato?.slug.isNotEmpty == true
           ? _selectedCampeonato!.slug
           : 'campeonato-$selectedCampeonatoId';
+
+  /// Determina si el torneo actualmente seleccionado maneja categorías visuales de edad.
+  /// Para Torneo Banquita Los Altos (ID 2), retorna false.
+  /// Para Torneo Intertecnologías (ID 1) y otros torneos estándar, retorna true.
+  bool get tieneCategoriasEdad => torneoTieneCategoriasEdad(
+        id: selectedCampeonatoId,
+        slug: selectedCampeonatoSlug,
+        nombre: selectedCampeonatoNombre,
+      );
 
   /// Extrae el slug de una URI con soporte para rutas web amigables y con hash (#)
   static String? extractSlugFromUri(Uri uri) {

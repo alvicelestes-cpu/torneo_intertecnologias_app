@@ -74,3 +74,38 @@ Map<AgeGroup, List<Jugador>> groupJugadoresPorEdad(List<Jugador> jugadores) {
 
   return grupos;
 }
+
+/// Determina si un torneo requiere agrupación/categorías visuales por edad según su id o slug.
+/// Únicamente el Torneo Banquita Los Altos actual (ID 2 o slug exacto 'torneo-demo') NO tiene categorías de edad (retorna false).
+/// Todos los demás torneos (incluyendo Torneo Intertecnologías ID 1 o futuros torneos con nombres similares) manejan categorías de edad por defecto (retorna true).
+bool torneoTieneCategoriasEdad({int? id, String? slug, String? nombre}) {
+  if (id == 2) return false;
+  if (slug != null) {
+    final s = slug.toLowerCase().trim();
+    if (s == 'torneo-demo') return false;
+  }
+  return true;
+}
+
+
+/// Ordena jugadores para torneos sin categorías por edad (ej. Torneo Banquita Los Altos):
+/// 1. Por número de camiseta (dorsal) ascendente.
+/// 2. Jugadores sin dorsal van al final.
+/// 3. Empate en dorsal o sin dorsal: nombre alfabético.
+List<Jugador> sortJugadoresSinCategorias(List<Jugador> jugadores) {
+  final copy = List<Jugador>.from(jugadores);
+  copy.sort((a, b) {
+    final numA = a.numeroCamiseta;
+    final numB = b.numeroCamiseta;
+    if (numA != null && numB != null) {
+      final cmp = numA.compareTo(numB);
+      if (cmp != 0) return cmp;
+    } else if (numA != null) {
+      return -1;
+    } else if (numB != null) {
+      return 1;
+    }
+    return a.nombreCompleto.toLowerCase().compareTo(b.nombreCompleto.toLowerCase());
+  });
+  return copy;
+}

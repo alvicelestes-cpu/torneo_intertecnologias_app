@@ -13,6 +13,7 @@ class PublicAgeGroupSection extends StatelessWidget {
   final IconData icono;
   final void Function(Jugador jugador)? onVerFicha;
   final void Function(Jugador jugador)? onEliminar;
+  final bool mostrarCabecera;
 
   const PublicAgeGroupSection({
     super.key,
@@ -24,6 +25,7 @@ class PublicAgeGroupSection extends StatelessWidget {
     this.icono = Icons.sports_soccer,
     this.onVerFicha,
     this.onEliminar,
+    this.mostrarCabecera = true,
   });
 
   factory PublicAgeGroupSection.fromGroup({
@@ -32,6 +34,7 @@ class PublicAgeGroupSection extends StatelessWidget {
     required List<Jugador> jugadores,
     void Function(Jugador jugador)? onVerFicha,
     void Function(Jugador jugador)? onEliminar,
+    bool mostrarCabecera = true,
   }) {
     return PublicAgeGroupSection(
       key: key,
@@ -43,14 +46,25 @@ class PublicAgeGroupSection extends StatelessWidget {
       icono: Icons.sports_soccer,
       onVerFicha: onVerFicha,
       onEliminar: onEliminar,
+      mostrarCabecera: mostrarCabecera,
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
     if (jugadores.isEmpty) {
       return const SizedBox.shrink();
+    }
+
+    if (!mostrarCabecera) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: PublicPlayersGrid(
+          jugadores: jugadores,
+          onVerFicha: onVerFicha,
+          onEliminar: onEliminar,
+        ),
+      );
     }
 
     final gradientList = coloresGradiente ??
@@ -160,44 +174,70 @@ class PublicAgeGroupSection extends StatelessWidget {
         ),
 
         // GRID RESPONSIVE DE CARNETS
-        // Escritorio: 3 carnets por fila
-        // Tablet: 2 por fila
-        // Móvil: 1 por fila
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final width = constraints.maxWidth;
-            final int crossAxisCount;
-            if (width < 640) {
-              crossAxisCount = 1;
-            } else if (width < 1050) {
-              crossAxisCount = 2;
-            } else {
-              crossAxisCount = 3;
-            }
-
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                mainAxisExtent: 215,
-              ),
-              itemCount: jugadores.length,
-              itemBuilder: (context, index) {
-                return PublicPlayerCard(
-                  jugador: jugadores[index],
-                  onVerFicha: onVerFicha,
-                  onEliminar: onEliminar,
-                );
-
-              },
-            );
-          },
+        PublicPlayersGrid(
+          jugadores: jugadores,
+          onVerFicha: onVerFicha,
+          onEliminar: onEliminar,
         ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+}
+
+/// Grid responsive de tarjetas de jugadores (carnets oficiales)
+/// Escritorio: 3 carnets por fila
+/// Tablet: 2 por fila
+/// Móvil: 1 por fila
+class PublicPlayersGrid extends StatelessWidget {
+  final List<Jugador> jugadores;
+  final void Function(Jugador jugador)? onVerFicha;
+  final void Function(Jugador jugador)? onEliminar;
+
+  const PublicPlayersGrid({
+    super.key,
+    required this.jugadores,
+    this.onVerFicha,
+    this.onEliminar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (jugadores.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final int crossAxisCount;
+        if (width < 640) {
+          crossAxisCount = 1;
+        } else if (width < 1050) {
+          crossAxisCount = 2;
+        } else {
+          crossAxisCount = 3;
+        }
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+            mainAxisExtent: 215,
+          ),
+          itemCount: jugadores.length,
+          itemBuilder: (context, index) {
+            return PublicPlayerCard(
+              jugador: jugadores[index],
+              onVerFicha: onVerFicha,
+              onEliminar: onEliminar,
+            );
+          },
+        );
+      },
     );
   }
 }

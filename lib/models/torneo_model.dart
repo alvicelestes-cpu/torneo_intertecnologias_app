@@ -21,6 +21,17 @@ class TorneoModel {
     this.activo = true,
   });
 
+  /// Determina si este torneo utiliza categorías de edad.
+  /// Únicamente el Torneo Banquita Los Altos actual (ID 2 o slug exacto 'torneo-demo') no tiene categorías de edad.
+  bool get tieneCategoriasEdad {
+    if (id == 2) return false;
+    final s = slug.toLowerCase().trim();
+    if (s == 'torneo-demo') return false;
+    return true;
+  }
+
+
+
   /// Valores predeterminados oficiales del torneo con fallback seguro
   factory TorneoModel.defaults() {
     return const TorneoModel(

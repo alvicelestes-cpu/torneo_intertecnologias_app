@@ -27,6 +27,8 @@ class JugadoresPage extends StatefulWidget {
   final JugadoresService? jugadoresService;
   final EquiposService? equiposService;
   final TorneoService? torneoService;
+  final int? torneoId;
+  final bool? tieneCategoriasEdad;
 
   const JugadoresPage({
     super.key,
@@ -34,6 +36,8 @@ class JugadoresPage extends StatefulWidget {
     this.jugadoresService,
     this.equiposService,
     this.torneoService,
+    this.torneoId,
+    this.tieneCategoriasEdad,
   });
 
   @override
@@ -44,6 +48,15 @@ class _JugadoresPageState extends State<JugadoresPage> {
   late final JugadoresService _jugadoresService;
   late final EquiposService _equiposService;
   late final TorneoService _torneoService;
+
+  bool get _tieneCategoriasEdad =>
+      widget.tieneCategoriasEdad ??
+      torneoTieneCategoriasEdad(
+        id: widget.torneoId ?? SessionManager().selectedCampeonatoId,
+        slug: SessionManager().selectedCampeonatoSlug,
+        nombre: SessionManager().selectedCampeonatoNombre,
+      );
+
 
   bool cargando = true;
   String? error;
@@ -596,19 +609,28 @@ class _JugadoresPageState extends State<JugadoresPage> {
                         ),
                       ),
 
-                      // SECCIONES VISUALES DE CARNETS POR GRUPO DE EDAD
-                      ...kAgeGroupsOrder.map((group) {
-                        final list = grupos[group] ?? [];
-                        if (list.isEmpty) return const SizedBox.shrink();
-                        return PublicAgeGroupSection.fromGroup(
-                          group: group,
-                          jugadores: list,
+                      if (_tieneCategoriasEdad) ...[
+                        // SECCIONES VISUALES DE CARNETS POR GRUPO DE EDAD (Torneo Intertecnologías ID 1)
+                        ...kAgeGroupsOrder.map((group) {
+                          final list = grupos[group] ?? [];
+                          if (list.isEmpty) return const SizedBox.shrink();
+                          return PublicAgeGroupSection.fromGroup(
+                            group: group,
+                            jugadores: list,
+                            onVerFicha: _abrirFicha,
+                            onEliminar: _esAdmin ? _confirmarEliminarJugador : null,
+                          );
+                        }),
+                      ] else ...[
+                        // PLANTEL COMPLETO SIN CATEGORÍAS DE EDAD (Torneo Banquita Los Altos ID 2)
+                        PublicPlayersGrid(
+                          jugadores: sortJugadoresSinCategorias(jugadores),
                           onVerFicha: _abrirFicha,
                           onEliminar: _esAdmin ? _confirmarEliminarJugador : null,
-                        );
-
-                      }),
+                        ),
+                      ],
                       const SizedBox(height: 16),
+
                     ],
                   ),
                 ),

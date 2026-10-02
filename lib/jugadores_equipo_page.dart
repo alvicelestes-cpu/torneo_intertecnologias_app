@@ -31,6 +31,8 @@ class JugadoresEquipoPage extends StatefulWidget {
   final EquiposService? equiposService;
   final JugadoresService? jugadoresService;
   final TorneoService? torneoService;
+  final int? torneoId;
+  final bool? tieneCategoriasEdad;
 
   const JugadoresEquipoPage({
     super.key,
@@ -40,6 +42,8 @@ class JugadoresEquipoPage extends StatefulWidget {
     this.equiposService,
     this.jugadoresService,
     this.torneoService,
+    this.torneoId,
+    this.tieneCategoriasEdad,
   });
 
   @override
@@ -57,14 +61,34 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
   Equipo? equipoInfo;
   int get _limiteJugadores => TorneoConfigService().limiteJugadores;
 
+  bool get _tieneCategoriasEdad =>
+      widget.tieneCategoriasEdad ??
+      torneoTieneCategoriasEdad(
+        id: widget.torneoId ?? SessionManager().selectedCampeonatoId,
+        slug: SessionManager().selectedCampeonatoSlug,
+        nombre: SessionManager().selectedCampeonatoNombre,
+      );
+
   @override
   void initState() {
     super.initState();
     _equiposService = widget.equiposService ?? EquiposService();
     _jugadoresService = widget.jugadoresService ?? JugadoresService();
     _torneoService = widget.torneoService ?? TorneoService();
+    SessionManager().addListener(_onSessionChanged);
     cargarJugadores();
   }
+
+  @override
+  void dispose() {
+    SessionManager().removeListener(_onSessionChanged);
+    super.dispose();
+  }
+
+  void _onSessionChanged() {
+    if (mounted) cargarJugadores();
+  }
+
 
   Future<void> cargarJugadores() async {
     setState(() {
@@ -552,7 +576,10 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Row(
+                                        Wrap(
+                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          spacing: 8,
+                                          runSpacing: 4,
                                           children: [
                                             const Text(
                                               'PLANTEL OFICIAL',
@@ -563,8 +590,7 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                                                 fontWeight: FontWeight.bold,
                                               ),
                                             ),
-                                            if (_esAdmin) ...[
-                                              const SizedBox(width: 8),
+                                            if (_esAdmin)
                                               InkWell(
                                                 onTap: _abrirEditarEquipo,
                                                 child: Container(
@@ -586,9 +612,9 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                                                   ),
                                                 ),
                                               ),
-                                            ],
                                           ],
                                         ),
+
                                         const SizedBox(height: 2),
                                         Text(
                                           widget.equipoNombre,
@@ -697,19 +723,28 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                         ),
                       ),
 
-                      // SECCIONES VISUALES DE CARNETS POR GRUPO DE EDAD
-                      ...kAgeGroupsOrder.map((group) {
-                        final list = grupos[group] ?? [];
-                        if (list.isEmpty) return const SizedBox.shrink();
-                        return PublicAgeGroupSection.fromGroup(
-                          group: group,
-                          jugadores: list,
+                      if (_tieneCategoriasEdad) ...[
+                        // SECCIONES VISUALES DE CARNETS POR GRUPO DE EDAD (Torneo Intertecnologías ID 1)
+                        ...kAgeGroupsOrder.map((group) {
+                          final list = grupos[group] ?? [];
+                          if (list.isEmpty) return const SizedBox.shrink();
+                          return PublicAgeGroupSection.fromGroup(
+                            group: group,
+                            jugadores: list,
+                            onVerFicha: _abrirFicha,
+                            onEliminar: _esAdmin ? _confirmarEliminarJugador : null,
+                          );
+                        }),
+                      ] else ...[
+                        // PLANTEL COMPLETO SIN CATEGORÍAS DE EDAD (Torneo Banquita Los Altos ID 2)
+                        PublicPlayersGrid(
+                          jugadores: sortJugadoresSinCategorias(jugadores),
                           onVerFicha: _abrirFicha,
                           onEliminar: _esAdmin ? _confirmarEliminarJugador : null,
-                        );
-
-                      }),
+                        ),
+                      ],
                       const SizedBox(height: 16),
+
                     ],
                   ),
                 ),
