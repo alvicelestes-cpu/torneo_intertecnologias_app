@@ -11,6 +11,8 @@ import 'jornadas_page.dart';
 import 'jugadores_page.dart';
 import 'partidos_page.dart';
 import 'posiciones_page.dart';
+import 'reglamento_page.dart';
+import 'services/reglamento_service.dart';
 import 'services/torneo_service.dart';
 import 'widgets/campeonato_selector_bar.dart';
 import 'widgets/public_navbar.dart';
@@ -198,6 +200,16 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                     _navegarAModulo(context, '/jugadores', const JugadoresPage());
                   },
                 ),
+                if (ReglamentoService().tieneReglamento(SessionManager().selectedCampeonatoSlug))
+                  ListTile(
+                    key: const Key('drawer_item_reglamento'),
+                    leading: const Icon(Icons.gavel, color: Color(0xFFC2185B)),
+                    title: const Text('Reglamento Oficial', style: TextStyle(fontWeight: FontWeight.w600)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _navegarAModulo(context, '/reglamento', const ReglamentoPage());
+                    },
+                  ),
                 const Divider(),
                 ListTile(
                   leading: Icon(
@@ -373,6 +385,15 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
         'bgPastilla': const Color(0xFFE1F5FE),
         'onTap': () => _mostrarAcercaDelTorneo(context),
       },
+      if (ReglamentoService().tieneReglamento(SessionManager().selectedCampeonatoSlug))
+        {
+          'titulo': 'Reglamento',
+          'subtitulo': 'Normas y directrices oficiales',
+          'icono': Icons.gavel,
+          'color': const Color(0xFFC2185B),
+          'bgPastilla': const Color(0xFFFCE4EC),
+          'onTap': () => _navegarAModulo(context, '/reglamento', const ReglamentoPage()),
+        },
     ];
 
     return Scaffold(

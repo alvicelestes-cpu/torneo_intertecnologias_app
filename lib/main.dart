@@ -16,6 +16,7 @@ import 'jugadores_page.dart';
 import 'partidos_page.dart';
 import 'portal_publico_page.dart';
 import 'posiciones_page.dart';
+import 'reglamento_page.dart';
 import 'widgets/campeonato_selector_bar.dart';
 
 void main() async {
@@ -98,6 +99,12 @@ class TorneoApp extends StatelessWidget {
             return MaterialPageRoute(
               settings: settings,
               builder: (_) => const JugadoresPage(),
+            );
+          }
+          if (subpath == '/reglamento') {
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (_) => ReglamentoPage(slug: slug),
             );
           }
           if (subpath == '/admin' || subpath == '/login') {
@@ -194,6 +201,12 @@ class TorneoApp extends StatelessWidget {
           return MaterialPageRoute(
             settings: settings,
             builder: (_) => const JugadoresPage(),
+          );
+        }
+        if (path == '/reglamento') {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const ReglamentoPage(),
           );
         }
 
