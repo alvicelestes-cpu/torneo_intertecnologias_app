@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:torneo_intertecnologias_app/core/errors/app_exception.dart';
 import 'package:torneo_intertecnologias_app/core/network/api_client.dart';
 import 'package:torneo_intertecnologias_app/core/session/session_manager.dart';
 import 'package:torneo_intertecnologias_app/models/auth_user.dart';
@@ -352,7 +353,7 @@ void main() {
       expect(session.campeonatos.any((c) => c.id == 2), isTrue);
     });
 
-    testWidgets('Confirmar eliminación llama DELETE /api/campeonatos/2 y selecciona de forma segura torneo ID 1', (tester) async {
+    testWidgets('Confirmar eliminación llama DELETE /api/torneo/2, NO llama /api/campeonatos, desaparece del selector y selecciona de forma segura torneo ID 1', (tester) async {
       final session = SessionManager();
       session.setSession(const AuthUser(
         token: 'super-token',
@@ -383,19 +384,51 @@ void main() {
       await tester.tap(find.byKey(const Key('btn_confirmar_eliminar_torneo_2')));
       await tester.pumpAndSettle();
 
-      // Verificar petición DELETE
+      // 1. Confirmar que DELETE /api/torneo/2 se ejecuta
       expect(
-        mockClient.requests.any((r) => r.method == 'DELETE' && r.url.path.endsWith('/api/campeonatos/2')),
+        mockClient.requests.any((r) => r.method == 'DELETE' && r.url.path.endsWith('/api/torneo/2')),
         isTrue,
       );
 
-      // Verificar que torneo 2 desapareció y torneo ID 1 quedó seleccionado
+      // 2. Confirmar que ya NO se llama DELETE /api/campeonatos/2
+      expect(
+        mockClient.requests.any((r) => r.method == 'DELETE' && r.url.path.contains('/api/campeonatos')),
+        isFalse,
+      );
+
+      // 3. Torneo 2 desaparece del selector tras refrescar /api/torneo/listar
       expect(session.campeonatos.any((c) => c.id == 2), isFalse);
+      expect(find.text('Torneo Secundario 2026'), findsNothing);
+
+      // 4. El torneo ID 1 queda seleccionado de forma segura
       expect(session.selectedCampeonatoId, equals(1));
       expect(session.selectedCampeonatoNombre, equals('Torneo Intertecnologías 2026'));
 
+      // 5. El slug del ID 1 permanece exactamente igual
+      expect(session.selectedCampeonatoSlug, equals('intertecnologias'));
+
       // Verificar SnackBar de éxito
       expect(find.text('Torneo "Torneo Secundario 2026" eliminado exitosamente.'), findsOneWidget);
+    });
+
+    test('TorneoService.desactivarCampeonato llama DELETE /api/torneo/{id} y rechaza ID 1', () async {
+      // Intentar desactivar ID 1 debe fallar antes de hacer cualquier petición HTTP
+      expect(
+        () => mockTorneoService.desactivarCampeonato(1, token: 'super-token'),
+        throwsA(isA<AppException>()),
+      );
+      expect(mockClient.requests.where((r) => r.method == 'DELETE'), isEmpty);
+
+      // Desactivar ID 2 debe llamar DELETE /api/torneo/2
+      await mockTorneoService.desactivarCampeonato(2, token: 'super-token');
+      expect(
+        mockClient.requests.any((r) => r.method == 'DELETE' && r.url.path.endsWith('/api/torneo/2')),
+        isTrue,
+      );
+      expect(
+        mockClient.requests.any((r) => r.method == 'DELETE' && r.url.path.contains('/api/campeonatos')),
+        isFalse,
+      );
     });
 
     test('removerCampeonato(1) no hace absolutamente nada y conserva el torneo principal', () {
