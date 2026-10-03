@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
+import 'core/theme/tournament_theme.dart';
 import 'core/utils/date_utils.dart';
 import 'core/utils/ui_helpers.dart';
 import 'editar_jugador_page.dart';
@@ -251,10 +252,13 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
     final edadTexto = jugador.edad != null ? '${jugador.edad} años' : 'No registrada';
 
     final isAuthenticated = SessionManager().isAuthenticated;
+    final theme = TournamentTheme.of(context);
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
+      backgroundColor: theme.scaffoldBackground,
       appBar: AppBar(
+        backgroundColor: theme.isBanquita ? theme.primary : null,
+        foregroundColor: theme.isBanquita ? Colors.white : null,
         title: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -263,7 +267,11 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
               listenable: SessionManager(),
               builder: (context, _) => Text(
                 SessionManager().selectedCampeonatoNombre,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.normal,
+                  color: theme.isBanquita ? Colors.white70 : null,
+                ),
               ),
             ),
           ],
@@ -273,7 +281,10 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
           if (_esAdmin)
             IconButton(
               key: const Key('btn_eliminar_jugador_appbar'),
-              icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626)),
+              icon: Icon(
+                Icons.delete_outline,
+                color: theme.isBanquita ? Colors.white : const Color(0xFFDC2626),
+              ),
               tooltip: 'Eliminar jugador',
               onPressed: _confirmarEliminarJugador,
             ),
@@ -299,11 +310,7 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [
-                          AppColors.getColorByAge(jugador.edad),
-                          Color.lerp(AppColors.getColorByAge(jugador.edad), const Color(0xFF0D233A), 0.4) ??
-                              AppColors.getColorByAge(jugador.edad),
-                        ],
+                        colors: theme.getPlayerCardHeaderGradient(jugador.edad),
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -435,7 +442,7 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
                   icon: Icons.confirmation_number_outlined,
                   label: 'Dorsal / Camiseta',
                   value: numero,
-                  iconColor: const Color(0xFF1565C0),
+                  iconColor: theme.isBanquita ? theme.accent : const Color(0xFF1565C0),
                 ),
                 _buildInfoRow(
                   icon: Icons.sports_soccer_outlined,
@@ -453,7 +460,7 @@ class _JugadorDetallePageState extends State<JugadorDetallePage> {
                   label: 'Edad actual',
                   value: edadTexto,
                   highlight: true,
-                  iconColor: const Color(0xFF0D233A),
+                  iconColor: theme.isBanquita ? theme.primary : const Color(0xFF0D233A),
                 ),
 
                 // CAMPOS PRIVADOS (SÓLO ADMINISTRADORES AUTENTICADOS)

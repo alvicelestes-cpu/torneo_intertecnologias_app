@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../core/theme/tournament_theme.dart';
 import '../models/equipo.dart';
 import '../services/torneo_config_service.dart';
 import 'team_logo_avatar.dart';
@@ -25,10 +26,25 @@ class PublicTeamCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final teamColor = equipo.color;
+    final theme = TournamentTheme.of(context);
+    // Aislamiento estricto: Si equipo es de ID 1, NUNCA usar tema Banquita. Si es ID 2, SIEMPRE Banquita.
+    final isBanquita = equipo.resolvedCampeonatoId == 2 || (theme.isBanquita && equipo.resolvedCampeonatoId != 1);
+    final teamColor = isBanquita ? theme.getTeamColor(equipo) : equipo.color;
     final maxPlantilla = PublicTeamCard.maxPlantilla;
     final cant = equipo.cantidadJugadores;
     final porcentaje = min(1.0, cant / maxPlantilla);
+
+    // Identidad cromática por torneo:
+    // En Banquita: borde superior turquesa (#2A9D8F), avatar petróleo (#0F4C5C), progreso (#2A9D8F), botón (#0F4C5C en #E6F4F1)
+    // En Intertecnologías (ID 1): se preserva 100% la identidad original con colores propios del equipo
+    final topBorderColor = isBanquita ? theme.secondary : teamColor;
+    final avatarColor = isBanquita ? theme.primary : teamColor;
+    final progressColor = isBanquita ? theme.secondary : teamColor;
+    final buttonBg = isBanquita ? theme.primaryLight : const Color(0xFFEFF6FF);
+    final buttonFg = isBanquita ? theme.primary : const Color(0xFF1565C0);
+    final siglaBg = isBanquita ? theme.secondary.withAlpha(25) : teamColor.withAlpha(25);
+    final siglaBorder = isBanquita ? theme.secondary.withAlpha(120) : teamColor.withAlpha(90);
+    final siglaFg = isBanquita ? theme.primary : teamColor;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -47,10 +63,10 @@ class PublicTeamCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Borde superior distintivo con el color del equipo
+            // Borde superior distintivo con el color del equipo / torneo
             Container(
               height: 5,
-              color: teamColor,
+              color: topBorderColor,
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -66,7 +82,7 @@ class PublicTeamCard extends StatelessWidget {
                         logoUrl: equipo.logo,
                         teamName: equipo.nombre,
                         sigla: equipo.sigla,
-                        teamColor: teamColor,
+                        teamColor: avatarColor,
                         size: 44,
                         isCircle: true,
                       ),
@@ -95,10 +111,10 @@ class PublicTeamCard extends StatelessWidget {
                                   vertical: 1.5,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: teamColor.withAlpha(25),
+                                  color: siglaBg,
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
-                                    color: teamColor.withAlpha(90),
+                                    color: siglaBorder,
                                     width: 0.8,
                                   ),
                                 ),
@@ -107,7 +123,7 @@ class PublicTeamCard extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: teamColor,
+                                    color: siglaFg,
                                   ),
                                 ),
                               ),
@@ -176,7 +192,7 @@ class PublicTeamCard extends StatelessWidget {
                       value: porcentaje,
                       minHeight: 6,
                       backgroundColor: const Color(0xFFE2E8F0),
-                      valueColor: AlwaysStoppedAnimation<Color>(teamColor),
+                      valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -193,8 +209,8 @@ class PublicTeamCard extends StatelessWidget {
                             height: 36,
                             child: TextButton.icon(
                               style: TextButton.styleFrom(
-                                backgroundColor: const Color(0xFFEFF6FF),
-                                foregroundColor: const Color(0xFF1565C0),
+                                backgroundColor: buttonBg,
+                                foregroundColor: buttonFg,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),

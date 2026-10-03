@@ -246,6 +246,31 @@ void main() {
       final header = utf8.decode(bytes.sublist(0, 5));
       expect(header, equals('%PDF-'));
     });
+
+    test('Genera PDF para Torneo Banquita Los Altos con identidad personalizada', () async {
+      final banquitaJugadores = [
+        const Jugador(
+          id: 101,
+          equipoId: 31,
+          nombres: 'MARIO',
+          apellidos: 'BARRIENTOS',
+          numeroCamiseta: 10,
+          fechaNacimiento: '1998-05-10',
+          estado: 'ACTIVO',
+        ),
+      ];
+
+      final bytes = await CarnetsPdfService.generarCarnetsPdf(
+        equipo: const Equipo(id: 31, nombre: 'Amigos del fútbol', sigla: 'ADF'),
+        jugadores: banquitaJugadores,
+        torneoNombre: 'Torneo Banquita Los Altos',
+        torneoId: 2,
+      );
+
+      expect(bytes.isNotEmpty, isTrue);
+      final header = utf8.decode(bytes.sublist(0, 5));
+      expect(header, equals('%PDF-'));
+    });
   });
 
   group('PublicTeamCard - Integración de botón de Carnets', () {

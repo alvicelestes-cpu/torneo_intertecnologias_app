@@ -148,6 +148,29 @@ class SessionManager extends ChangeNotifier {
       return true;
     }
 
+    // Fast-path síncrono para torneos base si aún no están cargados en memoria
+    if (cleanSlug == 'torneo-demo' || cleanSlug == 'banquita') {
+      final banquita = Campeonato(
+        id: 2,
+        nombre: 'Torneo Banquita Los Altos',
+        slug: 'torneo-demo',
+        activo: true,
+        publicado: true,
+      );
+      selectCampeonato(banquita);
+      return true;
+    } else if (cleanSlug == 'intertecnologias') {
+      final inter = Campeonato(
+        id: 1,
+        nombre: 'Torneo Intertecnologías 2026',
+        slug: 'intertecnologias',
+        activo: true,
+        publicado: true,
+      );
+      selectCampeonato(inter);
+      return true;
+    }
+
     // Consultar backend vía /api/torneo/por-slug/{slug}
     try {
       final service = torneoService ?? TorneoService();

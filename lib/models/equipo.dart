@@ -4,6 +4,7 @@ import '../core/utils/text_utils.dart';
 
 class Equipo {
   final int id;
+  final int? campeonatoId;
   final String nombre;
   final String sigla;
   final String? logo;
@@ -14,6 +15,7 @@ class Equipo {
 
   const Equipo({
     required this.id,
+    this.campeonatoId,
     required this.nombre,
     required this.sigla,
     this.logo,
@@ -22,6 +24,11 @@ class Equipo {
     this.activo = true,
     this.fechaCreacion,
   });
+
+  int get resolvedCampeonatoId =>
+      (campeonatoId != null && campeonatoId! > 0)
+          ? campeonatoId!
+          : (id >= 30 ? 2 : 1);
 
   factory Equipo.fromJson(Map<String, dynamic> json) {
     final nombre = json['nombre']?.toString().trim() ?? 'Sin nombre';
@@ -37,8 +44,13 @@ class Equipo {
       }
     }
 
+    final rawCampeonatoId = TextUtils.toInt(
+      json['campeonatoId'] ?? json['torneoId'] ?? (json['id'] is int && (json['id'] as int) >= 30 ? 2 : 1),
+    );
+
     return Equipo(
       id: TextUtils.toInt(json['id']),
+      campeonatoId: rawCampeonatoId > 0 ? rawCampeonatoId : 1,
       nombre: nombre,
       sigla: sigla,
       logo: logo,
@@ -56,6 +68,7 @@ class Equipo {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'campeonatoId': campeonatoId,
       'nombre': nombre,
       'sigla': sigla,
       if (logo != null) 'logo': logo,
@@ -68,6 +81,7 @@ class Equipo {
 
   Equipo copyWith({
     int? id,
+    int? campeonatoId,
     String? nombre,
     String? sigla,
     String? logo,
@@ -78,6 +92,7 @@ class Equipo {
   }) {
     return Equipo(
       id: id ?? this.id,
+      campeonatoId: campeonatoId ?? this.campeonatoId,
       nombre: nombre ?? this.nombre,
       sigla: sigla ?? this.sigla,
       logo: logo ?? this.logo,

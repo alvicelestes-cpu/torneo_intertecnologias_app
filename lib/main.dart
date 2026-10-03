@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
+import 'core/theme/tournament_theme.dart';
 import 'core/utils/ui_helpers.dart';
 import 'services/auth_service.dart';
 
@@ -42,6 +43,18 @@ class TorneoApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
+      builder: (context, child) {
+        return ListenableBuilder(
+          listenable: SessionManager(),
+          builder: (context, _) {
+            final theme = TournamentTheme.current;
+            return InheritedTournamentTheme(
+              theme: theme,
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
+        );
+      },
       home: const PortalPublicoPage(),
       onGenerateRoute: (settings) {
         final uri = Uri.parse(settings.name ?? '/');
@@ -59,58 +72,64 @@ class TorneoApp extends StatelessWidget {
             session.selectCampeonatoBySlug(slug);
           }
 
+          final tournamentTheme = TournamentTheme.fromIdOrSlug(slug: slug);
+          Widget wrapTheme(Widget page) => InheritedTournamentTheme(
+                theme: tournamentTheme,
+                child: page,
+              );
+
           if (subpath == '/equipos') {
             return MaterialPageRoute(
               settings: settings,
-              builder: (_) => const EquiposPage(),
+              builder: (_) => wrapTheme(const EquiposPage()),
             );
           }
           if (subpath == '/partidos') {
             return MaterialPageRoute(
               settings: settings,
-              builder: (_) => const PartidosPage(),
+              builder: (_) => wrapTheme(const PartidosPage()),
             );
           }
           if (subpath == '/jornadas') {
             return MaterialPageRoute(
               settings: settings,
-              builder: (_) => const JornadasPage(),
+              builder: (_) => wrapTheme(const JornadasPage()),
             );
           }
           if (subpath == '/posiciones') {
             return MaterialPageRoute(
               settings: settings,
-              builder: (_) => const PosicionesPage(),
+              builder: (_) => wrapTheme(const PosicionesPage()),
             );
           }
           if (subpath == '/goleadores') {
             return MaterialPageRoute(
               settings: settings,
-              builder: (_) => const GoleadoresPage(),
+              builder: (_) => wrapTheme(const GoleadoresPage()),
             );
           }
           if (subpath == '/estadisticas') {
             return MaterialPageRoute(
               settings: settings,
-              builder: (_) => const EstadisticasPage(),
+              builder: (_) => wrapTheme(const EstadisticasPage()),
             );
           }
           if (subpath == '/jugadores') {
             return MaterialPageRoute(
               settings: settings,
-              builder: (_) => const JugadoresPage(),
+              builder: (_) => wrapTheme(const JugadoresPage()),
             );
           }
           if (subpath == '/reglamento') {
             return MaterialPageRoute(
               settings: settings,
-              builder: (_) => ReglamentoPage(slug: slug),
+              builder: (_) => wrapTheme(ReglamentoPage(slug: slug)),
             );
           }
           if (subpath == '/admin' || subpath == '/login') {
             return MaterialPageRoute(
               settings: settings,
-              builder: (_) => const LoginPage(),
+              builder: (_) => wrapTheme(const LoginPage()),
             );
           }
           if (subpath == '/configuracion-torneo' ||
@@ -119,19 +138,19 @@ class TorneoApp extends StatelessWidget {
             if (session.hasAdminAccess) {
               return MaterialPageRoute(
                 settings: settings,
-                builder: (_) => ConfiguracionTorneoPage(token: session.token),
+                builder: (_) => wrapTheme(ConfiguracionTorneoPage(token: session.token)),
               );
             }
             return MaterialPageRoute(
               settings: settings,
-              builder: (_) => const LoginPage(),
+              builder: (_) => wrapTheme(const LoginPage()),
             );
           }
 
           // Portal público de /t/:slug
           return MaterialPageRoute(
             settings: settings,
-            builder: (_) => const PortalPublicoPage(),
+            builder: (_) => wrapTheme(const PortalPublicoPage()),
           );
         }
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'configuracion_torneo_page.dart';
 import 'core/constants/app_colors.dart';
 import 'core/session/session_manager.dart';
+import 'core/theme/tournament_theme.dart';
 import 'core/utils/text_utils.dart';
 import 'equipos_page.dart';
 import 'estadisticas_page.dart';
@@ -92,19 +93,16 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
   }
 
   Drawer _buildDrawer(BuildContext context) {
+    final theme = TournamentTheme.of(context);
     return Drawer(
       child: Column(
         children: [
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(20, 50, 20, 24),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Color(0xFF0D233A),
-                  Color(0xFF1565C0),
-                  Color(0xFF1E88E5),
-                ],
+                colors: theme.headerGradient,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -118,9 +116,9 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
                   child: Icon(Icons.sports_soccer, color: Colors.white, size: 30),
                 ),
                 const SizedBox(height: 14),
-                const Text(
-                  'TORNEO INTERTECNOLOGÍAS',
-                  style: TextStyle(
+                Text(
+                  theme.nombre.toUpperCase(),
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -396,8 +394,9 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
         },
     ];
 
+    final theme = TournamentTheme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
+      backgroundColor: theme.scaffoldBackground,
       appBar: const PublicTopNavBar(activeRoute: 'Inicio'),
       drawer: _buildDrawer(context),
       body: RefreshIndicator(
@@ -759,13 +758,9 @@ class PublicHeaderBanner extends StatelessWidget {
           ),
           clipBehavior: Clip.antiAlias,
           child: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Color(0xFF0D233A),
-                  Color(0xFF1565C0),
-                  Color(0xFF1E88E5),
-                ],
+                colors: TournamentTheme.of(context).headerGradient,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),

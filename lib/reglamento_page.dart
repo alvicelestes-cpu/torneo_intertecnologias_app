@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/session/session_manager.dart';
+import 'core/theme/tournament_theme.dart';
 import 'core/utils/web_url_helper.dart';
 import 'models/reglamento_model.dart';
 import 'services/reglamento_service.dart';
@@ -52,13 +53,17 @@ class _ReglamentoPageState extends State<ReglamentoPage> {
   Widget build(BuildContext context) {
     final slug = _effectiveSlug;
     final reglamento = _reglamentoService.getReglamentoPorSlug(slug);
+    final theme = TournamentTheme.fromIdOrSlug(slug: slug);
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
-      appBar: const PublicTopNavBar(activeRoute: 'Reglamento'),
-      body: reglamento == null
-          ? _buildReglamentoNoDisponible(context)
-          : _buildContenidoReglamento(context, reglamento),
+    return InheritedTournamentTheme(
+      theme: theme,
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackground,
+        appBar: const PublicTopNavBar(activeRoute: 'Reglamento'),
+        body: reglamento == null
+            ? _buildReglamentoNoDisponible(context)
+            : _buildContenidoReglamento(context, reglamento),
+      ),
     );
   }
 
@@ -212,18 +217,15 @@ class _ReglamentoPageState extends State<ReglamentoPage> {
   }
 
   Widget _buildHeaderBanner(BuildContext context, TorneoReglamento reglamento) {
+    final theme = TournamentTheme.of(context);
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       clipBehavior: Clip.antiAlias,
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFF0A1E32),
-              Color(0xFF0F3B66),
-              Color(0xFF1976D2),
-            ],
+            colors: theme.headerGradient,
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),

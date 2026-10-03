@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/session/session_manager.dart';
+import '../core/theme/tournament_theme.dart';
 import '../equipos_page.dart';
 import '../estadisticas_page.dart';
 import '../goleadores_page.dart';
@@ -91,6 +92,9 @@ class PublicTopNavBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = TournamentTheme.of(context);
+    final isBanquita = theme.isBanquita;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -99,9 +103,11 @@ class PublicTopNavBar extends StatelessWidget implements PreferredSizeWidget {
         final isTiny = width < 460;
 
         return Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF0D1B2A), // Barra superior oscura / azul noche
-            boxShadow: [
+          decoration: BoxDecoration(
+            color: isBanquita
+                ? const Color(0xFF064E3B) // Barra superior verde deportivo oscuro Banquita
+                : const Color(0xFF0D1B2A), // Barra superior oscura / azul noche Intertecnologías
+            boxShadow: const [
               BoxShadow(
                 color: Colors.black38,
                 blurRadius: 4,
@@ -177,7 +183,7 @@ class PublicTopNavBar extends StatelessWidget implements PreferredSizeWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'TORNEO INTERTECNOLOGÍAS',
+                                isBanquita ? 'TORNEO BANQUITA LOS ALTOS' : 'TORNEO INTERTECNOLOGÍAS',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w900,
@@ -187,9 +193,9 @@ class PublicTopNavBar extends StatelessWidget implements PreferredSizeWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const Text(
-                                'Torneo Intertecnologías',
-                                style: TextStyle(
+                              Text(
+                                isBanquita ? 'Torneo Banquita Los Altos' : 'Torneo Intertecnologías',
+                                style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w500,

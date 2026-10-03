@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
+import 'core/theme/tournament_theme.dart';
 import 'core/utils/mobile_image_picker.dart';
 import 'core/utils/ui_helpers.dart';
 import 'models/equipo.dart';
@@ -132,13 +133,26 @@ class _EquiposPageState extends State<EquiposPage> {
       return;
     }
 
+    final targetTheme = equipo.resolvedCampeonatoId == 2
+        ? TournamentTheme.banquita
+        : (equipo.resolvedCampeonatoId == 1
+            ? TournamentTheme.intertecnologias
+            : TournamentTheme.of(context));
+
+    final targetTorneoId = equipo.resolvedCampeonatoId;
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => JugadoresEquipoPage(
-          equipoId: equipo.id,
-          equipoNombre: equipo.nombre,
-          token: widget.token,
+        builder: (_) => InheritedTournamentTheme(
+          theme: targetTheme,
+          child: JugadoresEquipoPage(
+            equipoId: equipo.id,
+            equipoNombre: equipo.nombre,
+            token: widget.token,
+            torneoId: targetTorneoId,
+            tieneCategoriasEdad: targetTheme.usaCategoriasEdad,
+          ),
         ),
       ),
     );
@@ -814,8 +828,9 @@ class _EquiposPageState extends State<EquiposPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = TournamentTheme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
+      backgroundColor: theme.scaffoldBackground,
       appBar: const PublicTopNavBar(activeRoute: 'Equipos'),
       body: RefreshIndicator(
         onRefresh: cargarEquipos,
@@ -856,7 +871,7 @@ class _EquiposPageState extends State<EquiposPage> {
                               icon: const Icon(Icons.file_upload_outlined),
                               label: const Text('Importar Planilla'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0F766E),
+                                backgroundColor: theme.usaCategoriasEdad ? const Color(0xFF0F766E) : theme.secondary,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -868,7 +883,7 @@ class _EquiposPageState extends State<EquiposPage> {
                               icon: const Icon(Icons.add_circle_outline),
                               label: const Text('Crear Primer Equipo'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
+                                backgroundColor: theme.primary,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -884,6 +899,8 @@ class _EquiposPageState extends State<EquiposPage> {
             }
 
             final isMobile = MediaQuery.of(context).size.width < 600;
+            final isBanquita = (SessionManager().selectedCampeonatoId == 2) ||
+                (theme.isBanquita && SessionManager().selectedCampeonatoId != 1);
 
             return Center(
               child: ConstrainedBox(
@@ -903,21 +920,25 @@ class _EquiposPageState extends State<EquiposPage> {
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: Container(
-                        decoration: const BoxDecoration(
-                          image: DecorationImage(
-                            image: AssetImage('assets/images/banner_blue.jpg'),
-                            fit: BoxFit.cover,
-                            colorFilter: ColorFilter.mode(
-                              Color(0xB30A192F),
-                              BlendMode.srcOver,
-                            ),
-                          ),
+                        decoration: BoxDecoration(
+                          image: !isBanquita
+                              ? const DecorationImage(
+                                  image: AssetImage('assets/images/banner_blue.jpg'),
+                                  fit: BoxFit.cover,
+                                  colorFilter: ColorFilter.mode(
+                                    Color(0xB30A192F),
+                                    BlendMode.srcOver,
+                                  ),
+                                )
+                              : null,
                           gradient: LinearGradient(
-                            colors: [
-                              Color(0xFF0D233A),
-                              Color(0xFF1565C0),
-                              Color(0xFF1E88E5),
-                            ],
+                            colors: isBanquita
+                                ? theme.headerGradient
+                                : const [
+                                    Color(0xFF0D233A),
+                                    Color(0xFF1565C0),
+                                    Color(0xFF1E88E5),
+                                  ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -979,7 +1000,7 @@ class _EquiposPageState extends State<EquiposPage> {
                                 icon: const Icon(Icons.file_upload_outlined, size: 18),
                                 label: Text(isMobile ? 'Importar' : 'Importar Planilla'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF0F766E),
+                                  backgroundColor: theme.usaCategoriasEdad ? const Color(0xFF0F766E) : theme.secondary,
                                   foregroundColor: Colors.white,
                                   padding: EdgeInsets.symmetric(
                                     horizontal: isMobile ? 10 : 14,
@@ -999,7 +1020,7 @@ class _EquiposPageState extends State<EquiposPage> {
                                 label: Text(isMobile ? 'Crear' : 'Crear Equipo'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,
-                                  foregroundColor: AppColors.primary,
+                                  foregroundColor: theme.primary,
                                   padding: EdgeInsets.symmetric(
                                     horizontal: isMobile ? 10 : 16,
                                     vertical: 10,
@@ -1087,7 +1108,7 @@ class _EquiposPageState extends State<EquiposPage> {
                 FloatingActionButton.extended(
                   heroTag: 'fab_importar_planilla',
                   key: const Key('btn_importar_planilla_fab'),
-                  backgroundColor: const Color(0xFF0F766E),
+                  backgroundColor: theme.usaCategoriasEdad ? const Color(0xFF0F766E) : theme.secondary,
                   onPressed: _abrirModalImportarPlanilla,
                   icon: const Icon(Icons.file_upload, color: Colors.white),
                   label: const Text(
@@ -1099,7 +1120,7 @@ class _EquiposPageState extends State<EquiposPage> {
                 FloatingActionButton.extended(
                   heroTag: 'fab_crear_equipo',
                   key: const Key('btn_crear_equipo_fab'),
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: theme.primary,
                   onPressed: _abrirCrearEquipo,
                   icon: const Icon(Icons.group_add, color: Colors.white),
                   label: const Text(
@@ -1111,7 +1132,7 @@ class _EquiposPageState extends State<EquiposPage> {
                 FloatingActionButton.extended(
                   heroTag: 'fab_inscribir_jugador',
                   key: const Key('btn_inscribir_jugador_fab'),
-                  backgroundColor: const Color(0xFF1E3A8A),
+                  backgroundColor: theme.usaCategoriasEdad ? const Color(0xFF1E3A8A) : theme.primaryDark,
                   onPressed: _abrirInscripcion,
                   icon: const Icon(Icons.person_add, color: Colors.white),
                   label: const Text(

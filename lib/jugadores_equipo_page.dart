@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
+import 'core/theme/tournament_theme.dart';
 import 'models/equipo.dart';
 import 'models/goleador.dart';
 import 'models/jugador.dart';
@@ -61,13 +62,29 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
   Equipo? equipoInfo;
   int get _limiteJugadores => TorneoConfigService().limiteJugadores;
 
-  bool get _tieneCategoriasEdad =>
-      widget.tieneCategoriasEdad ??
-      torneoTieneCategoriasEdad(
-        id: widget.torneoId ?? SessionManager().selectedCampeonatoId,
-        slug: SessionManager().selectedCampeonatoSlug,
-        nombre: SessionManager().selectedCampeonatoNombre,
-      );
+  int get _resolvedTorneoId {
+    if (widget.torneoId != null && widget.torneoId! > 0) return widget.torneoId!;
+    if (equipoInfo != null) return equipoInfo!.resolvedCampeonatoId;
+    return SessionManager().selectedCampeonatoId;
+  }
+
+  bool get _isBanquita {
+    if (_resolvedTorneoId == 1) return false;
+    if (_resolvedTorneoId == 2) return true;
+    final theme = TournamentTheme.of(context);
+    return theme.isBanquita && _resolvedTorneoId != 1;
+  }
+
+  bool get _tieneCategoriasEdad {
+    if (_isBanquita) return false;
+    if (_resolvedTorneoId == 1) return true;
+    return widget.tieneCategoriasEdad ??
+        torneoTieneCategoriasEdad(
+          id: _resolvedTorneoId,
+          slug: SessionManager().selectedCampeonatoSlug,
+          nombre: SessionManager().selectedCampeonatoNombre,
+        );
+  }
 
   @override
   void initState() {
@@ -402,8 +419,9 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = TournamentTheme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
+      backgroundColor: theme.scaffoldBackground,
       appBar: const PublicTopNavBar(activeRoute: 'Equipos'),
       body: RefreshIndicator(
         onRefresh: cargarJugadores,
@@ -435,7 +453,7 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                         const SizedBox(height: 16),
                         FilledButton.icon(
                           style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.primary,
+                            backgroundColor: theme.primary,
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -475,13 +493,15 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: Container(
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [
-                                Color(0xFF0D233A),
-                                Color(0xFF1565C0),
-                                Color(0xFF1E88E5),
-                              ],
+                              colors: _isBanquita
+                                  ? theme.headerGradient
+                                  : const [
+                                      Color(0xFF0D233A),
+                                      Color(0xFF1565C0),
+                                      Color(0xFF1E88E5),
+                                    ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -739,6 +759,7 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
                         // PLANTEL COMPLETO SIN CATEGORÍAS DE EDAD (Torneo Banquita Los Altos ID 2)
                         PublicPlayersGrid(
                           jugadores: sortJugadoresSinCategorias(jugadores),
+                          isBanquitaOverride: true,
                           onVerFicha: _abrirFicha,
                           onEliminar: _esAdmin ? _confirmarEliminarJugador : null,
                         ),
@@ -756,7 +777,7 @@ class _JugadoresEquipoPageState extends State<JugadoresEquipoPage> {
       floatingActionButton: _esAdmin
           ? FloatingActionButton.extended(
               backgroundColor:
-                  (jugadores.length >= _limiteJugadores) ? Colors.blueGrey : AppColors.primary,
+                  (jugadores.length >= _limiteJugadores) ? Colors.blueGrey : theme.primary,
               onPressed: _abrirInscripcion,
               icon: const Icon(Icons.person_add, color: Colors.white),
               label: Text(

@@ -10,6 +10,7 @@ import 'package:printing/printing.dart';
 
 import '../core/constants/app_colors.dart';
 import '../core/session/session_manager.dart';
+import '../core/theme/tournament_theme.dart';
 import '../core/utils/date_utils.dart';
 import '../core/utils/image_utils.dart';
 import '../core/utils/player_sort_utils.dart';
@@ -57,14 +58,27 @@ class CarnetsPdfService {
     required Equipo equipo,
     required List<Jugador> jugadores,
     String? torneoNombre,
+    int? torneoId,
+    TournamentTheme? tournamentTheme,
     PdfPageFormat pageFormat = PdfPageFormat.a4,
   }) async {
-    // 1. Resolver nombre del torneo activo
+    // 1. Resolver nombre del torneo activo y tema correspondiente
     final torneo = (torneoNombre != null && torneoNombre.trim().isNotEmpty)
         ? torneoNombre.trim()
         : (SessionManager().selectedCampeonatoNombre.isNotEmpty
             ? SessionManager().selectedCampeonatoNombre
             : TorneoConfigService().nombreTorneo);
+
+    final resolvedTheme = tournamentTheme ??
+        TournamentTheme.fromIdOrSlug(
+          id: torneoId ??
+              (equipo.campeonatoId != 0
+                  ? equipo.campeonatoId
+                  : (SessionManager().selectedCampeonatoId != 0
+                      ? SessionManager().selectedCampeonatoId
+                      : null)),
+          nombre: torneo,
+        );
 
     // 2. Filtrar y ordenar jugadores activos por edad descendente
     List<Jugador> jugadoresProcesados = jugadores
@@ -151,6 +165,7 @@ class CarnetsPdfService {
                     teamColor: teamColor,
                     logoImage: logoImage,
                     playerPhoto: fotosJugadores[j.id],
+                    theme: resolvedTheme,
                   );
                 }).toList(),
               );
@@ -171,10 +186,29 @@ class CarnetsPdfService {
     required PdfColor teamColor,
     required pw.MemoryImage? logoImage,
     required pw.MemoryImage? playerPhoto,
+    TournamentTheme? theme,
   }) {
+    final activeTheme = theme ?? TournamentTheme.fromIdOrSlug(nombre: torneoNombre);
+    final isBanquita = activeTheme.isBanquita;
     final edad = jugador.edad;
-    final carnetColor = obtenerColorPorEdad(edad, fallbackColor: teamColor);
-    final pillBgColor = _calcularColorPastel(carnetColor);
+
+    // Para Banquita ID 2: Identidad verde profesional con gradiente y acentos dorados
+    // Para Intertecnologías ID 1: Colores reglamentarios oficiales por edad
+    final carnetColor = isBanquita
+        ? PdfColor.fromHex('#064E3B')
+        : obtenerColorPorEdad(edad, fallbackColor: teamColor);
+
+    final borderColor = isBanquita
+        ? PdfColor.fromHex('#047857')
+        : carnetColor;
+
+    final dorsalBadgeColor = isBanquita
+        ? PdfColor.fromHex('#F59E0B')
+        : PdfColor.fromInt(0x42000000);
+
+    final pillBgColor = isBanquita
+        ? PdfColor.fromHex('#ECFDF5')
+        : _calcularColorPastel(carnetColor);
 
     final fechaNac = AppDateUtils.formatDate(
       jugador.fechaNacimiento,
@@ -188,7 +222,7 @@ class CarnetsPdfService {
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-        border: pw.Border.all(color: carnetColor, width: 1.0),
+        border: pw.Border.all(color: borderColor, width: 1.0),
       ),
       child: pw.ClipRRect(
         horizontalRadius: 6,
@@ -199,7 +233,20 @@ class CarnetsPdfService {
             // ==================== ENCABEZADO ====================
             pw.Container(
               height: 58,
-              color: carnetColor,
+              decoration: isBanquita
+                  ? pw.BoxDecoration(
+                      gradient: pw.LinearGradient(
+                        colors: [
+                          PdfColor.fromHex('#064E3B'),
+                          PdfColor.fromHex('#047857'),
+                        ],
+                        begin: pw.Alignment.topLeft,
+                        end: pw.Alignment.bottomRight,
+                      ),
+                    )
+                  : pw.BoxDecoration(
+                      color: carnetColor,
+                    ),
               padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -223,7 +270,7 @@ class CarnetsPdfService {
                                   ? equipo.sigla.toUpperCase()
                                   : equipo.iniciales.toUpperCase(),
                               style: pw.TextStyle(
-                                color: carnetColor,
+                                color: isBanquita ? PdfColor.fromHex('#064E3B') : carnetColor,
                                 fontSize: 11,
                                 fontWeight: pw.FontWeight.bold,
                               ),
@@ -261,6 +308,24 @@ class CarnetsPdfService {
                       ],
                     ),
                   ),
+                  if (jugador.numeroCamiseta != null) ...[
+                    pw.SizedBox(width: 4),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+                      decoration: pw.BoxDecoration(
+                        color: dorsalBadgeColor,
+                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+                      ),
+                      child: pw.Text(
+                        '#${jugador.numeroCamiseta}',
+                        style: pw.TextStyle(
+                          color: PdfColors.white,
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 9,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -336,7 +401,9 @@ class CarnetsPdfService {
                                     pw.Text(
                                       'EDAD',
                                       style: pw.TextStyle(
-                                        color: PdfColor.fromHex('#6B7280'),
+                                        color: isBanquita
+                                            ? PdfColor.fromHex('#064E3B')
+                                            : PdfColor.fromHex('#6B7280'),
                                         fontSize: 6,
                                         fontWeight: pw.FontWeight.bold,
                                       ),
@@ -345,7 +412,9 @@ class CarnetsPdfService {
                                     pw.Text(
                                       edadTxt,
                                       style: pw.TextStyle(
-                                        color: PdfColors.black,
+                                        color: isBanquita
+                                            ? PdfColor.fromHex('#064E3B')
+                                            : PdfColors.black,
                                         fontSize: 8.5,
                                         fontWeight: pw.FontWeight.bold,
                                       ),
@@ -366,7 +435,7 @@ class CarnetsPdfService {
                           pw.Text(
                             torneoNombre.toUpperCase(),
                             style: pw.TextStyle(
-                              color: carnetColor,
+                              color: isBanquita ? PdfColor.fromHex('#064E3B') : carnetColor,
                               fontSize: 6.5,
                               fontWeight: pw.FontWeight.bold,
                             ),
@@ -537,6 +606,8 @@ class CarnetsPdfService {
     required Equipo equipo,
     required List<Jugador> jugadores,
     String? torneoNombre,
+    int? torneoId,
+    TournamentTheme? tournamentTheme,
     bool verificarPermisos = true,
   }) async {
     // 0. Comprobación de seguridad: Solo administradores autorizados
@@ -603,6 +674,8 @@ class CarnetsPdfService {
         equipo: equipo,
         jugadores: jugadores,
         torneoNombre: torneoNombre,
+        torneoId: torneoId,
+        tournamentTheme: tournamentTheme ?? (context.mounted ? TournamentTheme.of(context) : null),
       );
 
       final filename = getFilename(equipo.nombre);
@@ -659,6 +732,8 @@ class CarnetsPdfService {
     required Equipo equipo,
     required List<Jugador> jugadores,
     String? torneoNombre,
+    int? torneoId,
+    TournamentTheme? tournamentTheme,
     bool verificarPermisos = true,
   }) async {
     // 0. Comprobación de seguridad: Solo administradores autorizados
@@ -680,6 +755,8 @@ class CarnetsPdfService {
         equipo: equipo,
         jugadores: jugadores,
         torneoNombre: torneoNombre,
+        torneoId: torneoId,
+        tournamentTheme: tournamentTheme ?? (context.mounted ? TournamentTheme.of(context) : null),
         pageFormat: format,
       ),
       name: filename,

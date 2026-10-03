@@ -176,6 +176,8 @@ class PublicAgeGroupSection extends StatelessWidget {
         // GRID RESPONSIVE DE CARNETS
         PublicPlayersGrid(
           jugadores: jugadores,
+          carnetColor: color,
+          isBanquitaOverride: false,
           onVerFicha: onVerFicha,
           onEliminar: onEliminar,
         ),
@@ -193,12 +195,16 @@ class PublicPlayersGrid extends StatelessWidget {
   final List<Jugador> jugadores;
   final void Function(Jugador jugador)? onVerFicha;
   final void Function(Jugador jugador)? onEliminar;
+  final Color? carnetColor;
+  final bool? isBanquitaOverride;
 
   const PublicPlayersGrid({
     super.key,
     required this.jugadores,
     this.onVerFicha,
     this.onEliminar,
+    this.carnetColor,
+    this.isBanquitaOverride,
   });
 
   @override
@@ -232,6 +238,8 @@ class PublicPlayersGrid extends StatelessWidget {
           itemBuilder: (context, index) {
             return PublicPlayerCard(
               jugador: jugadores[index],
+              carnetColor: carnetColor,
+              isBanquitaOverride: isBanquitaOverride,
               onVerFicha: onVerFicha,
               onEliminar: onEliminar,
             );

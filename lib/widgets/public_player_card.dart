@@ -1,3 +1,4 @@
+import '../core/theme/tournament_theme.dart';
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
@@ -13,6 +14,7 @@ class PublicPlayerCard extends StatelessWidget {
   final void Function(Jugador jugador)? onVerFicha;
   final void Function(Jugador jugador)? onEliminar;
   final Color? carnetColor;
+  final bool? isBanquitaOverride;
 
   const PublicPlayerCard({
     super.key,
@@ -20,12 +22,50 @@ class PublicPlayerCard extends StatelessWidget {
     this.onVerFicha,
     this.onEliminar,
     this.carnetColor,
+    this.isBanquitaOverride,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = TournamentTheme.of(context);
+    final isBanquita = isBanquitaOverride ?? (theme.isBanquita && theme.id != 1);
     final edad = jugador.edad;
-    final carnetColor = this.carnetColor ?? getColorByAge(edad);
+
+    // Para Banquita ID 2: NUNCA usar colores por edad (ni verde ni naranja ni azul por edad).
+    // Usar estrictamente la identidad visual deportiva de Banquita:
+    // Header verde deportivo [Color(0xFF064E3B), Color(0xFF047857)], dorsal y acentos ámbar/dorado [Color(0xFFF59E0B)].
+    // Para Intertecnologías ID 1: SIEMPRE colores por edad (>40 verde #2E7D32, 35-39 naranja #E65100, 18-34 azul #1565C0).
+    final carnetColor = isBanquita
+        ? theme.secondary // #047857
+        : (this.carnetColor ?? getColorByAge(edad));
+
+    final headerColors = isBanquita
+        ? theme.getPlayerCardHeaderGradient(edad) // [Color(0xFF064E3B), Color(0xFF047857)]
+        : (this.carnetColor != null
+            ? [
+                this.carnetColor!,
+                Color.lerp(this.carnetColor!, const Color(0xFF0D233A), 0.35) ?? this.carnetColor!,
+              ]
+            : [
+                carnetColor,
+                Color.lerp(carnetColor, const Color(0xFF0D233A), 0.35) ?? carnetColor,
+              ]);
+
+    final dorsalBadgeBg = isBanquita
+        ? theme.getPlayerDorsalBadgeColor(edad) // Color(0xFFF59E0B) Ámbar / Dorado
+        : Colors.black26;
+
+    final dorsalTextColor = isBanquita
+        ? theme.getPlayerDorsalTextColor(edad) // Colors.white
+        : Colors.white;
+
+    final ageTextColor = isBanquita
+        ? theme.getPlayerAgeTextColor(edad) // Color(0xFF064E3B)
+        : carnetColor;
+
+    final buttonColor = isBanquita
+        ? theme.getPlayerCardButtonColor(edad) // Color(0xFF047857)
+        : carnetColor;
 
 
 
@@ -67,10 +107,7 @@ class PublicPlayerCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  carnetColor,
-                  Color.lerp(carnetColor, const Color(0xFF0D233A), 0.35) ?? carnetColor,
-                ],
+                colors: headerColors,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -95,8 +132,8 @@ class PublicPlayerCard extends StatelessWidget {
                     children: [
                       Text(
                         equipoNombre.toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: isBanquita ? Colors.white.withAlpha(230) : Colors.white70,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.6,
@@ -123,13 +160,13 @@ class PublicPlayerCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.black26,
+                      color: dorsalBadgeBg,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       '#${jugador.numeroCamiseta}',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: dorsalTextColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 11,
                       ),
@@ -240,7 +277,7 @@ class PublicPlayerCard extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: 8.5,
                                       fontWeight: FontWeight.bold,
-                                      color: carnetColor,
+                                      color: ageTextColor,
                                       letterSpacing: 0.4,
                                     ),
                                   ),
@@ -250,7 +287,7 @@ class PublicPlayerCard extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w900,
-                                      color: carnetColor,
+                                      color: ageTextColor,
                                       letterSpacing: 0.2,
                                     ),
                                   ),
@@ -280,9 +317,9 @@ class PublicPlayerCard extends StatelessWidget {
                                 child: OutlinedButton(
                                   key: Key('btn_ver_ficha_${jugador.id}'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: carnetColor,
+                                    foregroundColor: buttonColor,
                                     side: BorderSide(
-                                      color: carnetColor,
+                                      color: buttonColor,
                                       width: 1.2,
                                     ),
                                     padding: EdgeInsets.zero,
