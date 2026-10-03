@@ -253,9 +253,12 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
           ),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(
-              '© ${DateTime.now().year} Torneo Intertecnologías',
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            child: ListenableBuilder(
+              listenable: SessionManager(),
+              builder: (context, _) => Text(
+                '© ${DateTime.now().year} ${SessionManager().selectedCampeonatoNombre}',
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+              ),
             ),
           ),
         ],
@@ -563,9 +566,12 @@ class _PortalPublicoPageState extends State<PortalPublicoPage> {
 
                   // PIE DE PÁGINA
                   Center(
-                    child: Text(
-                      '© ${DateTime.now().year} Torneo Intertecnologías • Información oficial',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    child: ListenableBuilder(
+                      listenable: SessionManager(),
+                      builder: (context, _) => Text(
+                        '© ${DateTime.now().year} ${SessionManager().selectedCampeonatoNombre} • Información oficial',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -695,6 +701,57 @@ class PublicHeaderBanner extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _resolverTituloBanner(BuildContext context) {
+    final theme = TournamentTheme.of(context);
+    final session = SessionManager();
+    final nombre = session.selectedCampeonatoNombre.trim();
+    if (theme.isBanquita ||
+        SessionManager.isBanquitaIdentifier(session.selectedCampeonatoSlug) ||
+        nombre.toLowerCase().contains('banquita')) {
+      return 'TORNEO BANQUITA LOS ALTOS';
+    }
+    if (theme.isIntertecnologias && nombre.toLowerCase().contains('intertecnolog')) {
+      return 'TORNEO INTERTECNOLOGÍAS';
+    }
+    return nombre.isNotEmpty ? nombre.toUpperCase() : 'TORNEO INTERTECNOLOGÍAS';
+  }
+
+  String _resolverSubtituloBanner(BuildContext context) {
+    final theme = TournamentTheme.of(context);
+    final session = SessionManager();
+    final nombre = session.selectedCampeonatoNombre.trim();
+
+    if (theme.isBanquita ||
+        SessionManager.isBanquitaIdentifier(session.selectedCampeonatoSlug) ||
+        nombre.toLowerCase().contains('banquita')) {
+      return 'Edición 2026';
+    }
+
+    if (theme.isIntertecnologias || nombre.toLowerCase().contains('intertecnolog')) {
+      return 'Edición 2026';
+    }
+
+    final matchYear = RegExp(r'20\d\d').firstMatch(nombre);
+    if (matchYear != null) {
+      return 'Edición ${matchYear.group(0)}';
+    }
+    return 'Edición Oficial';
+  }
+
+  String _resolverLemaBanner(BuildContext context) {
+    final theme = TournamentTheme.of(context);
+    final session = SessionManager();
+    final nombre = session.selectedCampeonatoNombre.trim();
+
+    if (theme.isBanquita ||
+        SessionManager.isBanquitaIdentifier(session.selectedCampeonatoSlug) ||
+        nombre.toLowerCase().contains('banquita')) {
+      return 'Pasión, fútbol y deporte en comunidad';
+    }
+
+    return 'Pasión, tecnología y deporte en un solo torneo';
   }
 
   @override
@@ -854,40 +911,48 @@ class PublicHeaderBanner extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 10),
-                            // Título adaptado a todo el ancho sin compresión
-                            Text(
-                              'TORNEO INTERTECNOLOGÍAS',
-                              style: TextStyle(
-                                fontSize: titleFontSize,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                letterSpacing: 0.6,
-                                height: 1.15,
-                              ),
-                              softWrap: true,
-                            ),
-                            const SizedBox(height: 4),
                             ListenableBuilder(
                               listenable: SessionManager(),
-                              builder: (context, _) => Text(
-                                SessionManager().selectedCampeonatoNombre,
-                                style: TextStyle(
-                                  fontSize: isVerySmall ? 13.0 : 14.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white.withAlpha(235),
-                                ),
-                                softWrap: true,
+                              builder: (context, _) => Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _resolverTituloBanner(context),
+                                    style: TextStyle(
+                                      fontSize: titleFontSize,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: 0.6,
+                                      height: 1.15,
+                                    ),
+                                    softWrap: true,
+                                    overflow: TextOverflow.visible,
+                                    maxLines: 2,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _resolverSubtituloBanner(context),
+                                    style: TextStyle(
+                                      fontSize: isVerySmall ? 13.0 : 14.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white.withAlpha(235),
+                                    ),
+                                    softWrap: true,
+                                    overflow: TextOverflow.visible,
+                                    maxLines: 2,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _resolverLemaBanner(context),
+                                    style: TextStyle(
+                                      color: Colors.white.withAlpha(210),
+                                      fontSize: isVerySmall ? 11.0 : 12.5,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                    softWrap: true,
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Pasión, tecnología y deporte en un solo torneo',
-                              style: TextStyle(
-                                color: Colors.white.withAlpha(210),
-                                fontSize: isVerySmall ? 11.0 : 12.5,
-                                fontStyle: FontStyle.italic,
-                              ),
-                              softWrap: true,
                             ),
                           ],
                         )
@@ -947,47 +1012,46 @@ class PublicHeaderBanner extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 5),
-
-                                  // Título: TORNEO INTERTECNOLOGÍAS
-                                  Text(
-                                    'TORNEO INTERTECNOLOGÍAS',
-                                    style: TextStyle(
-                                      fontSize: titleFontSize,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                      letterSpacing: 0.8,
-                                      height: 1.15,
-                                    ),
-                                    softWrap: true,
-                                    overflow: TextOverflow.visible,
-                                    maxLines: 2,
-                                  ),
-                                  const SizedBox(height: 4),
-
-                                  // Subtítulo
                                   ListenableBuilder(
                                     listenable: SessionManager(),
-                                    builder: (context, _) => Text(
-                                      SessionManager().selectedCampeonatoNombre,
-                                      style: const TextStyle(
-                                        fontSize: 15.0,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white70,
-                                      ),
-                                      softWrap: true,
-                                      overflow: TextOverflow.visible,
-                                      maxLines: 2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-
-                                  // Lema
-                                  Text(
-                                    'Pasión, tecnología y deporte en un solo torneo',
-                                    style: TextStyle(
-                                      color: Colors.white.withAlpha(210),
-                                      fontSize: 13.0,
-                                      fontStyle: FontStyle.italic,
+                                    builder: (context, _) => Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _resolverTituloBanner(context),
+                                          style: TextStyle(
+                                            fontSize: titleFontSize,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white,
+                                            letterSpacing: 0.8,
+                                            height: 1.15,
+                                          ),
+                                          softWrap: true,
+                                          overflow: TextOverflow.visible,
+                                          maxLines: 2,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _resolverSubtituloBanner(context),
+                                          style: const TextStyle(
+                                            fontSize: 15.0,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white70,
+                                          ),
+                                          softWrap: true,
+                                          overflow: TextOverflow.visible,
+                                          maxLines: 2,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          _resolverLemaBanner(context),
+                                          style: TextStyle(
+                                            color: Colors.white.withAlpha(210),
+                                            fontSize: 13.0,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],

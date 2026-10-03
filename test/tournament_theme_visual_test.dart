@@ -12,6 +12,7 @@ import 'package:torneo_intertecnologias_app/models/campeonato.dart';
 import 'package:torneo_intertecnologias_app/services/carnets_pdf_service.dart';
 import 'package:torneo_intertecnologias_app/widgets/public_player_card.dart';
 import 'package:torneo_intertecnologias_app/widgets/public_team_card.dart';
+import 'package:torneo_intertecnologias_app/portal_publico_page.dart';
 
 void main() {
   group('TournamentTheme - Visual & Chromatic Identity Tests', () {
@@ -567,6 +568,56 @@ void main() {
       expect(bytes.isNotEmpty, isTrue);
       final header = String.fromCharCodes(bytes.sublist(0, 5));
       expect(header, equals('%PDF-'));
+    });
+
+    testWidgets('Banquita: PublicHeaderBanner muestra TORNEO BANQUITA LOS ALTOS y subtítulo Edición 2026', (tester) async {
+      final session = SessionManager();
+      session.clearSession();
+      session.selectCampeonato(
+        const Campeonato(id: 2, nombre: 'Torneo Banquita Los Altos', slug: 'torneo-demo', activo: true, publicado: true),
+      );
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: InheritedTournamentTheme(
+              theme: TournamentTheme.banquita,
+              child: PublicHeaderBanner(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('TORNEO BANQUITA LOS ALTOS'), findsOneWidget);
+      expect(find.text('Edición 2026'), findsOneWidget);
+      expect(find.text('Pasión, fútbol y deporte en comunidad'), findsOneWidget);
+      expect(find.text('TORNEO INTERTECNOLOGÍAS'), findsNothing);
+    });
+
+    testWidgets('Intertecnologías: PublicHeaderBanner muestra TORNEO INTERTECNOLOGÍAS y subtítulo Edición 2026', (tester) async {
+      final session = SessionManager();
+      session.clearSession();
+      session.selectCampeonato(
+        const Campeonato(id: 1, nombre: 'Torneo Intertecnologías 2026', slug: 'intertecnologias', activo: true, publicado: true),
+      );
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: InheritedTournamentTheme(
+              theme: TournamentTheme.intertecnologias,
+              child: PublicHeaderBanner(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('TORNEO INTERTECNOLOGÍAS'), findsOneWidget);
+      expect(find.text('Edición 2026'), findsOneWidget);
+      expect(find.text('Pasión, tecnología y deporte en un solo torneo'), findsOneWidget);
+      expect(find.text('TORNEO BANQUITA LOS ALTOS'), findsNothing);
     });
   });
 }
