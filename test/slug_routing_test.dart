@@ -146,10 +146,59 @@ void main() {
       );
     });
 
-    test('extractSlugFromUri retorna null en rutas estándar sin slug', () {
+    test('extractSlugFromUri resuelve parámetros query directos y en fragment (#)', () {
+      expect(
+        SessionManager.extractSlugFromUri(Uri.parse('https://app.com/?torneo=banquita_los_altos')),
+        'banquita_los_altos',
+      );
+      expect(
+        SessionManager.extractSlugFromUri(Uri.parse('https://app.com/?t=banquita_los_altos')),
+        'banquita_los_altos',
+      );
+      expect(
+        SessionManager.extractSlugFromUri(Uri.parse('https://app.com/#/?torneo=banquita_los_altos')),
+        'banquita_los_altos',
+      );
+      expect(
+        SessionManager.extractSlugFromUri(Uri.parse('https://app.com/#/torneo/banquita_los_altos')),
+        'banquita_los_altos',
+      );
+      expect(
+        SessionManager.extractSlugFromUri(Uri.parse('https://app.com/torneo/banquita_los_altos')),
+        'banquita_los_altos',
+      );
+      expect(
+        SessionManager.extractSlugFromUri(Uri.parse('https://app.com/#/torneo/banquita_los_altos/posiciones')),
+        'banquita_los_altos',
+      );
+    });
+
+    test('extractSlugFromUri retorna null en rutas estándar sin slug ni parámetros', () {
       expect(SessionManager.extractSlugFromUri(Uri.parse('https://app.com/')), isNull);
       expect(SessionManager.extractSlugFromUri(Uri.parse('https://app.com/equipos')), isNull);
       expect(SessionManager.extractSlugFromUri(Uri.parse('https://app.com/login')), isNull);
+    });
+
+    test('init con ?torneo=banquita_los_altos selecciona automáticamente Banquita Los Altos', () async {
+      final session = SessionManager();
+      session.clearSession();
+
+      final uri = Uri.parse('https://app.com/?torneo=banquita_los_altos');
+      await session.init(currentUri: uri);
+
+      expect(session.selectedCampeonatoNombre.toLowerCase(), contains('banquita'));
+      expect(session.selectedCampeonatoId, anyOf(2, 3));
+    });
+
+    test('init sin parámetros en la URL mantiene el torneo principal por defecto (Intertecnologías ID 1)', () async {
+      final session = SessionManager();
+      session.clearSession();
+
+      final uri = Uri.parse('https://app.com/');
+      await session.init(currentUri: uri);
+
+      expect(session.selectedCampeonatoId, 1);
+      expect(session.selectedCampeonatoNombre.toLowerCase(), contains('intertecnolog'));
     });
 
     test('selectCampeonatoBySlug resuelve de lista en memoria y backend', () async {
@@ -264,6 +313,30 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(JugadoresPage), findsOneWidget);
+    });
+
+    testWidgets('Ruta /torneo/banquita_los_altos activa Torneo Banquita Los Altos y carga PortalPublicoPage', (tester) async {
+      await tester.pumpWidget(const TorneoApp());
+      await tester.pumpAndSettle();
+
+      final context = tester.element(find.byType(PortalPublicoPage));
+      Navigator.pushNamed(context, '/torneo/banquita_los_altos');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PortalPublicoPage), findsOneWidget);
+      expect(SessionManager().selectedCampeonatoNombre.toLowerCase(), contains('banquita'));
+    });
+
+    testWidgets('Ruta /?torneo=banquita_los_altos activa Torneo Banquita Los Altos en PortalPublicoPage', (tester) async {
+      await tester.pumpWidget(const TorneoApp());
+      await tester.pumpAndSettle();
+
+      final context = tester.element(find.byType(PortalPublicoPage));
+      Navigator.pushNamed(context, '/?torneo=banquita_los_altos');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PortalPublicoPage), findsOneWidget);
+      expect(SessionManager().selectedCampeonatoNombre.toLowerCase(), contains('banquita'));
     });
   });
 

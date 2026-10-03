@@ -111,13 +111,17 @@ class TournamentTheme {
     defaultTeamColor: Color(0xFF064E3B),
   );
 
-  /// Determina si este tema corresponde al Torneo Banquita Los Altos (ID 2 o slug torneo-demo)
+  /// Determina si este tema corresponde al Torneo Banquita Los Altos (ID 2 o 3, o slug correspondiente)
   bool get isBanquita =>
       type == TournamentType.banquita ||
       id == 2 ||
+      id == 3 ||
       slug == 'torneo-demo' ||
       slug == 'banquita' ||
       slug == 'banquita-los-altos' ||
+      slug == 'banquita_los_altos' ||
+      slug == 'torneo-banquitas-los-altos-2026' ||
+      slug == 'torneo_banquitas_los_altos_2026' ||
       slug == 'torneo-banquita-los-altos' ||
       nombre.toLowerCase().contains('banquita');
 
@@ -229,14 +233,18 @@ class TournamentTheme {
       }
     }
 
-    // 2. Torneo Banquita Los Altos (ID 2)
-    if (id == 2) return banquita;
+    // 2. Torneo Banquita Los Altos (ID 2 o 3)
+    if (id == 2 || id == 3) return banquita;
     if (slug != null) {
       final s = slug.toLowerCase().trim();
       if (s == 'torneo-demo' ||
           s == 'banquita' ||
           s == 'banquita-los-altos' ||
-          s == 'torneo-banquita-los-altos') {
+          s == 'banquita_los_altos' ||
+          s == 'torneo-banquitas-los-altos-2026' ||
+          s == 'torneo_banquitas_los_altos_2026' ||
+          s == 'torneo-banquita-los-altos' ||
+          s.contains('banquita')) {
         return banquita;
       }
     }

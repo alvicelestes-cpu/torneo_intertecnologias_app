@@ -60,8 +60,20 @@ class TorneoApp extends StatelessWidget {
         final uri = Uri.parse(settings.name ?? '/');
         final path = uri.path;
 
-        // 1. Soporte de Enrutamiento Dinámico por Slug (/t/:slug/...)
-        final slugMatch = RegExp(r'^/t/([^/]+)(/.*)?$').firstMatch(path);
+        // 1. Extraer slug o parámetro query de settings.name o de Uri.base
+        final slugFromUri = SessionManager.extractSlugFromUri(uri) ??
+            SessionManager.extractSlugFromUri(Uri.base);
+
+        // Si se detectó un slug en la ruta o parámetro query
+        if (slugFromUri != null && slugFromUri.isNotEmpty) {
+          final session = SessionManager();
+          if (session.selectedCampeonatoSlug.toLowerCase() != slugFromUri.toLowerCase()) {
+            session.selectCampeonatoBySlug(slugFromUri);
+          }
+        }
+
+        // 2. Soporte de Enrutamiento Dinámico por Slug (/t/:slug/... o /torneo/:slug/...)
+        final slugMatch = RegExp(r'^/(?:t|torneo)/([^/]+)(/.*)?$').firstMatch(path);
         if (slugMatch != null) {
           final slug = slugMatch.group(1)!;
           final subpath = (slugMatch.group(2) ?? '').toLowerCase();
@@ -154,7 +166,19 @@ class TorneoApp extends StatelessWidget {
           );
         }
 
-        // 2. Enrutamiento estándar sin slug (Compatibilidad 100%)
+        // Si la ruta es "/" con parámetro query de torneo (ej: /?torneo=banquita_los_altos)
+        if (path == '/' && slugFromUri != null && slugFromUri.isNotEmpty) {
+          final tournamentTheme = TournamentTheme.fromIdOrSlug(slug: slugFromUri);
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => InheritedTournamentTheme(
+              theme: tournamentTheme,
+              child: const PortalPublicoPage(),
+            ),
+          );
+        }
+
+        // 3. Enrutamiento estándar sin slug (Compatibilidad 100%)
         if (path == '/admin' || path == '/login') {
           return MaterialPageRoute(
             settings: settings,

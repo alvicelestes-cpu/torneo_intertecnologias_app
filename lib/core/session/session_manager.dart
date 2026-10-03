@@ -6,6 +6,7 @@ import '../../models/torneo_model.dart';
 import '../../services/torneo_config_service.dart';
 import '../../services/torneo_service.dart';
 import '../utils/player_sort_utils.dart';
+import '../utils/web_url_helper.dart';
 
 class SessionManager extends ChangeNotifier {
   static final SessionManager _instance = SessionManager._internal();
@@ -80,21 +81,67 @@ class SessionManager extends ChangeNotifier {
         nombre: selectedCampeonatoNombre,
       );
 
-  /// Extrae el slug de una URI con soporte para rutas web amigables y con hash (#)
+  /// Determina si una cadena representa un identificador o slug del Torneo Banquita Los Altos
+  static bool isBanquitaIdentifier(String? val) {
+    if (val == null) return false;
+    final clean = val.trim().toLowerCase().replaceAll('-', '_');
+    if (clean == '2' || clean == '3') return true;
+    if (clean.contains('banquita')) return true;
+    if (clean == 'torneo_demo') return true;
+    return false;
+  }
+
+  /// Determina si una cadena representa un identificador del Torneo Intertecnologías
+  static bool isIntertecnologiasIdentifier(String? val) {
+    if (val == null) return false;
+    final clean = val.trim().toLowerCase().replaceAll('-', '_');
+    if (clean == '1') return true;
+    if (clean.contains('intertecnologia') || clean.contains('inter_tecnologia')) return true;
+    return false;
+  }
+
+  /// Extrae el slug o identificador de torneo de una URI con soporte para:
+  /// 1. Query parameters directos (?torneo=..., ?t=..., ?slug=..., ?campeonato=..., ?id=...)
+  /// 2. Query parameters dentro del fragment de Flutter Web (#/?torneo=... o #?torneo=...)
+  /// 3. Rutas directas: /t/:slug, /torneo/:slug
+  /// 4. Rutas en hash fragment: #/t/:slug, #/torneo/:slug
   static String? extractSlugFromUri(Uri uri) {
-    // 1. Path directo: /t/:slug o /t/:slug/...
-    final pathMatch = RegExp(r'^/t/([^/]+)').firstMatch(uri.path);
-    if (pathMatch != null) {
-      return pathMatch.group(1);
+    // 1. Query parameters directos (?torneo=..., ?t=..., etc.)
+    final qDirect = uri.queryParameters['torneo'] ??
+        uri.queryParameters['t'] ??
+        uri.queryParameters['slug'] ??
+        uri.queryParameters['campeonato'] ??
+        uri.queryParameters['id'];
+    if (qDirect != null && qDirect.trim().isNotEmpty) {
+      return qDirect.trim();
     }
 
-    // 2. Hash fragment (Flutter Web hash URL strategy: #/t/:slug)
+    // 2. Query parameters o rutas dentro del fragment (#) en Flutter Web
     if (uri.fragment.isNotEmpty) {
       final cleanFragment = uri.fragment.startsWith('/') ? uri.fragment : '/${uri.fragment}';
-      final fragmentMatch = RegExp(r'^/t/([^/]+)').firstMatch(cleanFragment);
-      if (fragmentMatch != null) {
-        return fragmentMatch.group(1);
+      final fragUri = Uri.tryParse(cleanFragment);
+      if (fragUri != null) {
+        final qFrag = fragUri.queryParameters['torneo'] ??
+            fragUri.queryParameters['t'] ??
+            fragUri.queryParameters['slug'] ??
+            fragUri.queryParameters['campeonato'] ??
+            fragUri.queryParameters['id'];
+        if (qFrag != null && qFrag.trim().isNotEmpty) {
+          return qFrag.trim();
+        }
+
+        // Rutas dentro de hash: #/t/:slug o #/torneo/:slug
+        final fragMatch = RegExp(r'^/(?:t|torneo)/([^/?#]+)').firstMatch(fragUri.path);
+        if (fragMatch != null) {
+          return fragMatch.group(1);
+        }
       }
+    }
+
+    // 3. Path directo: /t/:slug o /torneo/:slug
+    final pathMatch = RegExp(r'^/(?:t|torneo)/([^/?#]+)').firstMatch(uri.path);
+    if (pathMatch != null) {
+      return pathMatch.group(1);
     }
 
     return null;
@@ -117,30 +164,76 @@ class SessionManager extends ChangeNotifier {
       // Ignorar fallo al leer SharedPreferences para no bloquear inicio
     }
 
-    // Intentar resolver slug desde la URL del navegador si aplica
-    final uri = currentUri ?? Uri.base;
+    // Obtener la URI actual del navegador si estamos en entorno web
+    Uri uri = currentUri ?? Uri.base;
+    final browserHref = getBrowserUrl();
+    if (currentUri == null && browserHref.isNotEmpty) {
+      final parsed = Uri.tryParse(browserHref);
+      if (parsed != null) {
+        uri = parsed;
+      }
+    }
+
+    // Intentar resolver torneo desde la URL del navegador si se especificó
     final slugFromUrl = extractSlugFromUri(uri);
     if (slugFromUrl != null && slugFromUrl.isNotEmpty) {
       final exito = await selectCampeonatoBySlug(slugFromUrl, torneoService: torneoService);
       if (exito) return;
+    } else {
+      // Si no viene ningún parámetro en la URL y el usuario no está autenticado,
+      // asegurar que el torneo activo sea el torneo principal por defecto (Torneo Intertecnologías)
+      if (!isAuthenticated) {
+        final principal = Campeonato(
+          id: 1,
+          nombre: 'Torneo Intertecnologías 2026',
+          slug: 'torneo-intertecnologias-2026',
+          activo: true,
+          publicado: true,
+        );
+        _selectedCampeonato = principal;
+        _persistedCampeonatoId = 1;
+      }
     }
 
     TorneoConfigService().cargarConfiguracion(torneoId: selectedCampeonatoId);
   }
 
-  /// Selecciona y sincroniza el torneo activo a partir de su Slug
+  /// Selecciona y sincroniza el torneo activo a partir de su Slug o identificador
   Future<bool> selectCampeonatoBySlug(String slug, {TorneoService? torneoService}) async {
     final cleanSlug = slug.trim().toLowerCase();
     if (cleanSlug.isEmpty) return false;
 
+    final isBanquita = isBanquitaIdentifier(cleanSlug);
+    final isInter = isIntertecnologiasIdentifier(cleanSlug);
+
     // Si ya coincide con el seleccionado actualmente
-    if (_selectedCampeonato?.slug.trim().toLowerCase() == cleanSlug) {
-      return true;
+    if (_selectedCampeonato != null) {
+      if (_selectedCampeonato!.slug.trim().toLowerCase() == cleanSlug) {
+        return true;
+      }
+      if (isBanquita && (_selectedCampeonato!.id == 2 || _selectedCampeonato!.id == 3 || _selectedCampeonato!.nombre.toLowerCase().contains('banquita'))) {
+        return true;
+      }
+      if (isInter && (_selectedCampeonato!.id == 1 || _selectedCampeonato!.nombre.toLowerCase().contains('intertecnologia'))) {
+        return true;
+      }
     }
 
     // Si ya existe en la lista de torneos en memoria
     final match = _campeonatos.cast<Campeonato?>().firstWhere(
-          (c) => c?.slug.trim().toLowerCase() == cleanSlug,
+          (c) {
+            if (c == null) return false;
+            final cSlug = c.slug.trim().toLowerCase().replaceAll('-', '_');
+            if (cSlug == cleanSlug.replaceAll('-', '_')) return true;
+            if (cleanSlug == c.id.toString()) return true;
+            if (isBanquita && (c.id == 2 || c.id == 3 || c.nombre.toLowerCase().contains('banquita'))) {
+              return true;
+            }
+            if (isInter && (c.id == 1 || c.nombre.toLowerCase().contains('intertecnologia'))) {
+              return true;
+            }
+            return false;
+          },
           orElse: () => null,
         );
     if (match != null) {
@@ -148,18 +241,51 @@ class SessionManager extends ChangeNotifier {
       return true;
     }
 
+    // Si la lista de torneos aún no se ha cargado en memoria, intentar cargarla del backend
+    if (_campeonatos.isEmpty) {
+      try {
+        final service = torneoService ?? TorneoService();
+        final list = await service.getCampeonatos(token: token);
+        if (list.isNotEmpty) {
+          _campeonatos = list;
+          final matchFromBackend = _campeonatos.cast<Campeonato?>().firstWhere(
+                (c) {
+                  if (c == null) return false;
+                  final cSlug = c.slug.trim().toLowerCase().replaceAll('-', '_');
+                  if (cSlug == cleanSlug.replaceAll('-', '_')) return true;
+                  if (cleanSlug == c.id.toString()) return true;
+                  if (isBanquita && (c.id == 2 || c.id == 3 || c.nombre.toLowerCase().contains('banquita'))) {
+                    return true;
+                  }
+                  if (isInter && (c.id == 1 || c.nombre.toLowerCase().contains('intertecnologia'))) {
+                    return true;
+                  }
+                  return false;
+                },
+                orElse: () => null,
+              );
+          if (matchFromBackend != null) {
+            selectCampeonato(matchFromBackend);
+            return true;
+          }
+        }
+      } catch (_) {
+        // Fallback síncrono si el endpoint no responde
+      }
+    }
+
     // Fast-path síncrono para torneos base si aún no están cargados en memoria
-    if (cleanSlug == 'torneo-demo' || cleanSlug == 'banquita') {
+    if (isBanquita) {
       final banquita = Campeonato(
-        id: 2,
+        id: (cleanSlug == 'torneo-demo' || cleanSlug == '2') ? 2 : 3,
         nombre: 'Torneo Banquita Los Altos',
-        slug: 'torneo-demo',
+        slug: cleanSlug == 'torneo-demo' ? 'torneo-demo' : 'torneo-banquitas-los-altos-2026',
         activo: true,
         publicado: true,
       );
       selectCampeonato(banquita);
       return true;
-    } else if (cleanSlug == 'intertecnologias') {
+    } else if (isInter) {
       final inter = Campeonato(
         id: 1,
         nombre: 'Torneo Intertecnologías 2026',
