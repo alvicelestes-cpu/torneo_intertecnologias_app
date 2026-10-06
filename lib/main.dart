@@ -389,12 +389,15 @@ class _LoginPageState extends State<LoginPage> {
                           color: AppColors.primary,
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          'Torneo Intertecnologías',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
+                        ListenableBuilder(
+                          listenable: SessionManager(),
+                          builder: (context, _) => Text(
+                            SessionManager().selectedCampeonatoNombre,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -529,6 +532,11 @@ class InicioPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final session = SessionManager();
+    if (!session.isSuperAdmin && session.currentUser != null) {
+      session.restaurarTorneoAsignado();
+    }
+
     final opciones = <Map<String, dynamic>>[
       {
         'titulo': 'Equipos',
@@ -641,6 +649,19 @@ class InicioPage extends StatelessWidget {
                                 'Rol: $rol',
                                 style: const TextStyle(color: Colors.black54),
                               ),
+                              if (session.currentUser?.campeonato != null &&
+                                  session.currentUser!.campeonato!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    'Torneo asignado: ${session.currentUser!.campeonato}',
+                                    style: const TextStyle(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -654,18 +675,22 @@ class InicioPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Row(
+                Row(
                   children: [
                     Text(
-                      'Torneo activo:',
-                      style: TextStyle(
+                      session.canChangeCampeonato ? 'Torneo activo:' : 'Torneo asignado (Fijado):',
+                      style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: Colors.black54,
                       ),
                     ),
-                    SizedBox(width: 10),
-                    Expanded(
+                    if (!session.canChangeCampeonato) ...[
+                      const SizedBox(width: 5),
+                      const Icon(Icons.lock_outline, size: 14, color: AppColors.primary),
+                    ],
+                    const SizedBox(width: 10),
+                    const Expanded(
                       child: CampeonatoSelectorBar(),
                     ),
                   ],

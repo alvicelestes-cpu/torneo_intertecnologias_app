@@ -541,6 +541,11 @@ class _ResultadoPartidoPageState extends State<ResultadoPartidoPage> {
   }
 
   Future<void> guardarResultado() async {
+    if (!SessionManager().hasWriteAccess) {
+      UiHelpers.showError(context, 'No tiene permisos para modificar resultados en este torneo.');
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       return;
     }

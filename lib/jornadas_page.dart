@@ -196,6 +196,10 @@ class _JornadasPageState extends State<JornadasPage> {
   }
 
   Future<void> _abrirModalGenerarFixture([String? faseInicial]) async {
+    if (!_esAdmin || !SessionManager().hasWriteAccess) {
+      UiHelpers.showError(context, 'No tiene permisos para generar fixture en este torneo.');
+      return;
+    }
     String faseSeleccionadaModal = _mapFaseToBackend(faseInicial ?? 'PRIMERA_FASE');
     DateTime fechaSeleccionada = DateTime.now().add(const Duration(days: 7));
     fechaSeleccionada = DateTime(fechaSeleccionada.year, fechaSeleccionada.month, fechaSeleccionada.day, 14, 0);

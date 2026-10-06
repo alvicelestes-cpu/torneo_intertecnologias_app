@@ -122,6 +122,10 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   }
 
   Future<void> abrirEdicion() async {
+    if (!SessionManager().hasWriteAccess) {
+      UiHelpers.showError(context, 'No tiene permisos de edición para este torneo.');
+      return;
+    }
     final token = widget.token ?? SessionManager().token;
     if (token.isEmpty) return;
     final actualizado = await Navigator.push<bool>(
@@ -140,6 +144,10 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   }
 
   Future<void> abrirResultado() async {
+    if (!SessionManager().hasWriteAccess) {
+      UiHelpers.showError(context, 'No tiene permisos de edición para este torneo.');
+      return;
+    }
     final token = widget.token ?? SessionManager().token;
     if (token.isEmpty) return;
     final actualizado = await Navigator.push<bool>(
@@ -158,6 +166,10 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   }
 
   Future<void> abrirGoles() async {
+    if (!SessionManager().hasWriteAccess) {
+      UiHelpers.showError(context, 'No tiene permisos de edición para este torneo.');
+      return;
+    }
     final token = widget.token ?? SessionManager().token;
     if (token.isEmpty) return;
     await Navigator.push(
@@ -176,6 +188,10 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   }
 
   Future<void> abrirTarjetas() async {
+    if (!SessionManager().hasWriteAccess) {
+      UiHelpers.showError(context, 'No tiene permisos de edición para este torneo.');
+      return;
+    }
     final token = widget.token ?? SessionManager().token;
     if (token.isEmpty) return;
     await Navigator.push(
@@ -194,6 +210,10 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
   }
 
   Future<void> confirmarReapertura() async {
+    if (!SessionManager().hasWriteAccess) {
+      UiHelpers.showError(context, 'No tiene permisos de edición para este torneo.');
+      return;
+    }
     final token = widget.token ?? SessionManager().token;
     if (token.isEmpty) return;
     final confirmar = await showDialog<bool>(
@@ -813,7 +833,7 @@ class _PartidoDetallePageState extends State<PartidoDetallePage> {
                 const SizedBox(height: 16),
                 _construirSeccionIncidencias(det),
                 const SizedBox(height: 20),
-                if (SessionManager().isAuthenticated) ...[
+                if (SessionManager().hasWriteAccess) ...[
                   Wrap(
                     spacing: 12,
                     runSpacing: 12,

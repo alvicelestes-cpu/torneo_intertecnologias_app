@@ -26,22 +26,35 @@ class SessionManager extends ChangeNotifier {
   String get usuario => _currentUser?.usuario ?? '';
   String get rol => _currentUser?.rol ?? 'Administrador';
 
-  // Control de roles
+  // Control de roles RBAC
   bool get isSuperAdmin =>
-      _currentUser != null &&
-      _currentUser!.rol.trim().toUpperCase() == 'SUPERADMIN';
+      _currentUser != null && _currentUser!.isSuperAdmin;
 
   bool get isAdmin =>
-      _currentUser != null &&
-      (_currentUser!.rol.trim().toUpperCase() == 'ADMIN' ||
-       _currentUser!.rol.trim().toUpperCase() == 'ADMINISTRADOR');
+      _currentUser != null && _currentUser!.isTournamentAdmin;
 
   /// Determina si el usuario tiene una sesión activa válida con permisos de administración
-  bool get hasAdminAccess =>
-      isAuthenticated && (isAdmin || isSuperAdmin);
+  bool get isAuthenticatedAdmin => isAuthenticated && (isAdmin || isSuperAdmin);
 
   /// SUPERADMIN puede cambiar libremente de torneo; ADMIN está restringido a su propio torneo
   bool get canChangeCampeonato => _currentUser == null || isSuperAdmin;
+
+  /// Valida si el usuario tiene permisos de edición/escritura sobre el torneo especificado.
+  /// Si no se especifica torneoId, evalúa sobre el torneo activo (selectedCampeonatoId).
+  bool canWriteTournament([int? torneoId]) {
+    if (!isAuthenticated) return false;
+    if (isSuperAdmin) return true;
+    if (!isAdmin) return false;
+    final targetId = torneoId ?? selectedCampeonatoId;
+    return _currentUser?.canWriteTournament(targetId) ?? false;
+  }
+
+  /// Permiso de edición en el torneo activo actualmente
+  bool get hasWriteAccess => canWriteTournament(selectedCampeonatoId);
+
+  /// Para compatibilidad y seguridad RBAC por torneo, hasAdminAccess valida los permisos
+  /// sobre el torneo activo actualmente seleccionado.
+  bool get hasAdminAccess => canWriteTournament(selectedCampeonatoId);
 
   // Multitorneo
   Campeonato? get selectedCampeonato => _selectedCampeonato;
@@ -347,24 +360,41 @@ class SessionManager extends ChangeNotifier {
   void setSession(AuthUser user) {
     _currentUser = user;
 
-    final isUserSuperAdmin = user.rol.trim().toUpperCase() == 'SUPERADMIN';
+    final isUserSuperAdmin = user.isSuperAdmin;
 
-    if (!isUserSuperAdmin && user.campeonatoId != null && user.campeonatoId! > 0) {
-      // ADMIN: Forzar que trabaje únicamente con su propio campeonato asignado
-      final assignedId = user.campeonatoId!;
+    if (!isUserSuperAdmin && (user.campeonatoId != null && user.campeonatoId! > 0 || user.torneoIds.isNotEmpty)) {
+      // ADMIN DE TORNEO: Forzar que trabaje únicamente con su propio campeonato asignado
+      final assignedId = user.campeonatoId ?? user.torneoIds.first;
+      final isBanquita = isBanquitaIdentifier(assignedId.toString()) ||
+          isBanquitaIdentifier(user.campeonato);
+
       final match = _campeonatos.cast<Campeonato?>().firstWhere(
-            (c) => c?.id == assignedId,
+            (c) {
+              if (c == null) return false;
+              if (c.id == assignedId) return true;
+              if (isBanquita && (c.id == 2 || c.id == 3 || isBanquitaIdentifier(c.nombre) || isBanquitaIdentifier(c.slug))) {
+                return true;
+              }
+              return false;
+            },
             orElse: () => null,
           );
+
+      final banquitaNombre = (user.campeonato != null && user.campeonato!.trim().isNotEmpty)
+          ? user.campeonato!.trim()
+          : 'Torneo Banquita Los Altos';
+
       _selectedCampeonato = match ??
           Campeonato(
             id: assignedId,
-            nombre: user.campeonato?.isNotEmpty == true
-                ? user.campeonato!
-                : 'Campeonato #$assignedId',
-            slug: 'campeonato-$assignedId',
+            nombre: isBanquita
+                ? banquitaNombre
+                : (user.campeonato?.isNotEmpty == true ? user.campeonato! : 'Campeonato #$assignedId'),
+            slug: isBanquita ? 'torneo-banquitas-los-altos-2026' : 'campeonato-$assignedId',
+            activo: true,
+            publicado: true,
           );
-      _persistCampeonatoId(assignedId);
+      _persistCampeonatoId(_selectedCampeonato!.id);
     } else if (isUserSuperAdmin) {
       // SUPERADMIN: conservar el campeonato seleccionado o guardado válido si existe
       final targetId = _selectedCampeonato?.id ??
@@ -386,6 +416,46 @@ class SessionManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Restaura el torneo activo al torneo asignado al usuario administrador
+  void restaurarTorneoAsignado() {
+    if (_currentUser == null || isSuperAdmin) return;
+    final assignedId = _currentUser!.campeonatoId ??
+        (_currentUser!.torneoIds.isNotEmpty ? _currentUser!.torneoIds.first : null);
+    if (assignedId == null) return;
+
+    final isBanquita = isBanquitaIdentifier(assignedId.toString()) ||
+        isBanquitaIdentifier(_currentUser!.campeonato);
+
+    final match = _campeonatos.cast<Campeonato?>().firstWhere(
+          (c) {
+            if (c == null) return false;
+            if (c.id == assignedId) return true;
+            if (isBanquita && (c.id == 2 || c.id == 3 || isBanquitaIdentifier(c.nombre) || isBanquitaIdentifier(c.slug))) {
+              return true;
+            }
+            return false;
+          },
+          orElse: () => null,
+        );
+
+    final banquitaNombre = (_currentUser!.campeonato != null && _currentUser!.campeonato!.trim().isNotEmpty)
+        ? _currentUser!.campeonato!.trim()
+        : 'Torneo Banquita Los Altos';
+
+    _selectedCampeonato = match ??
+        Campeonato(
+          id: assignedId,
+          nombre: isBanquita
+              ? banquitaNombre
+              : (_currentUser!.campeonato?.isNotEmpty == true ? _currentUser!.campeonato! : 'Campeonato #$assignedId'),
+          slug: isBanquita ? 'torneo-banquitas-los-altos-2026' : 'campeonato-$assignedId',
+          activo: true,
+          publicado: true,
+        );
+    _persistCampeonatoId(_selectedCampeonato!.id);
+    notifyListeners();
+  }
+
   void setCampeonatos(List<Campeonato> list) {
     _campeonatos = list;
 
@@ -400,22 +470,39 @@ class SessionManager extends ChangeNotifier {
         ? publicados
         : (activos.isNotEmpty ? activos : list);
 
-    if (_currentUser != null && !isSuperAdmin && _currentUser!.campeonatoId != null) {
-      // ADMIN: estrictamente bloqueado a su propio campeonato asignado
-      final assignedId = _currentUser!.campeonatoId!;
+    if (_currentUser != null && !isSuperAdmin && (_currentUser!.campeonatoId != null || _currentUser!.torneoIds.isNotEmpty)) {
+      // ADMIN: estrictamente bloqueado y fijado a su propio campeonato asignado
+      final assignedId = _currentUser!.campeonatoId ?? _currentUser!.torneoIds.first;
+      final isBanquita = isBanquitaIdentifier(assignedId.toString()) ||
+          isBanquitaIdentifier(_currentUser!.campeonato);
+
       final match = list.cast<Campeonato?>().firstWhere(
-            (c) => c?.id == assignedId,
+            (c) {
+              if (c == null) return false;
+              if (c.id == assignedId) return true;
+              if (isBanquita && (c.id == 2 || c.id == 3 || isBanquitaIdentifier(c.nombre) || isBanquitaIdentifier(c.slug))) {
+                return true;
+              }
+              return false;
+            },
             orElse: () => null,
           );
+
+      final banquitaNombre = (_currentUser!.campeonato != null && _currentUser!.campeonato!.trim().isNotEmpty)
+          ? _currentUser!.campeonato!.trim()
+          : 'Torneo Banquita Los Altos';
+
       _selectedCampeonato = match ??
           Campeonato(
             id: assignedId,
-            nombre: _currentUser!.campeonato?.isNotEmpty == true
-                ? _currentUser!.campeonato!
-                : 'Campeonato #$assignedId',
-            slug: 'campeonato-$assignedId',
+            nombre: isBanquita
+                ? banquitaNombre
+                : (_currentUser!.campeonato?.isNotEmpty == true ? _currentUser!.campeonato! : 'Campeonato #$assignedId'),
+            slug: isBanquita ? 'torneo-banquitas-los-altos-2026' : 'campeonato-$assignedId',
+            activo: true,
+            publicado: true,
           );
-      _persistCampeonatoId(assignedId);
+      _persistCampeonatoId(_selectedCampeonato!.id);
     } else if (isSuperAdmin) {
       // SUPERADMIN: validar si el campeonato guardado/seleccionado existe y está activo
       final targetId = _selectedCampeonato?.id ??

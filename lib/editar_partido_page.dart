@@ -175,6 +175,11 @@ class _EditarPartidoPageState extends State<EditarPartidoPage> {
   }
 
   Future<void> guardarCambios() async {
+    if (!SessionManager().hasWriteAccess) {
+      UiHelpers.showError(context, 'No tiene permisos de edición para este torneo.');
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
