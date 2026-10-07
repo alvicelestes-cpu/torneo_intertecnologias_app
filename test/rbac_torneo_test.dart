@@ -200,5 +200,43 @@ void main() {
       expect(session.hasWriteAccess, isTrue);
       expect(session.hasAdminAccess, isTrue);
     });
+
+    test('Administrador original Intertecnologías (SUPERADMIN con campeonatoId 1) tiene acceso total e inicio en Torneo 1', () {
+      session.setSession(const AuthUser(
+        token: 'token-admin-inter',
+        usuario: 'admin',
+        rol: 'SUPERADMIN',
+        campeonatoId: 1,
+        campeonato: 'Torneo Intertecnologías 2026',
+      ));
+
+      expect(session.isAuthenticated, isTrue);
+      expect(session.isSuperAdmin, isTrue);
+      expect(session.selectedCampeonatoId, equals(1));
+      expect(session.hasWriteAccess, isTrue);
+      expect(session.hasAdminAccess, isTrue);
+      expect(session.canChangeCampeonato, isTrue);
+      expect(session.canWriteTournament(1), isTrue);
+      expect(session.canWriteTournament(3), isTrue);
+    });
+
+    test('Administrador asignado a Intertecnologías (ADMIN con campeonatoId 1) tiene acceso en Torneo 1 pero bloqueado en Banquitas (Torneo 3)', () {
+      session.setSession(const AuthUser(
+        token: 'token-admin-inter-especifico',
+        usuario: 'admin.intertecnologias',
+        rol: 'ADMIN',
+        campeonatoId: 1,
+        campeonato: 'Torneo Intertecnologías 2026',
+      ));
+
+      expect(session.isAuthenticated, isTrue);
+      expect(session.isSuperAdmin, isFalse);
+      expect(session.isAdmin, isTrue);
+      expect(session.selectedCampeonatoId, equals(1));
+      expect(session.hasWriteAccess, isTrue);
+      expect(session.canWriteTournament(1), isTrue);
+      // Aislamiento: bloqueado para escribir en Banquitas
+      expect(session.canWriteTournament(3), isFalse);
+    });
   });
 }
