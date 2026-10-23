@@ -176,6 +176,20 @@ class TorneoService {
     throw const AppException('La respuesta de posiciones no tiene el formato esperado.');
   }
 
+  /// Obtiene la clasificación detallada por fases (Primera Fase y Cuadrangulares independientes)
+  Future<PosicionesFases> getPosicionesFases({String? token, int? campeonatoId}) async {
+    final response = await _apiClient.get(
+      _buildUrl(ApiConstants.posicionesFases, campeonatoId),
+      token: token,
+    );
+
+    if (response is Map<String, dynamic>) {
+      return PosicionesFases.fromJson(response);
+    }
+
+    throw const AppException('La respuesta de posiciones por fases no tiene el formato esperado.');
+  }
+
   Future<List<Goleador>> getGoleadores({String? token, bool cargarFotos = true, int? campeonatoId}) async {
     final response = await _apiClient.get(
       _buildUrl(ApiConstants.goleadores, campeonatoId),

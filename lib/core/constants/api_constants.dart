@@ -71,6 +71,7 @@ class ApiConstants {
 
   // Estadísticas & Tablas
   static const String posiciones = '$baseUrl/api/posiciones';
+  static const String posicionesFases = '$baseUrl/api/posiciones/fases';
   static const String goleadores = '$baseUrl/api/goleadores';
   static const String estadisticas = '$baseUrl/api/estadisticas';
 

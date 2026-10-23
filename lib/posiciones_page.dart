@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_colors.dart';
 import 'core/errors/app_exception.dart';
 import 'core/session/session_manager.dart';
-import 'models/partido.dart';
 import 'models/posicion.dart';
-import 'services/partidos_service.dart';
 import 'services/torneo_config_service.dart';
 import 'services/torneo_service.dart';
 import 'widgets/app_empty_view.dart';
@@ -16,10 +14,12 @@ import 'widgets/team_logo_avatar.dart';
 
 class PosicionesPage extends StatefulWidget {
   final String? token;
+  final TorneoService? torneoService;
 
   const PosicionesPage({
     super.key,
     this.token,
+    this.torneoService,
   });
 
   @override
@@ -27,19 +27,18 @@ class PosicionesPage extends StatefulWidget {
 }
 
 class _PosicionesPageState extends State<PosicionesPage> {
-  final TorneoService _torneoService = TorneoService();
-  final PartidosService _partidosService = PartidosService();
+  late final TorneoService _torneoService;
 
   bool cargando = true;
   String? error;
-  List<Posicion> posiciones = [];
-  bool segundaRondaGenerada = false;
+  PosicionesFases? fasesData;
   int _tabFase = 0; // 0: Primera Fase, 1: Segunda Ronda (Cuadrangulares)
   bool get _tienePuntoInvisible => TorneoConfigService().tienePuntoInvisible;
 
   @override
   void initState() {
     super.initState();
+    _torneoService = widget.torneoService ?? TorneoService();
     SessionManager().addListener(_onSessionChanged);
     cargarPosiciones();
   }
@@ -61,22 +60,11 @@ class _PosicionesPageState extends State<PosicionesPage> {
     });
 
     try {
-      final resultados = await Future.wait([
-        _torneoService.getPosiciones(token: widget.token),
-        _partidosService.getPartidos(token: widget.token).catchError((_) => <Partido>[]),
-      ]);
-
-      final list = resultados[0] as List<Posicion>;
-      final partidos = resultados[1] as List<Partido>;
-      final bool generada = partidos.any((p) {
-        final f = p.fase?.toUpperCase().trim() ?? '';
-        return f.contains('SEGUNDA') || f.contains('CUADRANGULAR') || p.jornada == 8;
-      });
+      final data = await _torneoService.getPosicionesFases(token: widget.token);
 
       if (mounted) {
         setState(() {
-          posiciones = list;
-          segundaRondaGenerada = generada;
+          fasesData = data;
         });
       }
     } on AppException catch (e) {
@@ -154,7 +142,58 @@ class _PosicionesPageState extends State<PosicionesPage> {
     );
   }
 
-  Widget _construirDistintivoVentaja(int posicion) {
+  Widget _construirDistintivoVentaja(Posicion pos, {required bool esCuadrangular}) {
+    if (esCuadrangular) {
+      if (pos.puntoInvisible && _tienePuntoInvisible) {
+        return Container(
+          margin: const EdgeInsets.only(top: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFEF3C7),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: const Color(0xFFF59E0B), width: 0.8),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.star, size: 10, color: Color(0xFFB45309)),
+              SizedBox(width: 3),
+              Text(
+                'Punto Invisible',
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFB45309),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+      if (pos.posicionPrimeraFase != null && pos.posicionPrimeraFase! > 0) {
+        return Container(
+          margin: const EdgeInsets.only(top: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: const Color(0xFFCBD5E1), width: 0.6),
+          ),
+          child: Text(
+            'Clasificado ${pos.posicionPrimeraFase}° PF',
+            style: const TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+          ),
+        );
+      }
+      return const SizedBox.shrink();
+    }
+
+    // Para Primera Fase (muestra ventajas/siembras reglamentarias)
+    final posicion = pos.posicion;
     if (posicion == 1) {
       return Container(
         margin: const EdgeInsets.only(top: 3),
@@ -169,12 +208,15 @@ class _PosicionesPageState extends State<PosicionesPage> {
           children: [
             Icon(Icons.star, size: 10, color: Color(0xFFB45309)),
             SizedBox(width: 3),
-            Text(
-              'Punto Invisible • Grupo A',
-              style: TextStyle(
-                fontSize: 9.5,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFB45309),
+            Flexible(
+              child: Text(
+                'Punto Invisible • Grupo A',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFB45309),
+                ),
               ),
             ),
           ],
@@ -195,12 +237,15 @@ class _PosicionesPageState extends State<PosicionesPage> {
           children: [
             Icon(Icons.star, size: 10, color: Color(0xFF4338CA)),
             SizedBox(width: 3),
-            Text(
-              'Punto Invisible • Grupo B',
-              style: TextStyle(
-                fontSize: 9.5,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF4338CA),
+            Flexible(
+              child: Text(
+                'Punto Invisible • Grupo B',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4338CA),
+                ),
               ),
             ),
           ],
@@ -279,7 +324,7 @@ class _PosicionesPageState extends State<PosicionesPage> {
     );
   }
 
-  Widget _construirFila(Posicion pos, int index) {
+  Widget _construirFila(Posicion pos, int index, {bool esCuadrangular = false}) {
     final esPrimero = pos.posicion == 1;
     final esSegundo = pos.posicion == 2;
 
@@ -351,7 +396,7 @@ class _PosicionesPageState extends State<PosicionesPage> {
                             color: Color(0xFF64748B),
                           ),
                         ),
-                      _construirDistintivoVentaja(pos.posicion),
+                      _construirDistintivoVentaja(pos, esCuadrangular: esCuadrangular),
                     ],
                   ),
                 ),
@@ -397,8 +442,74 @@ class _PosicionesPageState extends State<PosicionesPage> {
     );
   }
 
+  int _obtenerSiembraFallback(String nombreEquipo, {required bool esGrupoA}) {
+    final norm = nombreEquipo.toUpperCase().trim();
+    if (esGrupoA) {
+      if (norm.contains('ELITE')) return 1;
+      if (norm.contains('CONEXI') || norm.contains('DIGITAL')) return 3;
+      if (norm.contains('RACING') || norm.contains('TIENDA')) return 5;
+      if (norm.contains('TIGO')) return 7;
+    } else {
+      if (norm.contains('CEMENTERO')) return 2;
+      if (norm.contains('TELEMATIK')) return 4;
+      if (norm.contains('GREMIO')) return 6;
+      if (norm.contains('INPEC')) return 8;
+    }
+    return 99;
+  }
+
+  List<Posicion> _ordenarEquiposCuadrangular(List<Posicion> lista, {required bool esGrupoA}) {
+    final ordenados = List<Posicion>.from(lista);
+    ordenados.sort((a, b) {
+      // 1. Puntos
+      if (b.pts != a.pts) return b.pts.compareTo(a.pts);
+      // 2. Punto Invisible (desempate sin sumar puntos)
+      if (_tienePuntoInvisible && a.puntoInvisible != b.puntoInvisible) {
+        return a.puntoInvisible ? -1 : 1;
+      }
+      // 3. Diferencia de gol
+      if (b.dg != a.dg) return b.dg.compareTo(a.dg);
+      // 4. Goles a favor
+      if (b.gf != a.gf) return b.gf.compareTo(a.gf);
+      // 5. Posición de Primera Fase (siembra)
+      final posA = a.posicionPrimeraFase ?? _obtenerSiembraFallback(a.equipo, esGrupoA: esGrupoA);
+      final posB = b.posicionPrimeraFase ?? _obtenerSiembraFallback(b.equipo, esGrupoA: esGrupoA);
+      if (posA != posB) return posA.compareTo(posB);
+      // 6. Nombre alfabético
+      return a.equipo.compareTo(b.equipo);
+    });
+
+    return ordenados.asMap().entries.map((entry) {
+      final idx = entry.key + 1;
+      final p = entry.value;
+      if (p.posicion == idx) return p;
+      return Posicion(
+        posicion: idx,
+        equipoId: p.equipoId,
+        equipo: p.equipo,
+        sigla: p.sigla,
+        logo: p.logo,
+        pj: p.pj,
+        pg: p.pg,
+        pe: p.pe,
+        pp: p.pp,
+        gf: p.gf,
+        gc: p.gc,
+        dg: p.dg,
+        pts: p.pts,
+        puntoInvisible: p.puntoInvisible,
+        posicionPrimeraFase: p.posicionPrimeraFase,
+      );
+    }).toList();
+  }
+
   Widget _construirVistaCuadrangulares() {
-    if (!segundaRondaGenerada || posiciones.length < 8) {
+    final data = fasesData;
+    final bool tieneCuadrangulares = data != null &&
+        data.existeSegundaRonda &&
+        (data.grupoA.isNotEmpty || data.grupoB.isNotEmpty);
+
+    if (!tieneCuadrangulares) {
       return Card(
         elevation: 1,
         shape: RoundedRectangleBorder(
@@ -452,8 +563,8 @@ class _PosicionesPageState extends State<PosicionesPage> {
       );
     }
 
-    final grupoA = [posiciones[0], posiciones[2], posiciones[4], posiciones[6]];
-    final grupoB = [posiciones[1], posiciones[3], posiciones[5], posiciones[7]];
+    final grupoA = _ordenarEquiposCuadrangular(data.grupoA, esGrupoA: true);
+    final grupoB = _ordenarEquiposCuadrangular(data.grupoB, esGrupoA: false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -512,7 +623,6 @@ class _PosicionesPageState extends State<PosicionesPage> {
               ? '1°, 3°, 5° y 7° Puesto • 1° cuenta con Punto Invisible'
               : '1°, 3°, 5° y 7° Puesto',
           equipos: grupoA,
-          posicionVentaja: _tienePuntoInvisible ? 1 : 0,
           colorGradiente: const [Color(0xFF312E81), Color(0xFF4338CA)],
         ),
         const SizedBox(height: 16),
@@ -524,7 +634,6 @@ class _PosicionesPageState extends State<PosicionesPage> {
               ? '2°, 4°, 6° y 8° Puesto • 2° cuenta con Punto Invisible'
               : '2°, 4°, 6° y 8° Puesto',
           equipos: grupoB,
-          posicionVentaja: _tienePuntoInvisible ? 2 : 0,
           colorGradiente: const [Color(0xFF1E1B4B), Color(0xFF3730A3)],
         ),
       ],
@@ -535,7 +644,6 @@ class _PosicionesPageState extends State<PosicionesPage> {
     required String titulo,
     required String subtitulo,
     required List<Posicion> equipos,
-    required int posicionVentaja,
     required List<Color> colorGradiente,
   }) {
     return Card(
@@ -607,7 +715,9 @@ class _PosicionesPageState extends State<PosicionesPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _construirEncabezadoTabla(),
-                    ...equipos.asMap().entries.map((e) => _construirFila(e.value, e.key)),
+                    ...equipos.asMap().entries.map(
+                          (e) => _construirFila(e.value, e.key, esCuadrangular: true),
+                        ),
                   ],
                 ),
               ),
@@ -620,6 +730,8 @@ class _PosicionesPageState extends State<PosicionesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final primeraFaseEquipos = fasesData?.primeraFase ?? [];
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: const PublicTopNavBar(activeRoute: 'Posiciones'),
@@ -638,7 +750,7 @@ class _PosicionesPageState extends State<PosicionesPage> {
               );
             }
 
-            if (posiciones.isEmpty) {
+            if (primeraFaseEquipos.isEmpty) {
               return const AppEmptyView(
                 message: 'No hay posiciones registradas en este campeonato.',
                 icon: Icons.leaderboard_outlined,
@@ -706,7 +818,7 @@ class _PosicionesPageState extends State<PosicionesPage> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      '${posiciones.length} equipos en competencia',
+                                      '${primeraFaseEquipos.length} equipos en competencia',
                                       style: const TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w900,
@@ -869,8 +981,8 @@ class _PosicionesPageState extends State<PosicionesPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     _construirEncabezadoTabla(),
-                                    ...posiciones.asMap().entries.map(
-                                          (e) => _construirFila(e.value, e.key),
+                                    ...primeraFaseEquipos.asMap().entries.map(
+                                          (e) => _construirFila(e.value, e.key, esCuadrangular: false),
                                         ),
                                   ],
                                 ),

@@ -14,6 +14,8 @@ class Posicion {
   final int gc;
   final int dg;
   final int pts;
+  final bool puntoInvisible;
+  final int? posicionPrimeraFase;
 
   const Posicion({
     required this.posicion,
@@ -29,6 +31,8 @@ class Posicion {
     required this.gc,
     required this.dg,
     required this.pts,
+    this.puntoInvisible = false,
+    this.posicionPrimeraFase,
   });
 
   factory Posicion.fromJson(Map<String, dynamic> json) {
@@ -59,6 +63,10 @@ class Posicion {
       gc: TextUtils.toInt(json['gc']),
       dg: TextUtils.toInt(json['dg']),
       pts: TextUtils.toInt(json['pts'] ?? json['puntos']),
+      puntoInvisible: json['puntoInvisible'] == true,
+      posicionPrimeraFase: json['posicionPrimeraFase'] != null
+          ? TextUtils.toInt(json['posicionPrimeraFase'])
+          : null,
     );
   }
 
@@ -77,9 +85,45 @@ class Posicion {
       'gc': gc,
       'dg': dg,
       'pts': pts,
+      'puntoInvisible': puntoInvisible,
+      if (posicionPrimeraFase != null) 'posicionPrimeraFase': posicionPrimeraFase,
     };
   }
 
   String get diferenciaGolTexto => TextUtils.formatGoalDifference(dg);
   String get iniciales => TextUtils.getInitials(equipo, sigla: sigla);
+}
+
+/// Respuesta estructurada con la clasificación desagregada por fases y cuadrangulares
+class PosicionesFases {
+  final List<Posicion> primeraFase;
+  final bool existeSegundaRonda;
+  final List<Posicion> grupoA;
+  final List<Posicion> grupoB;
+
+  const PosicionesFases({
+    required this.primeraFase,
+    required this.existeSegundaRonda,
+    required this.grupoA,
+    required this.grupoB,
+  });
+
+  factory PosicionesFases.fromJson(Map<String, dynamic> json) {
+    final rawPF = json['primeraFase'];
+    final rawGA = json['grupoA'];
+    final rawGB = json['grupoB'];
+
+    return PosicionesFases(
+      primeraFase: (rawPF is List)
+          ? rawPF.map((e) => Posicion.fromJson(Map<String, dynamic>.from(e))).toList()
+          : <Posicion>[],
+      existeSegundaRonda: json['existeSegundaRonda'] == true,
+      grupoA: (rawGA is List)
+          ? rawGA.map((e) => Posicion.fromJson(Map<String, dynamic>.from(e))).toList()
+          : <Posicion>[],
+      grupoB: (rawGB is List)
+          ? rawGB.map((e) => Posicion.fromJson(Map<String, dynamic>.from(e))).toList()
+          : <Posicion>[],
+    );
+  }
 }
