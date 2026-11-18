@@ -72,6 +72,25 @@ class MockFixtureHttpClient extends http.BaseClient {
       final modalidad = payload['modalidad'] ?? 'Ida';
       final soloVistaPrevia = payload['soloVistaPrevia'] == true;
 
+      if (fase == 'SEMIFINAL' && soloVistaPrevia) {
+        final responseData = {
+          'mensaje': 'No es posible calcular los cruces de Semifinales porque aún hay llaves de Cuartos de Final pendientes de definición.',
+          'fase': fase,
+          'modalidad': modalidad,
+          'totalPartidos': 0,
+          'partidos': <Map<String, dynamic>>[],
+          'clasificadosPendientes': [
+            'Llave LLAVE_1: El partido 175 no ha finalizado (Estado: PROGRAMADO).',
+            'Llave LLAVE_2: El partido 176 no ha finalizado (Estado: PROGRAMADO).'
+          ]
+        };
+        return http.StreamedResponse(
+          Stream.value(utf8.encode(jsonEncode(responseData))),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+
       final previewPartidos = [
         {
           'numero': 1,
@@ -445,6 +464,59 @@ void main() {
       // Se cerró modal y se mostró confirmación
       expect(find.text('Generador de Fixture'), findsNothing);
       expect(find.textContaining('generado exitosamente'), findsOneWidget);
+    });
+
+    testWidgets('5. Modal Interactivo de Generación de Fixture - Vista Previa de Semifinales con Cuartos Pendientes Muestra advertencia y clasificados pendientes', (WidgetTester tester) async {
+      final session = SessionManager();
+      session.setSession(const AuthUser(
+        token: 'admin-token',
+        usuario: 'admin_user',
+        rol: 'ADMIN',
+        campeonatoId: 1,
+      ));
+
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(MaterialApp(
+        home: JornadasPage(
+          token: 'admin-token',
+          jornadasService: jornadasService,
+          partidosService: partidosService,
+          torneoService: torneoService,
+          equiposService: equiposService,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // Abrir modal desde el botón de la barra de acciones
+      await tester.tap(find.byKey(const Key('btn_generar_fixture_banner')));
+      await tester.pumpAndSettle();
+
+      // Seleccionar fase SEMIFINAL en el dropdown
+      await tester.tap(find.byKey(const Key('dropdown_fase_fixture')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('4. Semifinales').last);
+      await tester.pumpAndSettle();
+
+      // Pulsar Ver Vista Previa de Cruces
+      await tester.tap(find.byKey(const Key('btn_vista_previa_fixture')));
+      await tester.pumpAndSettle();
+
+      // Verificar que se envió la petición correcta
+      expect(mockClient.lastPostUri?.path, contains('/generar-fixture'));
+      final reqBody = jsonDecode(mockClient.lastPostBody!);
+      expect(reqBody['fase'], 'SEMIFINAL');
+      expect(reqBody['soloVistaPrevia'], true);
+
+      // Verificar que se renderiza el mensaje de alerta y las llaves pendientes
+      expect(find.byIcon(Icons.pending_actions), findsOneWidget);
+      expect(find.textContaining('pendientes de definición'), findsOneWidget);
+      expect(find.textContaining('Llave LLAVE_1: El partido 175 no ha finalizado'), findsOneWidget);
+      expect(find.textContaining('Llave LLAVE_2: El partido 176 no ha finalizado'), findsOneWidget);
+      // No debe decir que hay 0 partidos proyectados con icono verde
+      expect(find.text('Cruces proyectados (0 partidos):'), findsNothing);
     });
   });
 }

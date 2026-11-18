@@ -209,6 +209,8 @@ class _JornadasPageState extends State<JornadasPage> {
     bool cargandoPreview = false;
     String? errorModal;
     List<dynamic>? partidosPreview;
+    List<dynamic>? clasificadosPendientes;
+    String? mensajePreview;
     List<Equipo> equiposTorneo = [];
     try {
       equiposTorneo = await _equiposService.getEquipos(token: widget.token);
@@ -417,7 +419,7 @@ class _JornadasPageState extends State<JornadasPage> {
                           ),
                           DropdownMenuItem(
                             value: 'CUARTOS',
-                            child: Text('3. Cuartos de Final (1° vs 8°, 2° vs 7°, etc.)'),
+                            child: Text('3. Cuartos de Final (Cruces Grupos A y B)'),
                           ),
                           DropdownMenuItem(
                             value: 'SEMIFINAL',
@@ -435,6 +437,8 @@ class _JornadasPageState extends State<JornadasPage> {
                                   setDialogState(() {
                                     faseSeleccionadaModal = val;
                                     partidosPreview = null;
+                                    clasificadosPendientes = null;
+                                    mensajePreview = null;
                                   });
                                 }
                               },
@@ -513,6 +517,8 @@ class _JornadasPageState extends State<JornadasPage> {
                                       setDialogState(() {
                                         modalidad = 'Ida';
                                         partidosPreview = null;
+                                        clasificadosPendientes = null;
+                                        mensajePreview = null;
                                       });
                                     }
                                   },
@@ -530,6 +536,8 @@ class _JornadasPageState extends State<JornadasPage> {
                                       setDialogState(() {
                                         modalidad = 'IdaYVuelta';
                                         partidosPreview = null;
+                                        clasificadosPendientes = null;
+                                        mensajePreview = null;
                                       });
                                     }
                                   },
@@ -578,6 +586,8 @@ class _JornadasPageState extends State<JornadasPage> {
                                   );
                                   setDialogState(() {
                                     partidosPreview = (res['partidos'] as List?) ?? [];
+                                    clasificadosPendientes = (res['clasificadosPendientes'] as List?) ?? [];
+                                    mensajePreview = res['mensaje']?.toString();
                                     cargandoPreview = false;
                                   });
                                 } catch (e) {
@@ -598,8 +608,60 @@ class _JornadasPageState extends State<JornadasPage> {
                         ),
                       ),
 
-                      // Sección de previsualización de cruces
-                      if (partidosPreview != null) ...[
+                      // Sección de llaves / clasificados pendientes
+                      if (clasificadosPendientes != null && clasificadosPendientes!.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.amber.shade300),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.pending_actions, color: Colors.amber.shade900, size: 18),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      mensajePreview ?? 'Llaves pendientes de definición:',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12.5,
+                                        color: Colors.amber.shade900,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              ...clasificadosPendientes!.map((item) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('• ', style: TextStyle(color: Colors.amber.shade900, fontWeight: FontWeight.bold)),
+                                      Expanded(
+                                        child: Text(
+                                          item.toString(),
+                                          style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // Sección de previsualización de cruces proyectados
+                      if (partidosPreview != null && partidosPreview!.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -662,6 +724,31 @@ class _JornadasPageState extends State<JornadasPage> {
                                       ],
                                     );
                                   },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // Mensaje cuando preview retorna 0 partidos y sin llaves pendientes explícitas
+                      if (partidosPreview != null && partidosPreview!.isEmpty && (clasificadosPendientes == null || clasificadosPendientes!.isEmpty)) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.info_outline, color: Colors.blueGrey, size: 18),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'No hay partidos proyectados para los criterios seleccionados.',
+                                  style: TextStyle(fontSize: 12, color: Colors.blueGrey),
                                 ),
                               ),
                             ],

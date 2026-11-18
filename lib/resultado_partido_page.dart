@@ -1083,6 +1083,8 @@ class _ResultadoPartidoPageState extends State<ResultadoPartidoPage> {
                         maxLines: 3,
                         decoration: const InputDecoration(
                           labelText: 'Observaciones del resultado',
+                          helperText: 'En caso de empate en fase eliminatoria, registre los penales (Ej: "Penales: 4-3" o "Ganador Penales: NombreEquipo")',
+                          helperMaxLines: 2,
                           prefixIcon: Icon(Icons.note_outlined),
                           border: OutlineInputBorder(),
                         ),
